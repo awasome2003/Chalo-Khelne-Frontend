@@ -9,8 +9,6 @@ lerna-debug.log*
 
 .env
 
-vite.config.js
-
 package-lock.json
 
 node_modules
