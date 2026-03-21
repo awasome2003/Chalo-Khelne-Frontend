@@ -1,0 +1,62 @@
+.container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  /* h2 {
+    margin-bottom: 20px;
+    color: #333;
+  } */
+  
+  input {
+    width: 100%;
+    padding: 10px;
+    /* margin: 8px 0; */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .error {
+    color: red;
+    font-size: 12px;
+    text-align: left;
+    margin-bottom: 10px;
+  }
+  
+  .role-container {
+    display: flex;
+    justify-content: space-around;
+    margin: 10px 0;
+  }
+  
+  .role-button {
+    border: 1px solid #007bff;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-transform: capitalize;
+  }
+  
+  .role-button input {
+    display: none;
+  }
+  
+  .selected {
+    background-color: #007bff;
+    color: white;
+  }
+  
+.login-text {
+    margin-top: 15px;
+  }
+  
+  .login-text a {
+    color: #007bff;
+    text-decoration: none;
+  }
+  

@@ -1,0 +1,38 @@
+import { Routes, Route } from "react-router-dom";
+import TrainerLayout from "./Trainer/TrainerLayout";
+import TrainerDashboard from "./Trainer/TrainerDashboard";
+import TrainerHistory from "./Trainer/TrainerHistory";
+import TrainerCurrentSession from "./Trainer/TrainerCurrentSessions";
+import TrainerSessions from "./Trainer/TrainerSessions";
+import TrainerProfile from "./Trainer/TrainerProfile";
+import TrainerRequests from "./Trainer/TrainerRequests";
+import TrainerPlayerRequests from "./Trainer/TrainerPlayerRequests";
+import TrainerUpcomingSessions from "./Trainer/TrainerUpcomingSessions";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+const TrainerApp = () => {
+  return (
+    <Routes>
+      <Route element={<TrainerLayout />}>
+        <Route element={<ProtectedRoute role="trainer" />}>
+          <Route path="/trainer-dashboard" element={<TrainerDashboard />} />
+          <Route path="/trainer-history" element={<TrainerHistory />} />
+          <Route
+            path="/trainer-upcoming"
+            element={<TrainerUpcomingSessions />}
+          />
+          <Route path="/trainer-current" element={<TrainerCurrentSession />} />
+          <Route path="/trainer-profile" element={<TrainerProfile />} />
+          <Route path="/trainer-sessions" element={<TrainerSessions />} />
+          <Route path="/trainer-requests" element={<TrainerRequests />} />
+          <Route
+            path="/trainer/player-requests"
+            element={<TrainerPlayerRequests />}
+          />
+        </Route>
+      </Route>
+    </Routes>
+  );
+};
+
+export default TrainerApp;

@@ -1,0 +1,29 @@
+import { Routes, Route } from "react-router-dom";
+import Home from "./SuperAdmin/Home";
+import Pending from "./SuperAdmin/Pending";
+import Approved from "./SuperAdmin/Approved";
+import Inquiries from "./SuperAdmin/Inquiries";
+import SportsManagement from "./SuperAdmin/SportsManagement";
+import SportRuleBooks from "./SuperAdmin/SportRuleBooks";
+import NewsManagement from "./SuperAdmin/NewsManagement";
+import DashboardLayout from "./SuperAdmin/DashboardLayout";
+
+const SuperAdminapp = () => {
+  return (
+    <>
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/pending" element={<Pending />} />
+          <Route path="/approved" element={<Approved />} />
+          <Route path="/inquiries" element={<Inquiries />} />
+          <Route path="/sports" element={<SportsManagement />} />
+          <Route path="/rule-books" element={<SportRuleBooks />} />
+          <Route path="/news" element={<NewsManagement />} />
+        </Route>
+      </Routes>
+    </>
+  );
+};
+
+export default SuperAdminapp;

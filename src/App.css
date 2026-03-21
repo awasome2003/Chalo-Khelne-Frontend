@@ -1,0 +1,742 @@
+/* Navbar.css */
+* {
+  font-family: "Roboto", sans-serif;
+}
+
+.outlets {
+  background-color: #f2f4f6; /* Set a solid background color */
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  position: sticky;
+  top: 0;
+  background-color: #f2f4f6; /* Set a solid background color */
+  z-index: 1000; /* Ensures navbar stays on top */
+  box-shadow: none;
+}
+.navbar-scrolled {
+  background-color: #fff; /* Change to white when scrolled */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Add shadow */
+}
+.navbar1 {
+  gap: 10rem;
+}
+ 
+.navbar-dark {
+  background-color: #2d3748; /* Dark background for dark mode */
+}
+ 
+.navbar h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+ 
+.navbar-dark h1 {
+  color: white;
+}
+ 
+.search-container {
+  position: relative;
+}
+ 
+.search-container input {
+  padding-left: 2.5rem; /* For the search icon */
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  /* background-color: #f7fafc; */
+  border: 1px solid #e2e8f0;
+  outline: none;
+  width: 414px;
+}
+@media (min-width: 320px) and (max-width: 680px) {
+  .search-container input {
+    width: 100%;
+  }
+}
+ 
+.search-container .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 1.1rem;
+  color: #4a5568;
+}
+.searchinput {
+  min-height: 50px;
+  margin: 0px !important;
+}
+ 
+.right-section {
+  /* display: flex; */
+  align-items: center;
+  gap: 1.5rem;
+}
+ 
+.toggle-button {
+  width: 4rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem;
+  transition: all 0.3s ease;
+}
+ 
+.toggle-button-dark {
+  background-color: #e2e8f0;
+}
+ 
+.toggle-button-light {
+  background-color: #dddd;
+}
+ 
+.toggle-switch {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+ 
+.toggle-switch-dark {
+  transform: translateX(1.75rem);
+  background-color: white;
+}
+ 
+.toggle-switch-light {
+  background-color: white;
+}
+ 
+.bell-icon,
+.profile-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+.createtournaments {
+  padding: 8px 24px 8px 16px;
+  min-height: 48px;
+}
+.bell-icon svg,
+.profile-icon svg {
+  color: #4a5568;
+  font-size: 1.25rem;
+}
+ 
+.bell-icon:hover svg,
+.profile-icon:hover svg {
+  color: #2d3748;
+}
+ 
+/* SideBar */
+/* Sidebar.css */
+.sidebar {
+  /* width: 381px; */
+  height: 100vh;
+  transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  position: relative;
+}
+.navlinks {
+  gap: 20px;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  height: 50px;
+}
+.sidebar.collapsed .nav-link.active {
+  background-color: #ff6a00;
+  width: 45px;
+  color: #fff;
+}
+
+/* Sidebar toggle button */
+.toggle-btn {
+  align-items: center;
+  height: 40px;
+  width: 40px;
+  left: 33px;
+  transform: translateX(-24%) translateY(-50%);
+  background-color: #2c3e50;
+  color: white;
+  font-size: 18px;
+  padding: 5px;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  position: absolute;
+  display: flex;
+  justify-content: center;
+}
+ 
+.text {
+  display: inline-block;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+  font-weight: 500 !important;
+}
+ 
+/* When sidebar is collapsed, text will be hidden */
+.sidebar.collapsed .text {
+  display: none;
+}
+ 
+/* Show text when hovered on icons */
+.sidebar:not(.collapsed) .nav-link:hover .text {
+  opacity: 1;
+}
+ 
+.sidebar:not(.collapsed) .nav-link.active {
+  background-color: #ff6a00;
+  color: #fff;
+}
+.sidebar:not(.collapsed) .nav-link:hover {
+  color: #fff;
+  background-color: #004e93;
+}
+.sidebar.collapsed .nav-link:hover .icon {
+  opacity: 0.7;
+}
+ 
+ 
+.nav-link svg {
+  flex-shrink: 0;
+}
+ 
+.nav-link span {
+  font-weight: bold;
+}
+ 
+.nav-link.active span {
+  font-weight: 600;
+}
+.tournament-container {
+  width: 400px;
+  margin: 20px auto;
+  font-family: Arial, sans-serif;
+}
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* background-color: #f5f5f5; */
+}
+.header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 336px;
+  width: 11px;
+  height: 11px;
+  /* background-color: #fff; */
+  transform: rotate(45deg);
+  border-top: 1px solid #000;
+  border-left: 1px solid #000;
+}
+.create-groups {
+  padding: 8px 24px 8px 16px;
+}
+.selecttournament {
+  padding: 4px;
+  font-size: 18px;
+  gap: 24px;
+}
+.selecttournament button {
+  margin-left: 0px !important;
+}
+.selecttournamentbtn {
+  height: 42px;
+  font-size: 18px;
+  font-weight: 400;
+  padding: 10px 16px;
+  font-family: "Roboto";
+}
+/* styles.css */
+.selected-tournament :active {
+  background-color: #ff6a00;
+}
+.top-players {
+  padding: 10px 24px;
+}
+.playersgroups {
+  margin-bottom: 19px;
+  gap: 24px;
+}
+.registeredplayers {
+  margin: 0px !important;
+}
+.playersgroups button {
+  margin-left: 0px !important;
+}
+.registerplayer {
+  gap: 24px;
+  margin-bottom: 40px;
+}
+.registerplayercontainer {
+  padding: 10px;
+}
+.checkboxs {
+  gap: 24px;
+  border: 1px solid #49454f !important;
+  height: 18px;
+  width: 18px;
+}
+.checkbox {
+  gap: 24px;
+}
+.selectedregisterplayer {
+  padding: 24px;
+}
+ 
+.tournament-card {
+  background-color: white;
+  color: black;
+  border-radius: 16px;
+  border: 1px solid transparent; /* Initially set transparent border */
+  box-sizing: border-box;
+}
+ 
+.tournament-card.active {
+  border: 2px solid #004e93;
+  box-shadow: 3px 7px 10px 0px rgba(174, 174, 174, 0.2);
+}
+ 
+.registerplayerprofile {
+  height: 50px;
+  width: 50px;
+}
+.registerplayerinfo {
+  gap: 18px;
+}
+.square {
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+.squareborder {
+  border: 1px solid #1b89ff;
+  background-color: #1b89ff;
+}
+.checktick {
+  position: absolute;
+  color: #fff;
+  height: 13px;
+  width: 13px;
+  top: 4px;
+  left: 4px;
+}
+.activediv {
+  border-radius: 16px;
+  border: 2px solid transparent; /* Initially set transparent border */
+  box-sizing: border-box; /* Ensure border doesn't affect size */
+}
+ 
+.activediv:hover {
+  border: 2px solid #004e93; /* Add border color on hover */
+}
+ 
+.stars {
+  background: transparent;
+  color: #666;
+}
+.grpbtns,
+.cancelbtn {
+  gap: 24px;
+}
+.backbtn,
+.viewbtn {
+  background-color: transparent;
+  border: 1px solid #075056;
+}
+.backbtn {
+  padding: 8px 24px 8px 16px;
+}
+.nextbtns {
+  padding: 8px 16px 8px 24px;
+}
+
+ 
+.createbtn {
+  padding: 8px 24px 8px 16px;
+}
+.groupstabs {
+  margin: 0px !important;
+  border-radius: 0px !important;
+}
+/* Add this to your external CSS file */
+.active-tab {
+  background-color: #f2f4f6;
+  color: #333;
+  font-size: 16px;
+  border-bottom: 2px solid #004e93; /* Blue color */
+}
+.active-tab:hover {
+  background-color: #f2f4f6;
+}
+.inactive-tab {
+  background-color: #fff;
+  color: #333333;
+  font-size: 16px;
+}
+ 
+.inactive-tab:hover {
+  background-color: #f2f4f6;
+  color: black;
+}
+.createstournaments {
+  margin-top: 40px;
+  padding: 14px 24px;
+}
+.ambtn {
+  border: 1px solid #004e93;
+  background-color: #fff;
+  color: #333;
+}
+.pmbtn {
+  border: 1px solid #dedede;
+  background-color: #fff;
+  color: #333;
+}
+.booktournaments {
+  padding: 16px !important;
+}
+.oponentmatches {
+  margin-top: 40px;
+}
+.oponent1 {
+  padding: 10px;
+}
+.opponet1match {
+  padding: 24px 22px;
+}
+.player1name {
+  margin-bottom: 16px;
+}
+.achievement {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+.addrefree {
+  border: 1px solid #ff6a00;
+  color: #ff6a00;
+  background-color: #fff;
+  border-radius: 25px;
+}
+.startmatch {
+  border-radius: 25px;
+  height: 48px;
+}
+.addrefree:hover {
+  background-color: #fff;
+}
+.matchtime {
+  margin: 20px 0px;
+}
+.creategrps {
+  border: 1px solid #ff6a00;
+}
+.matchesbtn,
+.courtbtns {
+  padding: 8px 12px;
+}
+.generatematches,
+.pointtables {
+  padding: 14px;
+}
+.requestbtn {
+  border-bottom: 2px solid #004e93;
+  border-radius: 0px;
+}
+.tournamenttitle {
+  line-height: normal;
+}
+.addrefree {
+  padding: 12px 24px 12px 16px !important;
+  height: 48px;
+}
+.selectioncheck {
+  color: #007aff;
+}
+ 
+.timeinputbtn:focus {
+  border: 1px solid purple !important;
+}
+
+ 
+.social {
+  /* color: #000; */
+  font-family: Roboto;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  margin-bottom: 24px;
+}
+.maintab {
+  color: #fff;
+  font-family: Roboto;
+  font-size: 18px;
+  font-weight: 400;
+  padding: 4px;
+}
+.addpost {
+  display: inline-flex;
+  height: 48px;
+  padding: 8px 24px 8px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 25px;
+  background: #ff6a00;
+}
+.card {
+  height: 600px;
+  flex-shrink: 0;
+  border-radius: 30px;
+  background: #f5f6f6;
+  box-shadow: 0px 4px 10px -2px rgba(0, 0, 0, 0.15);
+}
+.score {
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+}
+.profileImg {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+}
+ 
+.usernm {
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: normal;
+}
+.tnm {
+  color: #333;
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+.date {
+  color: #666;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+.victory {
+  color: #333;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+.tags {
+  color: #007aff;
+ 
+  font-size: 16px;
+  font-weight: 400;
+  line-height: normal;
+}
+.videourl {
+  color: #1b89ff;
+  text-align: center;
+ 
+  font-family: Roboto;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: normal;
+  text-decoration-line: underline;
+}
+.search {
+  display: flex;
+  width: 800px;
+  height: 70px;
+  padding: 24px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 24px;
+  background: #f5f6f6;
+}
+ 
+.profilecard {
+  margin-top: 30px;
+  width: 924px;
+  height: 305px;
+  border-radius: 30px;
+  background: #1d6a8b;
+}
+.profileimage {
+  width: 335px;
+  height: 305px;
+  border-radius: 30px 0px 0px 30px;
+  background: #d9d9d9;
+  margin-right: 32px;
+}
+.personname {
+  color: #fff;
+  font-size: 32px;
+  font-weight: 500;
+  padding-bottom: 15px;
+}
+.dob {
+  color: #fff;
+  font-family: Roboto;
+  font-size: 16px;
+  font-weight: 400;
+  padding-bottom: 13px;
+}
+.acheivement {
+  padding-bottom: 4px;
+}
+.dob {
+  color: #fff;
+  font-family: Roboto;
+  font-size: 16px;
+  font-weight: 500;
+}
+.dobicon .gendericon .trophy {
+  width: 24px;
+  height: 24px;
+}
+.gender {
+  color: #fff;
+  font-family: Roboto;
+  font-size: 16px;
+  font-weight: 400;
+}
+.tennis {
+  color: #fff;
+  font-family: Roboto;
+  font-size: 16px;
+  font-weight: 400;
+  padding-top: 22px;
+  padding-bottom: 28px;
+}
+.achievment {
+  color: #f9f9f9;
+  font-family: Roboto;
+  font-size: 16px;
+  font-weight: 400;
+}
+.tabs {
+  display: flex;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+ 
+.card1 {
+  border-radius: 30px;
+  margin-bottom: 30px;
+  margin-right: 30px;
+}
+.image1 {
+  width: 450px;
+  height: 246px;
+  border-radius: 30px;
+  background: #d9d9d9;
+}
+.link {
+  color: #1b89ff;
+  font-family: Roboto;
+  font-size: 20px;
+  font-weight: 400;
+  padding-bottom: 20px;
+}
+ 
+.profile-tab-button {
+  display: flex;
+  width: 150px;
+  padding: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid transparent;
+  background: transparent !important;
+  color: #666666 !important;
+}
+ 
+.profile-tab-button svg {
+  color: #333333;
+}
+.profile-tab-button:active,
+.profile-tab-button:focus {
+  border-bottom: 2px solid #004e93;
+}
+ 
+.playersdata {
+  padding: 20px;
+}
+.playersdatas {
+  padding: 22px 14px;
+}
+ 
+.ambtn {
+  border-top-left-radius: 8x;
+  border-top-right-radius: 8px;
+  padding: 8px 10px;
+}
+.timesbtn {
+  height: fit-content;
+}
+.creatematchbtns {
+  padding: 8px 24px 8px 16px;
+}
+.tournamentimage {
+  margin-top: 80px;
+}
+.ambtns,
+.pmbtns {
+  border: 1px solid #004e93;
+  background-color: #fff;
+  color: #000;
+  padding: 8px 24px;
+}
+.ambtn1,
+.pmbtn1 {
+  border: 1px solid #dedede;
+  background-color: #fff;
+  color: #000;
+  padding: 8px 24px;
+}
+ 
+.random {
+  border-bottom: 2px solid red;
+}
