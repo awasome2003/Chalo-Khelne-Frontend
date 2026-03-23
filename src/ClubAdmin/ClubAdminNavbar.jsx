@@ -1,96 +1,28 @@
 import {
   FiBell,
-  FiPlus,
   FiSearch,
   FiMenu,
   FiX,
   FiUser,
   FiLogOut,
   FiTrash2,
-  FiCheck,
-  FiArrowRight,
-  FiArrowLeft,
 } from "react-icons/fi";
-import { MdOutlineLightMode, MdOutlineDarkMode } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 import { useState, useEffect, useRef, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import "../App.css";
 
-const allNotifications = [
-  {
-    date: "Today",
-    items: [
-      {
-        id: 1,
-        name: "Manager Name",
-        message: "New turf booking request received for Field 1.",
-        time: "09:00 AM",
-        type: "new",
-      },
-      {
-        id: 2,
-        name: "System",
-        message: "Turf maintenance scheduled for tomorrow at 10:00 AM.",
-        time: "10:30 AM",
-        type: "new",
-      },
-    ],
-  },
-  {
-    date: "Yesterday",
-    items: [
-      {
-        id: 3,
-        name: "Finance",
-        message: "Payment received for turf booking #12345.",
-        time: "02:15 PM",
-        type: "old",
-      },
-      {
-        id: 4,
-        name: "System",
-        message: "New manager account created for your club.",
-        time: "05:45 PM",
-        type: "old",
-      },
-    ],
-  },
-];
-
 const ClubAdminNavbar = () => {
-  const [darkMode, setDarkMode] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [isPanelOpen, setPanelOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState("all");
-  const [selected, setSelected] = useState([]);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [filteredNotifications, setFilteredNotifications] =
-    useState(allNotifications);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] =
-    useState(false);
+  const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
   const { logout } = useContext(AuthContext);
-
-  // Update filteredNotifications when selectedTab changes
-  useEffect(() => {
-    if (selectedTab === "all") {
-      setFilteredNotifications(allNotifications);
-    } else {
-      const filtered = allNotifications
-        .map((section) => ({
-          ...section,
-          items: section.items.filter((item) => item.type === "request"),
-        }))
-        .filter((section) => section.items.length > 0);
-      setFilteredNotifications(filtered);
-    }
-  }, [selectedTab]);
+  const { notifications, unreadCount, markAllRead, clearNotifications } = useNotifications();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -98,28 +30,25 @@ const ClubAdminNavbar = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileDropdownOpen(false);
       }
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setIsNotificationDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleProfileClick = () => {
-    setIsProfileDropdownOpen(!isProfileDropdownOpen);
-    setIsNotificationDropdownOpen(false);
-  };
 
   const handleNotificationClick = () => {
     setIsNotificationDropdownOpen(!isNotificationDropdownOpen);
     setIsProfileDropdownOpen(false);
+    if (!isNotificationDropdownOpen && unreadCount > 0) {
+      markAllRead();
+    }
+  };
+
+  const handleProfileClick = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
+    setIsNotificationDropdownOpen(false);
   };
 
   const handleLogout = () => {
@@ -127,81 +56,27 @@ const ClubAdminNavbar = () => {
     window.location.href = "/";
   };
 
-  const toggleSelect = (id) => {
-    if (selected.includes(id)) {
-      setSelected(selected.filter((item) => item !== id));
-    } else {
-      setSelected([...selected, id]);
-    }
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "Just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   };
-
-  const selectAll = () => {
-    const allIds = filteredNotifications.flatMap((section) =>
-      section.items.map((item) => item.id)
-    );
-    setSelected(allIds);
-  };
-
-  const deselectAll = () => {
-    setSelected([]);
-  };
-
-  const deleteSelected = () => {
-    setFilteredNotifications((prevNotifications) => {
-      const newNotifications = prevNotifications.map((section) => ({
-        ...section,
-        items: section.items.filter((item) => !selected.includes(item.id)),
-      }));
-      return newNotifications.filter((section) => section.items.length > 0);
-    });
-    setSelected([]);
-  };
-
-  const clearAllNotifications = () => {
-    setFilteredNotifications([]);
-    setSelected([]);
-  };
-
-  const handleSelectionToggle = () => {
-    if (!isSelectionMode) {
-      setIsSelectionMode(true);
-    } else {
-      if (selected.length === 0) {
-        selectAll();
-      } else {
-        deselectAll();
-      }
-    }
-  };
-
-  const allSelected = filteredNotifications.every((section) =>
-    section.items.every((item) => selected.includes(item.id))
-  );
-
-  // Get notification count
-  const notificationCount = filteredNotifications.reduce(
-    (count, section) =>
-      count + section.items.filter((item) => item.type === "new").length,
-    0
-  );
 
   return (
-    <div className={`navbar ${darkMode ? "navbar-dark" : ""}`}>
+    <div className="navbar">
       <div className="flex items-center w-full md:w-auto navbar1">
-        <img
-          src="/src/assets/sportapp_logo.svg"
-          alt="Logo"
-          className="w-[45.811px] h-[35.481px]"
-        />
+        <img src="/src/assets/sportapp_logo.svg" alt="Logo" className="w-[45.811px] h-[35.481px]" />
         <div className="search-container ml-2">
-          <input
-            type="text"
-            placeholder="Search"
-            className="bg-white searchinput"
-          />
+          <input type="text" placeholder="Search" className="bg-white searchinput" />
           <FiSearch className="search-icon" />
         </div>
-
         <button
           className="md:hidden text-gray-600 text-2xl w-auto bg-transparent border-none focus:outline-none focus:ring-0"
           onClick={() => setIsOpen(!isOpen)}
@@ -210,220 +85,91 @@ const ClubAdminNavbar = () => {
         </button>
       </div>
 
-      <div
-        className={`right-section md:flex ${
-          isOpen
-            ? "flex flex-col items-start p-4 absolute top-16 right-4 bg-white shadow-md rounded-lg w-48 z-50"
-            : "hidden"
-        }`}
-      >
-        {/* <button
-          onClick={() => navigate("/turf-management")}
-          className="flex items-center gap-2 text-[#FF5B04] font-semibold px-6 w-auto py-2 rounded-full transition bg-transparent hover:bg-transparent mt-0 createtournaments"
-          style={{ border: "1px solid #FF6A00" }}
-        >
-          <FiPlus />
-          Add New Turf
-        </button>
-
-        {/* <div className="relative flex items-center">
-
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`toggle-button mt-0 ${
-              darkMode ? "toggle-button-dark" : "toggle-button-light"
-            }`}
-          >
-            <div
-              className={`toggle-switch mt-0 ${
-                darkMode ? "toggle-switch-dark" : "toggle-switch-light"
-              }`}
-            >
-              {darkMode ? (
-                <MdOutlineDarkMode className="text-gray-600 text-lg" />
-              ) : (
-                <MdOutlineLightMode className="text-orange-500 text-lg" />
-              )}
-            </div>
-          </button>
-        </div> */}
-
+      <div className={`right-section md:flex ${isOpen ? "flex flex-col items-start p-4 absolute top-16 right-4 bg-white shadow-md rounded-lg w-48 z-50" : "hidden"}`}>
         {/* Notification Bell */}
         <div className="relative" ref={notificationRef}>
-          <div
-            className="notification-icon cursor-pointer"
-            onClick={handleNotificationClick}
-          >
+          <div className="notification-icon cursor-pointer" onClick={handleNotificationClick}>
             <FiBell className="text-gray-600 text-2xl" />
-            {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {notificationCount}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </div>
 
           {/* Notification Dropdown */}
           {isNotificationDropdownOpen && (
-            <div className="absolute right-[-82px] mt-2 w-80 bg-white rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Notifications</h3>
-                  <div className="flex space-x-2 ">
-                    {isSelectionMode && (
-                      <>
-                        <button
-                          onClick={deleteSelected}
-                          disabled={selected.length === 0}
-                          className={`p-1 bg-transparent hover:bg-transparent rounded-full ${
-                            selected.length === 0
-                              ? "text-gray-400"
-                              : "text-red-500 hover:bg-red-100"
-                          }`}
-                        >
-                          <FiTrash2 size={18} />
-                        </button>
-                        <button
-                          onClick={deselectAll}
-                          disabled={selected.length === 0}
-                          className={`p-1 bg-transparent rounded-full ${
-                            selected.length === 0
-                              ? "text-gray-400"
-                              : "text-gray-600 hover:bg-gray-100"
-                          }`}
-                        >
-                          <FiX size={18} />
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={handleSelectionToggle}
-                      className={`p-1 bg-transparent hover:bg-transparent  rounded-full ${
-                        isSelectionMode && allSelected
-                          ? "bg-blue-100 text-blue-600"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      <FiCheck size={18} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex mt-2">
+            <div className="absolute right-[-82px] mt-2 w-80 bg-white rounded-lg shadow-lg z-50 max-h-96 overflow-hidden flex flex-col">
+              <div className="p-4 border-b flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Notifications</h3>
+                {notifications.length > 0 && (
                   <button
-                    onClick={() => setSelectedTab("all")}
-                    className={`mr-4 pb-1 bg-transparent hover:bg-transparent text-sm ${
-                      selectedTab === "all"
-                        ? "border-b-2 border-blue-500 text-blue-600 font-medium"
-                        : "text-gray-500"
-                    }`}
+                    onClick={clearNotifications}
+                    className="p-1 bg-transparent hover:bg-red-50 rounded-full text-red-500 w-auto"
+                    title="Clear all"
                   >
-                    All
+                    <FiTrash2 size={16} />
                   </button>
-                  <button
-                    onClick={() => setSelectedTab("requests")}
-                    className={`mr-4 pb-1 bg-transparent hover:bg-transparent text-sm ${
-                      selectedTab === "requests"
-                        ? "border-b-2 border-blue-500 text-blue-600 font-medium"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    Requests
-                  </button>
-                </div>
+                )}
               </div>
 
-              <div className="py-2 mx-4">
-                {filteredNotifications.length === 0 ? (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-gray-500">No notifications</p>
+              <div className="overflow-y-auto flex-1">
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <FiBell className="mx-auto text-gray-300 text-3xl mb-2" />
+                    <p className="text-gray-400 text-sm">No notifications yet</p>
+                    <p className="text-gray-300 text-xs mt-1">Booking alerts will appear here in real-time</p>
                   </div>
                 ) : (
-                  filteredNotifications.map((section) => (
-                    <div key={section.date} className="mb-2">
-                      <div className="px-4 py-1 bg-gray-50 text-xs font-medium text-gray-500">
-                        {section.date}
-                      </div>
-                      {section.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`px-4 py-3 hover:bg-gray-50 ${
-                            item.type === "new" ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          <div className="flex items-start">
-                            {isSelectionMode && (
-                              <div className="mr-2 mt-1">
-                                <input
-                                  type="checkbox"
-                                  checked={selected.includes(item.id)}
-                                  onChange={() => toggleSelect(item.id)}
-                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-grow">
-                              <div className="flex justify-between">
-                                <span className="font-medium text-sm">
-                                  {item.name}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {item.time}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {item.message}
-                              </p>
-                            </div>
+                  notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 ${!notif.read ? "bg-blue-50/50" : ""}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              notif.type === "booking_new" ? "bg-green-500" :
+                              notif.type === "booking_cancel" ? "bg-red-500" :
+                              "bg-blue-500"
+                            }`} />
+                            <span className="font-medium text-sm text-gray-800">{notif.title}</span>
                           </div>
+                          <p className="text-xs text-gray-500 mt-1 ml-4">{notif.message}</p>
                         </div>
-                      ))}
+                        <span className="text-[10px] text-gray-400 flex-shrink-0 ml-2">
+                          {formatTime(notif.createdAt)}
+                        </span>
+                      </div>
                     </div>
                   ))
                 )}
               </div>
-
-              {filteredNotifications.length > 0 && (
-                <div className="p-2 text-center border-t">
-                  <button
-                    onClick={clearAllNotifications}
-                    className="text-sm  bg-transparent hover:bg-transparent text-blue-600 hover:text-blue-800 "
-                  >
-                    Clear all notifications
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         {/* Profile Icon with Dropdown */}
         <div className="relative" ref={dropdownRef}>
-          <div
-            className="profile-icon cursor-pointer"
-            onClick={handleProfileClick}
-          >
+          <div className="profile-icon cursor-pointer" onClick={handleProfileClick}>
             <FaUserCircle className="text-gray-600 text-2xl" />
           </div>
 
-          {/* Profile Dropdown */}
           {isProfileDropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50">
               <div className="py-1">
                 <div
                   className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    navigate("/ClubAdminProfile");
-                    setIsProfileDropdownOpen(false);
-                  }}
+                  onClick={() => { navigate("/ClubAdminProfile"); setIsProfileDropdownOpen(false); }}
                 >
-                  <FiUser className="mr-2" />
-                  My Profile
+                  <FiUser className="mr-2" /> My Profile
                 </div>
                 <div
                   className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
                   onClick={handleLogout}
                 >
-                  <FiLogOut className="mr-2" />
-                  Logout
+                  <FiLogOut className="mr-2" /> Logout
                 </div>
               </div>
             </div>

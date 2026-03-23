@@ -46,14 +46,14 @@ export default defineConfig({
     https: httpsConfig,
     proxy: {
       '/api': {
-        target: 'https://chalo-khelne-backend-hp3z.onrender.com',
+        target: 'http://localhost:3003',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
       '/uploads': {
-        target: 'https://chalo-khelne-backend-hp3z.onrender.com',
+        target: 'http://localhost:3003',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
     allowedHosts: [

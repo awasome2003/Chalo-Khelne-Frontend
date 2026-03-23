@@ -5,7 +5,6 @@ import {
   FaTachometerAlt,
   FaBars,
   FaTimes,
-  FaMoneyBill,
   FaMoneyBillWave,
   FaUserCog,
   FaCalendarAlt,
@@ -43,12 +42,7 @@ const ClubAdminSidebar = ({ collapsed, toggleSidebar }) => {
           {
             to: "/payment-history",
             icon: <FaMoneyBillWave />,
-            label: "Payment History",
-          },
-          {
-            to: "/player/payment-history",
-            icon: <FaMoneyBill />,
-            label: "Player Payments",
+            label: "Payments",
           },
           { 
             to: "/club-social", 

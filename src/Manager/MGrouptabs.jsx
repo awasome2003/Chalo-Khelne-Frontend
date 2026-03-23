@@ -7,13 +7,15 @@ import {
   FiEdit2,
   FiCheck,
   FiInfo,
-  FiPlus
+  FiPlus,
+  FiUpload
 } from "react-icons/fi";
 import sports_tennis from "../assets/sports_tennis.png";
 import medal from "../assets/medal.png";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
+import BulkResultUploadModal from "./BulkResultUploadModal";
 
 export default function Tournament({
   tournamentId: propTournamentId,
@@ -105,6 +107,7 @@ export default function Tournament({
 
   // Bulk Score Upload state
   const [bulkScoreModal, setBulkScoreModal] = useState({ open: false, matches: [], groupId: null, title: "" });
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
 
   const handleEditGroup = async (group) => {
     // Set the current group to be edited
@@ -1658,17 +1661,26 @@ export default function Tournament({
                 {matchesData[activeGroup]?.length > 0 && matchesData[activeGroup].some(
                   m => m.status !== 'completed' && m.status !== 'COMPLETED'
                 ) && (
-                  <button
-                    className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-md"
-                    onClick={() => openBulkScoreModal(
-                      matchesData[activeGroup] || [],
-                      activeGroup,
-                      `Bulk Score Upload — ${currentGroup?.groupName || 'Group'}`
-                    )}
-                  >
-                    <FiCheck />
-                    Bulk Score Upload
-                  </button>
+                  <>
+                    <button
+                      className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-md"
+                      onClick={() => openBulkScoreModal(
+                        matchesData[activeGroup] || [],
+                        activeGroup,
+                        `Bulk Score Upload — ${currentGroup?.groupName || 'Group'}`
+                      )}
+                    >
+                      <FiCheck />
+                      Bulk Score Upload
+                    </button>
+                    <button
+                      className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[500] flex items-center justify-center gap-3 text-indigo-700 border-2 border-indigo-300 bg-indigo-50 hover:bg-indigo-100"
+                      onClick={() => setShowCsvUpload(true)}
+                    >
+                      <FiUpload />
+                      Upload CSV/Excel
+                    </button>
+                  </>
                 )}
 
               </div>
@@ -3959,6 +3971,20 @@ export default function Tournament({
         maxSets={getMatchFormat().maxSets}
         setsToWin={getMatchFormat().setsToWin}
         title={bulkScoreModal.title}
+      />
+
+      {/* Bulk Result Upload Modal (CSV/Excel) */}
+      <BulkResultUploadModal
+        isOpen={showCsvUpload}
+        onClose={() => setShowCsvUpload(false)}
+        onSuccess={() => {
+          fetchMatches();
+          if (round2Groups.length > 0) fetchRound2Groups();
+          fetchKnockoutMatches();
+        }}
+        tournamentId={tournamentId}
+        matchType="player"
+        title="Bulk Result Upload (CSV/Excel)"
       />
     </div >
   );

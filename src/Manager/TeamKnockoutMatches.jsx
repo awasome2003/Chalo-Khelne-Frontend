@@ -23,6 +23,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { TextField } from "@mui/material";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
+import BulkResultUploadModal from "./BulkResultUploadModal";
 
 const TeamKnockoutMatches = () => {
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -58,6 +59,7 @@ const TeamKnockoutMatches = () => {
 
   // Bulk Score Upload state
   const [bulkScoreModal, setBulkScoreModal] = useState({ open: false, matches: [], title: "" });
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
 
   const navigate = useNavigate();
 
@@ -1319,6 +1321,20 @@ const TeamKnockoutMatches = () => {
                           Bulk Upload
                         </button>
                       )}
+                      {roundMatches.some(m => {
+                        const s = (m.status || '').toUpperCase();
+                        return s !== 'COMPLETED' && !m.isBye;
+                      }) && (
+                        <button
+                          className="px-3 py-1 rounded-full text-[10px] font-semibold text-indigo-700 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 w-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowCsvUpload(true);
+                          }}
+                        >
+                          CSV Upload
+                        </button>
+                      )}
                       <span className="text-xs font-medium text-gray-400">
                         {roundMatches.length} Matches
                       </span>
@@ -2455,7 +2471,6 @@ const TeamKnockoutMatches = () => {
         isOpen={bulkScoreModal.open}
         onClose={() => setBulkScoreModal({ open: false, matches: [], title: "" })}
         onSuccess={() => {
-          // Refresh matches
           if (typeof window !== 'undefined') window.location.reload();
         }}
         matches={bulkScoreModal.matches}
@@ -2468,6 +2483,18 @@ const TeamKnockoutMatches = () => {
           return getTeamName(match.team2Id);
         }}
         title={bulkScoreModal.title}
+      />
+
+      {/* Bulk Result Upload Modal (CSV/Excel) */}
+      <BulkResultUploadModal
+        isOpen={showCsvUpload}
+        onClose={() => setShowCsvUpload(false)}
+        onSuccess={() => {
+          if (typeof window !== 'undefined') window.location.reload();
+        }}
+        tournamentId={tournamentId}
+        matchType="team"
+        title="Bulk Result Upload — Team Knockout (CSV/Excel)"
       />
     </div>
   );

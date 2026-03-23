@@ -119,7 +119,7 @@ export default function ClubAdminFinance() {
           <h1 className="text-2xl font-bold text-gray-800">
             {view === "overview" && "Financial Overview"}
             {view === "manager" && `${selectedManagerName} — Details`}
-            {view === "tournament" && `Tournament — ${tournamentDetail?.tournament?.tournamentName || ""}`}
+            {view === "tournament" && `Tournament — ${tournamentDetail?.tournament?.title || ""}`}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {view === "overview" && "Track all managers, tournaments, and revenue"}
@@ -243,13 +243,13 @@ export default function ClubAdminFinance() {
                     {managerDetail.tournaments.map((t) => (
                       <tr key={t._id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-800 text-sm">{t.tournamentName}</div>
+                          <div className="font-medium text-gray-800 text-sm">{t.tournamentName || t.title}</div>
                           <div className="text-xs text-gray-400">{t.type}</div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{t.sportName || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{t.sport || t.sportsType || "—"}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[t.status?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
-                            {t.status || "—"}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[t.status || t.currentStage?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
+                            {t.status || t.currentStage || "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -323,12 +323,12 @@ export default function ClubAdminFinance() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="flex flex-wrap gap-6 items-start">
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-800">{tournamentDetail.tournament.tournamentName}</h2>
+                <h2 className="text-xl font-bold text-gray-800">{tournamentDetail.tournament.title}</h2>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{tournamentDetail.tournament.sportName}</span>
+                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{tournamentDetail.tournament.sportsType}</span>
                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{tournamentDetail.tournament.type}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[tournamentDetail.tournament.status?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
-                    {tournamentDetail.tournament.status}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[tournamentDetail.tournament.currentStage?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
+                    {tournamentDetail.tournament.currentStage}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-2">

@@ -6,7 +6,6 @@ import ViewTurf from "./ClubAdmin/ViewTurf";
 import EditTurf from "./ClubAdmin/EditTurf";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PaymentHistory from "./ClubAdmin/PaymentHistory";
-import PlayerPaymentHistory from "./ClubAdmin/PlayerPaymentHistory";
 import ManagerAdmin from "./ClubAdmin/ManagerAdmin";
 import ClubAdminProfile from "./ClubAdmin/ClubAdminProfile";
 import CSocial from "./ClubAdmin/CSocial";
@@ -25,10 +24,6 @@ const ClubAdminApp = () => {
           <Route path="/turf/edit/:id" element={<EditTurf />} />
           <Route path="/staff-admin" element={<ManagerAdmin />} />
           <Route path="/payment-history" element={<PaymentHistory />} />
-          <Route
-            path="/player/payment-history"
-            element={<PlayerPaymentHistory />}
-          />
             <Route path="/club-social" element={<CSocial />} />
               <Route path="/club-refree" element={<CRefree />} />
               <Route path="/club-finance" element={<ClubAdminFinance />} />

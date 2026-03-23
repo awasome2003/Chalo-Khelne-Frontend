@@ -393,7 +393,11 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
       });
 
       setSuccess("Tournament created successfully!");
-      setTimeout(() => setShowPopup(false), 1500);
+      setTimeout(() => {
+        setShowPopup(false);
+        // Navigate to tournament management to show the new tournament
+        window.location.href = "/mtournament-management";
+      }, 1500);
     } catch (error) {
       console.error("Error creating tournament:", error);
       setError(error.response?.data?.message || "Failed to create tournament");

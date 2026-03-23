@@ -15,6 +15,7 @@ import {
   InformationCircleIcon,
   UserPlusIcon,
   ArrowDownTrayIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -44,6 +45,7 @@ export default function Sidebar() {
     { name: "Sports", href: "/sports", icon: TrophyIcon },
     { name: "Rule Books", href: "/rule-books", icon: BookOpenIcon },
     { name: "News", href: "/news", icon: NewspaperIcon },
+    { name: "Roles & Permissions", href: "/rbac", icon: ShieldCheckIcon },
   ];
 
   const handleFileChange = (e) => {
