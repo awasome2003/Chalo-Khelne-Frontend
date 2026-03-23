@@ -46,6 +46,7 @@ export default function Sidebar() {
     { name: "Rule Books", href: "/rule-books", icon: BookOpenIcon },
     { name: "News", href: "/news", icon: NewspaperIcon },
     { name: "Roles & Permissions", href: "/rbac", icon: ShieldCheckIcon },
+    { name: "Vendor Marketplace", href: "/vendor-marketplace", icon: ArrowUpTrayIcon },
   ];
 
   const handleFileChange = (e) => {

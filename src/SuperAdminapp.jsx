@@ -7,6 +7,7 @@ import SportsManagement from "./SuperAdmin/SportsManagement";
 import SportRuleBooks from "./SuperAdmin/SportRuleBooks";
 import NewsManagement from "./SuperAdmin/NewsManagement";
 import RbacManagement from "./SuperAdmin/RbacManagement";
+import VendorMarketplace from "./SuperAdmin/VendorMarketplace";
 import DashboardLayout from "./SuperAdmin/DashboardLayout";
 
 const SuperAdminapp = () => {
@@ -22,6 +23,7 @@ const SuperAdminapp = () => {
           <Route path="/rule-books" element={<SportRuleBooks />} />
           <Route path="/news" element={<NewsManagement />} />
           <Route path="/rbac" element={<RbacManagement />} />
+          <Route path="/vendor-marketplace" element={<VendorMarketplace />} />
         </Route>
       </Routes>
     </>
