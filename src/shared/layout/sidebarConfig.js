@@ -30,7 +30,7 @@ export const SIDEBAR_SECTIONS = [
     key: "facility",
     label: "Facility",
     items: [
-      { key: "turfs", label: "Turf Management", icon: MapPin, path: "/turf-details", roles: ["manager"] },
+      { key: "turfs", label: "Turf Management", icon: MapPin, path: "/add-turf", roles: ["manager"] },
       { key: "turfs", label: "Turf Management", icon: MapPin, path: "/turf-management", roles: ["clubadmin"] },
       { key: "bookings", label: "Slot Booking", icon: Grid3X3, path: "/mslot-Bookingt", roles: ["manager"] },
     ],
