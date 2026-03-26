@@ -443,18 +443,18 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-[#111B2E] rounded-2xl border border-[#1E2D4A] shadow-sm overflow-hidden">
       {/* Header & Tabs */}
-      <div className="p-4 border-b border-gray-100 bg-white">
-        <h5 className="mb-4 text-xl font-bold text-gray-900 tracking-tight">Your Tournaments</h5>
-        <div className="flex bg-gray-100/50 p-1 rounded-xl">
+      <div className="p-4 border-b border-[#1E2D4A] bg-[#0E1628]">
+        <h5 className="mb-4 text-xl font-bold text-gray-100 tracking-tight">Your Tournaments</h5>
+        <div className="flex bg-[#0B1220] p-1 rounded-xl">
           {["Live", "Upcoming", "History"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === tab
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 hover:bg-white/50"
+                ? "bg-[#1A2744] text-gray-100 shadow-sm"
+                : "text-gray-500 hover:text-gray-300 hover:bg-[#1A2744]/50"
                 }`}
             >
               {tab}
@@ -470,8 +470,8 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             <div
               key={tournament._id}
               className={`group relative p-4 rounded-xl border transition-all duration-200 cursor-pointer ${selectedTournament === tournament._id
-                ? "bg-blue-50/50 border-blue-200 shadow-md ring-1 ring-blue-100"
-                : "bg-white border-gray-100 hover:border-blue-100 hover:shadow-md"
+                ? "bg-[#FF6A00]/5 border-[#FF6A00]/30 shadow-md ring-1 ring-[#FF6A00]/10"
+                : "bg-[#0E1628] border-[#1E2D4A] hover:border-[#2A3F66] hover:shadow-md"
                 }`}
               onClick={() => {
                 onTournamentSelect(tournament._id);
@@ -497,8 +497,8 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             >
               <div className="flex justify-between items-start mb-2">
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedTournament === tournament._id
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-600"
+                  ? "bg-[#FF6A00]/20 text-[#FF9D32]"
+                  : "bg-[#1A2744] text-gray-500"
                   }`}>
                   {tournament.type === "knockout + group stage" ? "Group + Knockout" : tournament.type}
                 </span>
@@ -510,7 +510,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           e.stopPropagation();
                           navigate(`/invite-employees?tournamentId=${tournament._id}`);
                         }}
-                        className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-[#FF9D32] hover:bg-[#FF6A00]/10 rounded-lg transition-colors"
                         title="Invite Employee"
                       >
                         <UserPlus className="w-4 h-4" />
@@ -519,13 +519,13 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   )}
                   <button
                     onClick={(e) => handleEditClick(tournament._id, e)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => handleShareClick(tournament, e)}
-                    className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
@@ -536,7 +536,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                         handleDelete(tournament._id);
                       }
                     }}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -544,13 +544,13 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
               </div>
 
               <h3 className={`text-base font-bold mb-1 truncate ${selectedTournament === tournament._id
-                ? "text-blue-900"
-                : "text-gray-900"
+                ? "text-[#FF9D32]"
+                : "text-gray-200"
                 }`}>
                 {tournament.title}
               </h3>
 
-              <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-blue-600/80" : "text-gray-500"}`}>
+              <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-[#FF9D32]/80" : "text-gray-500"}`}>
                 <Trophy className="w-3.5 h-3.5" />
                 <span>{tournament.sportsType}</span>
               </div>
@@ -560,14 +560,14 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 <div className="mt-2">
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide ${
                     tournament.currentStage === "group_stage"
-                      ? "bg-blue-50 text-blue-600 border border-blue-200"
+                      ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
                       : tournament.currentStage === "group_completed"
-                      ? "bg-amber-50 text-amber-600 border border-amber-200"
+                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                       : tournament.currentStage === "knockout"
-                      ? "bg-orange-50 text-orange-600 border border-orange-200"
+                      ? "bg-[#FF6A00]/10 text-[#FF9D32] border border-[#FF6A00]/20"
                       : tournament.currentStage === "completed"
-                      ? "bg-green-50 text-green-600 border border-green-200"
-                      : "bg-gray-50 text-gray-500 border border-gray-200"
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-gray-800 text-gray-500 border border-gray-700"
                   }`}>
                     {tournament.currentStage === "group_stage" ? "Group Stage"
                       : tournament.currentStage === "group_completed" ? "Groups Done"
@@ -580,7 +580,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-48 text-center text-gray-400">
+          <div className="flex flex-col items-center justify-center h-48 text-center text-gray-600">
             <Trophy className="w-12 h-12 mb-3 opacity-20" />
             <p className="text-sm font-medium">No tournaments found</p>
           </div>
@@ -590,18 +590,18 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       {/* QR Code Modal */}
       {showQRCodeModal && qrCodeTournament && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#111B2E] border border-[#1E2D4A] rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
             <div className="flex justify-end">
               <button onClick={() => setShowQRCodeModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Booking QR Code</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Booking QR Code</h3>
               <p className="text-sm text-gray-500">{qrCodeTournament.title}</p>
             </div>
 
-            <div className="flex justify-center mb-6 bg-white p-4 rounded-xl shadow-inner border border-gray-100">
+            <div className="flex justify-center mb-6 bg-[#111B2E] p-4 rounded-xl shadow-none border border-[#1E2D4A]">
               <QRCodeCanvas
                 id="qr-code-canvas"
                 value={`intent://tournament/details/${qrCodeTournament._id}#Intent;scheme=chalokhelne;package=com.chalokhelne.app;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.chalokhelne.app;end`}
@@ -613,7 +613,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
             <div className="space-y-2">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tactical Intent</p>
-              <p className="text-[10px] text-mono text-gray-400 bg-gray-50 p-3 rounded-xl break-all border border-black/5 font-bold">
+              <p className="text-[10px] text-mono text-gray-400 bg-[#0E1628] p-3 rounded-xl break-all border border-black/5 font-bold">
                 chalokhelne://tournament/details/{qrCodeTournament._id}
               </p>
             </div>
@@ -631,12 +631,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       {/* Flow Chooser Modal for Combined Tournaments */}
       {showFlowChooser && flowChooserTournamentId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#111B2E] rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Choose Stage</h3>
+              <h3 className="text-xl font-bold text-gray-100">Choose Stage</h3>
               <button
                 onClick={() => setShowFlowChooser(false)}
-                className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+                className="p-2 bg-[#0E1628] hover:bg-[#1A2744] rounded-full transition-colors text-gray-500 hover:text-gray-300"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -698,27 +698,27 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       {/* Edit Tournament Modal - Premium Design */}
       {showEditModal && editingTournament && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+          <div className="bg-[#111B2E] w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-8 py-5 border-b border-[#1E2D4A] flex items-center justify-between bg-[#111B2E] z-10">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Edit Tournament</h2>
+                <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Edit Tournament</h2>
                 <p className="text-sm text-gray-500 mt-1">Update details for {editingTournament.title}</p>
               </div>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+                className="p-2 bg-[#0E1628] hover:bg-[#1A2744] rounded-full transition-colors text-gray-500 hover:text-gray-300"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/50 w-full">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0E1628]/50 w-full">
               {success ? (
                 <div className="flex flex-col items-center justify-center h-full min-h-[400px] animate-in fade-in zoom-in-95 duration-300">
                   <div className="w-24 h-24 bg-green-100/80 rounded-full flex items-center justify-center mb-6 shadow-sm">
                     <CheckCircle className="w-12 h-12 text-green-600" strokeWidth={3} />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Tournament Updated!</h3>
+                  <h3 className="text-2xl font-bold text-gray-100 mb-2">Tournament Updated!</h3>
                   <p className="text-gray-600 text-lg">{success}</p>
                 </div>
               ) : (
@@ -734,31 +734,31 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                     {/* Left Column */}
                     <div className="lg:col-span-8 space-y-6">
                       {/* Basic Info */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-6">
+                        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2 border-b border-gray-50 pb-3">
                           <Trophy className="w-5 h-5 text-blue-500" /> Basic Information
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="md:col-span-2">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tournament Name</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Tournament Name</label>
                             <input
                               type="text"
                               name="title"
                               value={editFormData.title}
                               onChange={handleEditInputChange}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                              className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               required
                             />
                           </div>
                           {/* Sport Dropdown (from DB) */}
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sport</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Sport</label>
                             <div className="relative">
                               <select
                                 name="sportsType"
                                 value={editFormData.sportsType}
                                 onChange={handleEditInputChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                                className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
                                 required
                               >
                                 <option value="">Select Sport</option>
@@ -774,13 +774,13 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
                           {/* Tournament Level Dropdown */}
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tournament Level</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Tournament Level</label>
                             <div className="relative">
                               <select
                                 name="tournamentLevel"
                                 value={editFormData.tournamentLevel}
                                 onChange={handleEditInputChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                                className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
                                 required
                               >
                                 <option value="">
@@ -797,32 +797,32 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Organizer Name</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Organizer Name</label>
                             <input
                               type="text"
                               name="organizerName"
                               value={editFormData.organizerName}
                               onChange={handleEditInputChange}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                              className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                             />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
+                          <label className="block text-sm font-semibold text-gray-300 mb-1.5">Description</label>
                           <textarea
                             name="description"
                             value={editFormData.description}
                             onChange={handleEditInputChange}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[100px]"
+                            className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[100px]"
                           ></textarea>
                         </div>
                       </div>
 
                       {/* Locked Sport Rules Card */}
                       {(loadingRules || sportRules) && (
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
+                        <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-5">
                           <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
                               <Shield className="w-5 h-5 text-emerald-500" /> Sport Rules
                               <span className="text-xs font-medium bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 <Lock className="w-3 h-3" /> Locked
@@ -849,9 +849,9 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                     {Object.entries(sportRules.format)
                                       .filter(([k, v]) => v !== null && v !== undefined && k !== "_id")
                                       .map(([key, val]) => (
-                                        <div key={key} className="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-100">
+                                        <div key={key} className="bg-[#0E1628] px-3 py-2.5 rounded-lg border border-[#1E2D4A]">
                                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{formatLabel(key)}</p>
-                                          <p className="text-sm font-semibold text-gray-800 mt-0.5">{renderRuleValue(val)}</p>
+                                          <p className="text-sm font-semibold text-gray-200 mt-0.5">{renderRuleValue(val)}</p>
                                         </div>
                                       ))}
                                   </div>
@@ -865,9 +865,9 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                     {Object.entries(sportRules.rules)
                                       .filter(([k, v]) => v !== null && v !== undefined && k !== "_id")
                                       .map(([key, val]) => (
-                                        <div key={key} className="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-100">
+                                        <div key={key} className="bg-[#0E1628] px-3 py-2.5 rounded-lg border border-[#1E2D4A]">
                                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{formatLabel(key)}</p>
-                                          <p className="text-sm font-semibold text-gray-800 mt-0.5">{renderRuleValue(val)}</p>
+                                          <p className="text-sm font-semibold text-gray-200 mt-0.5">{renderRuleValue(val)}</p>
                                         </div>
                                       ))}
                                   </div>
@@ -881,9 +881,9 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                     {Object.entries(sportRules.equipment)
                                       .filter(([k, v]) => v !== null && v !== undefined && k !== "_id")
                                       .map(([key, val]) => (
-                                        <div key={key} className="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-100">
+                                        <div key={key} className="bg-[#0E1628] px-3 py-2.5 rounded-lg border border-[#1E2D4A]">
                                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{formatLabel(key)}</p>
-                                          <p className="text-sm font-semibold text-gray-800 mt-0.5">{renderRuleValue(val)}</p>
+                                          <p className="text-sm font-semibold text-gray-200 mt-0.5">{renderRuleValue(val)}</p>
                                         </div>
                                       ))}
                                   </div>
@@ -902,20 +902,20 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                       )}
 
                       {/* Format & Rules */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-6">
+                        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2 border-b border-gray-50 pb-3">
                           <Type className="w-5 h-5 text-orange-500" /> Format & Rules
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           {/* Tournament Type — Checkboxes (can select both) */}
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2.5">Tournament Type</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2.5">Tournament Type</label>
                             <div className="flex gap-3">
                               <label
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all text-sm font-semibold ${
                                   editFormData.hasGroupStage
                                     ? "border-blue-500 bg-blue-50 text-blue-700"
-                                    : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+                                    : "border-[#2A3F66] bg-[#0E1628] text-gray-500 hover:border-gray-300"
                                 }`}
                               >
                                 <input
@@ -933,7 +933,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all text-sm font-semibold ${
                                   editFormData.hasKnockout
                                     ? "border-orange-500 bg-orange-50 text-orange-700"
-                                    : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+                                    : "border-[#2A3F66] bg-[#0E1628] text-gray-500 hover:border-gray-300"
                                 }`}
                               >
                                 <input
@@ -957,12 +957,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                             )}
                           </div>
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sets Format</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Sets Format</label>
                             <select
                               name="setsFormat"
                               value={editFormData.setsFormat}
                               onChange={handleEditInputChange}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                              className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                             >
                               <option value="">Select Format</option>
                               <option value="bestOf3">Best of 3</option>
@@ -972,12 +972,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           </div>
                           {editFormData.hasGroupStage && (
                             <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Group Stage Format</label>
+                              <label className="block text-sm font-semibold text-gray-300 mb-1.5">Group Stage Format</label>
                               <select
                                 name="groupStageFormat"
                                 value={editFormData.groupStageFormat}
                                 onChange={handleEditInputChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               >
                                 <option value="">Select Format</option>
                                 <option value="Singles">Singles</option>
@@ -987,12 +987,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           )}
                           {editFormData.hasKnockout && (
                             <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Knockout Format</label>
+                              <label className="block text-sm font-semibold text-gray-300 mb-1.5">Knockout Format</label>
                               <select
                                 name="knockoutFormat"
                                 value={editFormData.knockoutFormat}
                                 onChange={handleEditInputChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               >
                                 <option value="">Select Format</option>
                                 <option value="Singles">Singles</option>
@@ -1003,13 +1003,13 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           )}
                           {editFormData.hasGroupStage && editFormData.hasKnockout && (
                             <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Qualify Per Group</label>
+                              <label className="block text-sm font-semibold text-gray-300 mb-1.5">Qualify Per Group</label>
                               <p className="text-xs text-gray-400 mb-1.5">Top N players from each group advance to knockout</p>
                               <select
                                 name="qualifyPerGroup"
                                 value={editFormData.qualifyPerGroup || "2"}
                                 onChange={handleEditInputChange}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               >
                                 <option value="1">Top 1</option>
                                 <option value="2">Top 2</option>
@@ -1019,12 +1019,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                             </div>
                           )}
                           <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cancellation Policy</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-1.5">Cancellation Policy</label>
                             <select
                               name="cancellationPolicy"
                               value={editFormData.cancellationPolicy}
                               onChange={handleEditInputChange}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                              className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                             >
                               <option value="YES">Allow Cancellation</option>
                               <option value="NO">No Cancellation</option>
@@ -1032,20 +1032,20 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Terms & Conditions</label>
+                          <label className="block text-sm font-semibold text-gray-300 mb-1.5">Terms & Conditions</label>
                           <textarea
                             name="termsAndConditions"
                             value={editFormData.termsAndConditions}
                             onChange={handleEditInputChange}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[80px]"
+                            className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[80px]"
                           ></textarea>
                         </div>
                       </div>
 
                       {/* Categories */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-6">
                         <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
                             <Users className="w-5 h-5 text-purple-500" /> Categories
                           </h3>
                           <button
@@ -1064,7 +1064,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                   type="text"
                                   value={cat.name}
                                   onChange={(e) => handleCategoryChange(idx, "name", e.target.value)}
-                                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                  className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                   placeholder="Category Name"
                                 />
                               </div>
@@ -1075,7 +1075,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                   min="0"
                                   value={cat.fee}
                                   onChange={(e) => handleCategoryChange(idx, "fee", e.target.value)}
-                                  className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                  className="w-full pl-9 pr-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                   placeholder="Fee"
                                 />
                               </div>
@@ -1100,11 +1100,11 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                     {/* Right Column */}
                     <div className="lg:col-span-4 space-y-6">
                       {/* Logo */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-4">
+                        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
                           <ImageIcon className="w-5 h-5 text-gray-500" /> Logo
                         </h3>
-                        <div className="w-full aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all relative flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
+                        <div className="w-full aspect-square bg-[#0E1628] rounded-2xl border-2 border-dashed border-[#2A3F66] hover:border-blue-500 hover:bg-blue-50/30 transition-all relative flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
                           <input
                             type="file"
                             accept="image/*"
@@ -1128,8 +1128,8 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                       </div>
 
                       {/* Schedule */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-5">
+                        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2 border-b border-gray-50 pb-3">
                           <Calendar className="w-5 h-5 text-green-500" /> Schedule
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
@@ -1140,7 +1140,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                               name="startDate"
                               value={editFormData.startDate}
                               onChange={handleEditInputChange}
-                              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 border-gray-200 outline-none"
+                              className="w-full px-3 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 border-[#2A3F66] outline-none"
                             />
                           </div>
                           <div className="space-y-1">
@@ -1150,34 +1150,34 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                               name="endDate"
                               value={editFormData.endDate}
                               onChange={handleEditInputChange}
-                              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 border-gray-200 outline-none"
+                              className="w-full px-3 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 border-[#2A3F66] outline-none"
                             />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Daily Time</label>
-                          <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                          <label className="block text-sm font-semibold text-gray-300 mb-1.5">Daily Time</label>
+                          <div className="flex items-center gap-2 bg-[#0E1628] p-3 rounded-xl border border-[#2A3F66]">
                             <Clock className="w-5 h-5 text-gray-400" />
                             <input
                               type="time"
                               value={editFormData.selectedTime?.startTime || ""}
                               onChange={(e) => handleTimeChange("startTime", e.target.value)}
-                              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 p-0"
+                              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-300 p-0"
                             />
                             <span className="text-gray-400">-</span>
                             <input
                               type="time"
                               value={editFormData.selectedTime?.endTime || ""}
                               onChange={(e) => handleTimeChange("endTime", e.target.value)}
-                              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 p-0"
+                              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-300 p-0"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Location */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <div className="bg-[#111B2E] p-6 rounded-2xl border border-[#1E2D4A] shadow-sm space-y-4">
+                        <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
                           <MapPin className="w-5 h-5 text-red-500" /> Location
                         </h3>
                         <input
@@ -1185,7 +1185,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                           name="eventLocation"
                           value={editFormData.eventLocation}
                           onChange={handleEditInputChange}
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all text-sm"
+                          className="w-full px-4 py-3 bg-[#0E1628] border border-[#2A3F66] rounded-xl focus:bg-[#111B2E] focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all text-sm"
                           placeholder="Venue Address"
                           required
                         />
@@ -1194,11 +1194,11 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   </div>
 
                   {/* Footer */}
-                  <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3">
+                  <div className="mt-8 pt-6 border-t border-[#2A3F66] flex justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setShowEditModal(false)}
-                      className="px-6 py-3 rounded-xl font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
+                      className="px-6 py-3 rounded-xl font-semibold text-gray-600 hover:text-gray-100 hover:bg-[#1A2744] transition-all"
                     >
                       Cancel
                     </button>
