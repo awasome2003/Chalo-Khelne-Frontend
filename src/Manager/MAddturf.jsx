@@ -1,61 +1,83 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { MapPin, Clock, DollarSign, Camera, Phone, FileText, Shield, Car, Users, Star, CalendarDays, Dumbbell, ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Camera, Phone, Shield, Star, Dumbbell, ArrowLeft, Check, Loader2, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+const FACILITY_OPTIONS = [
+  "Floodlights", "Parking", "Changing Rooms", "Restrooms", "Drinking Water",
+  "WiFi", "Food Court", "Lounge Area", "First Aid Kit", "Shower",
+  "Locker Rooms", "CCTV", "Security", "Covered Areas",
+];
 
 const AddTurf = () => {
   const navigate = useNavigate();
-  const [turfData, setTurfData] = useState({
-    name: '', about: '', location: '', photos: [], hourlyPrice: '', sports: '',
-    offers: '', amenities: '', rules: '', cancellationPolicy: '', contacts: '',
-    openTime: '', closeTime: '', reviews: '', bookingSystem: '',
-    specialEvents: '', membershipPlans: '', parkingFacility: ''
-  });
   const [loading, setLoading] = useState(false);
-  const [previewImages, setPreviewImages] = useState([]);
 
-  const handleChange = (e) => {
-    setTurfData({ ...turfData, [e.target.name]: e.target.value });
-  };
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("");
+  const [area, setArea] = useState("");
+  const [city, setCity] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [contacts, setContacts] = useState("");
+  const [sports, setSports] = useState([{ name: "", pricePerHour: "" }]);
+  const [facilities, setFacilities] = useState([]);
+  const [openTime, setOpenTime] = useState("06:00");
+  const [closeTime, setCloseTime] = useState("22:00");
+  const [selectedDays, setSelectedDays] = useState([...DAYS]);
+  const [photos, setPhotos] = useState([]);
+  const [previews, setPreviews] = useState([]);
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
-    setTurfData({ ...turfData, photos: files });
-    setPreviewImages(files.map(f => URL.createObjectURL(f)));
+    setPhotos(files);
+    setPreviews(files.map(f => URL.createObjectURL(f)));
   };
+
+  const addSport = () => setSports([...sports, { name: "", pricePerHour: "" }]);
+  const removeSport = (idx) => setSports(sports.filter((_, i) => i !== idx));
+  const updateSport = (idx, field, val) => {
+    const next = [...sports];
+    next[idx] = { ...next[idx], [field]: val };
+    setSports(next);
+  };
+
+  const toggleFacility = (f) => setFacilities(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
+  const toggleDay = (d) => setSelectedDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!name || !address || !city) { alert("Name, address, and city are required"); return; }
+    const validSports = sports.filter(s => s.name.trim());
+    if (validSports.length === 0) { alert("Add at least one sport"); return; }
 
+    setLoading(true);
     const formData = new FormData();
-    // Add owner ID from logged-in manager
     const user = JSON.parse(localStorage.getItem("user"));
     if (user?._id) formData.append("ownerId", user._id);
 
-    Object.keys(turfData).forEach(key => {
-      if (key === 'photos') {
-        turfData.photos.forEach(photo => formData.append('turfImages', photo));
-      } else {
-        formData.append(key, turfData[key]);
-      }
-    });
+    formData.append("name", name);
+    formData.append("description", description);
+    formData.append("address", `${address}, ${area}, ${city} - ${pincode}`);
+    formData.append("area", area);
+    formData.append("city", city);
+    formData.append("pincode", pincode);
+    formData.append("longitude", "0");
+    formData.append("latitude", "0");
+    formData.append("contacts", contacts);
+    formData.append("sports", JSON.stringify(validSports.map(s => ({ name: s.name.trim(), pricePerHour: Number(s.pricePerHour) || 0 }))));
+    formData.append("facilities", JSON.stringify(facilities));
+    formData.append("availableTimeSlots", JSON.stringify(selectedDays.map(day => ({ day, startTime: openTime, endTime: closeTime }))));
+    photos.forEach(photo => formData.append("turfImages", photo));
 
     try {
-      const response = await axios.post(`/api/turfs/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      alert('Turf added successfully!');
-      setTurfData({
-        name: '', about: '', location: '', photos: [], hourlyPrice: '', sports: '',
-        offers: '', amenities: '', rules: '', cancellationPolicy: '', contacts: '',
-        openTime: '', closeTime: '', reviews: '', bookingSystem: '',
-        specialEvents: '', membershipPlans: '', parkingFacility: ''
-      });
-      setPreviewImages([]);
+      await axios.post("/api/turfs/", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      alert("Turf added successfully!");
+      navigate(-1);
     } catch (error) {
-      console.error('Error adding turf:', error);
-      alert('Failed to add turf. Please try again.');
+      alert("Failed: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -63,101 +85,106 @@ const AddTurf = () => {
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl transition w-auto">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </button>
         <div>
           <h1 className="text-2xl font-black text-gray-900">Add New Turf</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Fill in the details to register a new sports facility</p>
+          <p className="text-sm text-gray-500 mt-0.5">Register a new sports facility</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Section 1: Basic Info */}
         <Section title="Basic Information" icon={Dumbbell}>
-          <InputField label="Turf Name" name="name" value={turfData.name} onChange={handleChange} placeholder="e.g. Shivaji Sports Arena" required />
-          <TextareaField label="About Turf" name="about" value={turfData.about} onChange={handleChange} placeholder="Describe your turf — facilities, surface type, environment..." required rows={3} />
-          <InputField label="Location" name="location" value={turfData.location} onChange={handleChange} placeholder="Full address with city and pincode" required icon={MapPin} />
+          <InputField label="Turf Name *" value={name} onChange={setName} placeholder="e.g. Shivaji Sports Arena" />
+          <TextareaField label="Description" value={description} onChange={setDescription} placeholder="Describe your turf..." rows={3} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="Address *" value={address} onChange={setAddress} placeholder="Street address" icon={MapPin} />
+            <InputField label="Area" value={area} onChange={setArea} placeholder="e.g. Kharadi" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InputField label="City *" value={city} onChange={setCity} placeholder="Pune" />
+            <InputField label="Pincode" value={pincode} onChange={setPincode} placeholder="411014" />
+            <InputField label="Contact *" value={contacts} onChange={setContacts} placeholder="9876543210" icon={Phone} />
+          </div>
         </Section>
 
-        {/* Section 2: Photos */}
         <Section title="Photos" icon={Camera}>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Photos</label>
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[#004E93] hover:bg-blue-50/30 transition cursor-pointer relative">
-              <input type="file" multiple onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
-              <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 font-medium">Click or drag photos here</p>
-              <p className="text-xs text-gray-400 mt-1">JPG, PNG up to 5MB each</p>
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[#004E93] hover:bg-blue-50/30 transition cursor-pointer relative">
+            <input type="file" multiple onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
+            <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm text-gray-600 font-medium">Click or drag photos here</p>
+            <p className="text-xs text-gray-400 mt-1">Max 3 images</p>
+          </div>
+          {previews.length > 0 && (
+            <div className="flex gap-3 mt-3">
+              {previews.map((src, i) => <img key={i} src={src} alt="" className="w-20 h-20 rounded-xl object-cover border border-gray-200" />)}
             </div>
-            {previewImages.length > 0 && (
-              <div className="flex gap-3 mt-3 overflow-x-auto pb-2">
-                {previewImages.map((src, i) => (
-                  <img key={i} src={src} alt={`Preview ${i}`} className="w-20 h-20 rounded-xl object-cover border border-gray-200 flex-shrink-0" />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </Section>
 
-        {/* Section 3: Sports & Pricing */}
         <Section title="Sports & Pricing" icon={DollarSign}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField label="Available Sports" name="sports" value={turfData.sports} onChange={handleChange} placeholder="Cricket, Football, Badminton..." />
-            <InputField label="Hourly Price (₹)" name="hourlyPrice" value={turfData.hourlyPrice} onChange={handleChange} type="number" placeholder="500" icon={DollarSign} />
+          <div className="space-y-3">
+            {sports.map((sport, idx) => (
+              <div key={idx} className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Sport Name</label>
+                  <input type="text" value={sport.name} onChange={(e) => updateSport(idx, "name", e.target.value)} placeholder="e.g. Cricket"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                </div>
+                <div className="w-32">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">₹/hr</label>
+                  <input type="number" value={sport.pricePerHour} onChange={(e) => updateSport(idx, "pricePerHour", e.target.value)} placeholder="500"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                </div>
+                {sports.length > 1 && (
+                  <button type="button" onClick={() => removeSport(idx)} className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition w-auto">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-          <InputField label="Offers & Discounts" name="offers" value={turfData.offers} onChange={handleChange} placeholder="e.g. 20% off on weekdays" />
-        </Section>
-
-        {/* Section 4: Timings */}
-        <Section title="Operating Hours" icon={Clock}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField label="Opening Time" name="openTime" value={turfData.openTime} onChange={handleChange} type="time" icon={Clock} />
-            <InputField label="Closing Time" name="closeTime" value={turfData.closeTime} onChange={handleChange} type="time" icon={Clock} />
-          </div>
-        </Section>
-
-        {/* Section 5: Facilities */}
-        <Section title="Facilities & Amenities" icon={Star}>
-          <InputField label="Amenities" name="amenities" value={turfData.amenities} onChange={handleChange} placeholder="Floodlights, Changing rooms, Water..." />
-          <InputField label="Parking Facility" name="parkingFacility" value={turfData.parkingFacility} onChange={handleChange} placeholder="e.g. Free parking for 50 cars" icon={Car} />
-          <InputField label="Booking System" name="bookingSystem" value={turfData.bookingSystem} onChange={handleChange} placeholder="Online, Walk-in, Phone..." />
-        </Section>
-
-        {/* Section 6: Policies */}
-        <Section title="Rules & Policies" icon={Shield}>
-          <TextareaField label="Rules & Regulations" name="rules" value={turfData.rules} onChange={handleChange} placeholder="No shoes on turf, Carry own equipment..." rows={2} />
-          <TextareaField label="Cancellation Policy" name="cancellationPolicy" value={turfData.cancellationPolicy} onChange={handleChange} placeholder="Full refund 24h before, 50% refund 12h before..." rows={2} />
-        </Section>
-
-        {/* Section 7: Contact & Extras */}
-        <Section title="Contact & More" icon={Phone}>
-          <InputField label="Contact Number" name="contacts" value={turfData.contacts} onChange={handleChange} placeholder="9876543210" required icon={Phone} />
-          <InputField label="Special Events" name="specialEvents" value={turfData.specialEvents} onChange={handleChange} placeholder="Weekend tournaments, Corporate events..." icon={CalendarDays} />
-          <InputField label="Membership Plans" name="membershipPlans" value={turfData.membershipPlans} onChange={handleChange} placeholder="Monthly, Quarterly, Annual..." icon={Users} />
-        </Section>
-
-        {/* Submit */}
-        <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition w-auto"
-          >
-            Cancel
+          <button type="button" onClick={addSport} className="mt-2 text-sm font-semibold text-[#004E93] flex items-center gap-1 w-auto">
+            <Plus className="w-4 h-4" /> Add sport
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 md:flex-none md:px-10 py-3 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]"
-          >
-            {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-            ) : (
-              <><Check className="w-4 h-4" /> Add Turf</>
-            )}
+        </Section>
+
+        <Section title="Operating Hours" icon={Clock}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <InputField label="Opening Time" value={openTime} onChange={setOpenTime} type="time" icon={Clock} />
+            <InputField label="Closing Time" value={closeTime} onChange={setCloseTime} type="time" icon={Clock} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Open Days</label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map(day => (
+                <button key={day} type="button" onClick={() => toggleDay(day)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition w-auto ${selectedDays.includes(day) ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                  {day.slice(0, 3)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Facilities" icon={Star}>
+          <div className="flex flex-wrap gap-2">
+            {FACILITY_OPTIONS.map(f => (
+              <button key={f} type="button" onClick={() => toggleFacility(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition w-auto ${facilities.includes(f) ? "bg-green-100 text-green-700 border border-green-200" : "bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300"}`}>
+                {facilities.includes(f) && <Check className="w-3 h-3 inline mr-1" />}{f}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
+          <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition w-auto">Cancel</button>
+          <button type="submit" disabled={loading}
+            className="flex-1 md:flex-none md:px-10 py-3 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]">
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Check className="w-4 h-4" /> Add Turf</>}
           </button>
         </div>
       </form>
@@ -165,50 +192,37 @@ const AddTurf = () => {
   );
 };
 
-// ---- Reusable sub-components (local to this file) ----
-
 function Section({ title, icon: Icon, children }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-[#004E93]" />
-        </div>
+        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center"><Icon className="w-4 h-4 text-[#004E93]" /></div>
         <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
       </div>
-      <div className="p-6 space-y-4">
-        {children}
-      </div>
+      <div className="p-6 space-y-4">{children}</div>
     </div>
   );
 }
 
-function InputField({ label, icon: Icon, ...props }) {
+function InputField({ label, value, onChange, icon: Icon, type = "text", ...props }) {
   return (
     <div>
       <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
       <div className="relative">
-        {Icon && (
-          <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        )}
-        <input
-          {...props}
-          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition`}
-        />
+        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />}
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
+          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition`} {...props} />
       </div>
     </div>
   );
 }
 
-function TextareaField({ label, rows = 3, ...props }) {
+function TextareaField({ label, value, onChange, rows = 3, ...props }) {
   return (
     <div>
       <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
-      <textarea
-        {...props}
-        rows={rows}
-        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none"
-      />
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows}
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none" {...props} />
     </div>
   );
 }
