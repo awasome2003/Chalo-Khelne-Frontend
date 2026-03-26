@@ -23,7 +23,7 @@ export const SIDEBAR_SECTIONS = [
     label: "Tournament",
     items: [
       { key: "tournaments", label: "Tournaments", icon: Trophy, path: "/mtournament-management", roles: ["manager"] },
-      { key: "live", label: "Live Matches", icon: Radio, path: "/live", badge: "live", roles: ["manager"] },
+      { key: "live", label: "Live Matches", icon: Radio, path: "/mtournament-management", badge: "live", roles: ["manager"] },
     ],
   },
   {

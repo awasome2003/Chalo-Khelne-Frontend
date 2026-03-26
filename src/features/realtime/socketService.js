@@ -38,10 +38,14 @@ export function initSocket() {
     }
   });
 
-  socket.on("connect_error", () => {
+  socket.on("connect_error", (err) => {
     reconnectAttempts++;
+    if (reconnectAttempts === 1) {
+      console.log("[WS] Connection failed — using polling fallback");
+    }
     if (reconnectAttempts >= MAX_RECONNECT) {
-      console.warn("[WS] Max reconnect attempts reached, falling back to polling");
+      console.warn("[WS] Max reconnect attempts reached, polling only");
+      socket.disconnect(); // Stop trying
     }
   });
 

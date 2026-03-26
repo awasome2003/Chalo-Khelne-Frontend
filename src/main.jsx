@@ -11,9 +11,13 @@ import "react-toastify/dist/ReactToastify.css";
 import App from "./App";
 import { initSocket } from "./features/realtime";
 
-// Initialize WebSocket if user is authenticated
-if (localStorage.getItem("token")) {
-  initSocket();
+// Initialize WebSocket if user is authenticated (lazy — don't block startup)
+try {
+  if (localStorage.getItem("token")) {
+    initSocket();
+  }
+} catch (e) {
+  // Socket init failure is non-critical — polling fallback handles it
 }
 
 // Set axios base URL for production (when no Vite proxy is available)
