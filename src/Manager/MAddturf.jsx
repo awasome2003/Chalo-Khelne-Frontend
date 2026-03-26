@@ -31,7 +31,7 @@ const AddTurf = () => {
     const formData = new FormData();
     // Add owner ID from logged-in manager
     const user = JSON.parse(localStorage.getItem("user"));
-    if (user?._id) formData.append("owner", user._id);
+    if (user?._id) formData.append("ownerId", user._id);
 
     Object.keys(turfData).forEach(key => {
       if (key === 'photos') {
