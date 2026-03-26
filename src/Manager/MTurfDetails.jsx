@@ -89,13 +89,13 @@ const MTurfDetails = () => {
           <div className="grid grid-cols-2 gap-4 text-gray-700">
 
             <p><strong>📍 Location: </strong>
-              {turf.location.address
-                ? `${turf.location.address}`
+              {turf.address?.fullAddress
+                ? `${turf.address.fullAddress}, ${turf.address.city || ""} - ${turf.address.pincode || ""}`
                 : "Not provided"}
             </p>
 
             <p><strong>💰 Price: </strong>
-              {turf.hourlyPrice > 0 ? `₹${turf.hourlyPrice}/hour` : "Not specified"}
+              {turf.sports?.[0]?.pricePerHour > 0 ? `₹${turf.sports[0].pricePerHour}/hour` : turf.hourlyPrice > 0 ? `₹${turf.hourlyPrice}/hour` : "Not specified"}
             </p>
 
             <p><strong>🏆 Sports: </strong>
