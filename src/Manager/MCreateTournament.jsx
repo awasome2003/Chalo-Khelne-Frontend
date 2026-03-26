@@ -90,7 +90,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     startDate: dayjs().format("YYYY-MM-DD"),
     endDate: dayjs().add(7, "day").format("YYYY-MM-DD"),
     termsAndConditions: "",
-    playingFormat: "", // "group+knockout" | "singles-knockout" | "davis-cup"
+    playingFormats: [], // array of: "group+knockout" | "singles-knockout" | "davis-cup"
     groupStageFormat: "Singles",
     knockoutFormat: "Singles",
     qualifyPerGroup: "2",
@@ -170,7 +170,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     setFormData((prev) => ({
       ...prev,
       tournamentLevel: "",
-      playingFormat: "",
+      playingFormats: [],
       hasGroupStage: false,
       hasKnockout: false,
       groupStageFormat: isTeamSport ? "Teams" : "Singles",
@@ -289,8 +289,8 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     }
 
     if (stepId === "format") {
-      if (!formData.playingFormat) {
-        setError("Select a playing format");
+      if (!formData.playingFormats || formData.playingFormats.length === 0) {
+        setError("Select at least one playing format");
         return false;
       }
       return true;
@@ -337,14 +337,16 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     setError("");
 
     try {
-      const tournamentType =
-        formData.hasGroupStage && formData.hasKnockout
-          ? "knockout + group stage"
-          : formData.hasKnockout
-          ? "knockout"
-          : formData.hasGroupStage
-          ? "group stage"
-          : "";
+      // Determine type from selected formats
+      const formats = formData.playingFormats || [];
+      const hasGS = formats.includes("group+knockout");
+      const hasKO = formats.includes("singles-knockout") || formats.includes("davis-cup") || hasGS;
+      const tournamentType = hasGS && hasKO ? "knockout + group stage" : hasKO ? "knockout" : hasGS ? "group stage" : "";
+
+      // If Davis Cup selected, ensure knockoutFormat is set
+      if (formats.includes("davis-cup") && !formData.knockoutFormat?.includes("Davis")) {
+        formData.knockoutFormat = "Davis Cup";
+      }
 
       if (!formData.title || !tournamentType || !formData.sportsType) {
         setError("Title, Tournament Type, and Sport are required");
@@ -808,70 +810,74 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
           <Type className="w-5 h-5 text-orange-500" /> Tournament Format
         </h3>
 
-        {/* Playing Format — 3 clear options */}
+        {/* Playing Format — multi-select cards */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2.5">Playing Format</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Playing Format</label>
+          <p className="text-xs text-gray-400 mb-3">Select one or more formats for this tournament</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Option 1: Group Stage + Knockout */}
-            <div
-              onClick={() => setFormData((p) => ({
-                ...p, hasGroupStage: true, hasKnockout: true, playingFormat: "group+knockout",
-                groupStageFormat: isTeamSport ? "Teams" : p.groupStageFormat || "Singles",
-                knockoutFormat: isTeamSport ? "Teams Knockout" : p.knockoutFormat || "Singles",
-              }))}
-              className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                formData.playingFormat === "group+knockout" ? "border-blue-500 bg-blue-50 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${formData.playingFormat === "group+knockout" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500"}`}>
-                <Users className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-sm text-gray-800">Group Stage + Knockout</h4>
-              <p className="text-xs text-gray-500 mt-1">Round-robin groups then elimination bracket</p>
-              {formData.playingFormat === "group+knockout" && <FormatCheck color="blue" />}
-            </div>
-
-            {/* Option 2: Singles Knockout */}
-            <div
-              onClick={() => setFormData((p) => ({
-                ...p, hasGroupStage: false, hasKnockout: true, playingFormat: "singles-knockout",
-                groupStageFormat: "", knockoutFormat: "Singles",
-              }))}
-              className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                formData.playingFormat === "singles-knockout" ? "border-orange-500 bg-orange-50 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${formData.playingFormat === "singles-knockout" ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500"}`}>
-                <Trophy className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-sm text-gray-800">Singles Knockout</h4>
-              <p className="text-xs text-gray-500 mt-1">Direct elimination — 16/32/64 draw</p>
-              {formData.playingFormat === "singles-knockout" && <FormatCheck color="orange" />}
-            </div>
-
-            {/* Option 3: Davis Cup */}
-            <div
-              onClick={() => setFormData((p) => ({
-                ...p, hasGroupStage: false, hasKnockout: true, playingFormat: "davis-cup",
-                groupStageFormat: "", knockoutFormat: "Davis Cup",
-              }))}
-              className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                formData.playingFormat === "davis-cup" ? "border-purple-500 bg-purple-50 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${formData.playingFormat === "davis-cup" ? "bg-purple-500 text-white" : "bg-gray-100 text-gray-500"}`}>
-                <Shield className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-sm text-gray-800">Davis Cup</h4>
-              <p className="text-xs text-gray-500 mt-1">Team knockout — singles + doubles format</p>
-              {formData.playingFormat === "davis-cup" && <FormatCheck color="purple" />}
-            </div>
+            {[
+              { key: "group+knockout", label: "Group Stage + Knockout", desc: "Round-robin groups then elimination bracket", icon: Users, color: "blue",
+                onSelect: (p) => ({ ...p, hasGroupStage: true, hasKnockout: true, groupStageFormat: isTeamSport ? "Teams" : p.groupStageFormat || "Singles", knockoutFormat: isTeamSport ? "Teams Knockout" : p.knockoutFormat || "Singles" }),
+                onDeselect: (p) => ({ ...p, hasGroupStage: false }) },
+              { key: "singles-knockout", label: "Singles Knockout", desc: "Direct elimination — 16/32/64 draw", icon: Trophy, color: "orange",
+                onSelect: (p) => ({ ...p, hasKnockout: true }),
+                onDeselect: (p) => ({ ...p }) },
+              { key: "davis-cup", label: "Davis Cup", desc: "Team knockout — singles + doubles format", icon: Shield, color: "purple",
+                onSelect: (p) => ({ ...p, hasKnockout: true }),
+                onDeselect: (p) => ({ ...p }) },
+            ].map((fmt) => {
+              const isSelected = formData.playingFormats?.includes(fmt.key);
+              const Icon = fmt.icon;
+              const colors = { blue: { border: "border-blue-500", bg: "bg-blue-50", icon: "bg-blue-500" }, orange: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, purple: { border: "border-purple-500", bg: "bg-purple-50", icon: "bg-purple-500" } };
+              const c = colors[fmt.color];
+              return (
+                <div
+                  key={fmt.key}
+                  onClick={() => {
+                    setFormData((p) => {
+                      const current = p.playingFormats || [];
+                      let next, updated;
+                      if (current.includes(fmt.key)) {
+                        next = current.filter((k) => k !== fmt.key);
+                        updated = fmt.onDeselect(p);
+                      } else {
+                        next = [...current, fmt.key];
+                        updated = fmt.onSelect(p);
+                      }
+                      // Recalculate hasGroupStage/hasKnockout from selected formats
+                      const hasGS = next.includes("group+knockout");
+                      const hasKO = next.length > 0;
+                      return { ...updated, playingFormats: next, hasGroupStage: hasGS, hasKnockout: hasKO };
+                    });
+                  }}
+                  className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? `${c.border} ${c.bg} shadow-sm` : "border-gray-200 bg-white hover:border-gray-300"}`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isSelected ? `${c.icon} text-white` : "bg-gray-100 text-gray-500"}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-bold text-sm text-gray-800">{fmt.label}</h4>
+                  <p className="text-xs text-gray-500 mt-1">{fmt.desc}</p>
+                  {isSelected && <FormatCheck color={fmt.color} />}
+                </div>
+              );
+            })}
           </div>
-          {!formData.playingFormat && <p className="text-xs text-red-500 mt-2">Select a playing format</p>}
+          {(!formData.playingFormats || formData.playingFormats.length === 0) && (
+            <p className="text-xs text-red-500 mt-2">Select at least one playing format</p>
+          )}
+          {formData.playingFormats?.length > 0 && (
+            <div className="flex gap-1.5 mt-3">
+              {formData.playingFormats.map((f) => (
+                <span key={f} className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full capitalize">
+                  {f.replace(/[+-]/g, " ")}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sub-format for Group+Knockout */}
-        {formData.playingFormat === "group+knockout" && !isTeamSport && (
+        {formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Group Stage Format</label>
@@ -893,7 +899,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
         )}
 
         {/* Draw Size — Only for standalone knockout (no group stage) */}
-        {formData.hasKnockout && !formData.hasGroupStage && formData.knockoutFormat !== "Teams Knockout" && formData.knockoutFormat !== "Davis Cup" && (
+        {formData.playingFormats?.includes("singles-knockout") && !formData.playingFormats?.includes("group+knockout") && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Draw Size</label>
             <p className="text-xs text-gray-400 mb-1.5">Number of slots in the elimination bracket</p>
