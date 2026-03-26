@@ -33,7 +33,8 @@ const Slot_Booking = () => {
         }
 
         const data = await response.json();
-        setTurfs(data.turfs || []);
+        // API returns plain array, not { turfs: [...] }
+        setTurfs(Array.isArray(data) ? data : data.turfs || []);
       } catch (error) {
         setError(error.message);
       } finally {
