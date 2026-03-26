@@ -93,6 +93,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     groupStageFormat: "Singles",
     knockoutFormat: "Singles",
     qualifyPerGroup: "2",
+    drawSize: 16,
   };
 
   const [formData, setFormData] = useState({ ...defaultFormData });
@@ -372,6 +373,10 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
       if (formData.hasKnockout) tournamentFormData.append("knockoutFormat", formData.knockoutFormat);
       if (formData.hasGroupStage && formData.hasKnockout) {
         tournamentFormData.append("qualifyPerGroup", formData.qualifyPerGroup || "2");
+      }
+      // Draw size for standalone knockout
+      if (formData.hasKnockout && !formData.hasGroupStage && formData.drawSize) {
+        tournamentFormData.append("drawSize", formData.drawSize);
       }
 
       tournamentFormData.append("numTeams", formData.numTeams || "0");
@@ -868,6 +873,49 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
                 <option value="Singles">Singles</option>
                 <option value="Doubles">Doubles</option>
               </select>
+            )}
+          </div>
+        )}
+
+        {/* Draw Size — Only for standalone knockout (no group stage) */}
+        {formData.hasKnockout && !formData.hasGroupStage && formData.knockoutFormat !== "Teams Knockout" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Draw Size</label>
+            <p className="text-xs text-gray-400 mb-1.5">Number of slots in the elimination bracket</p>
+            <div className="flex gap-2">
+              {[16, 32, 64].map((size) => {
+                const numPlayers = Number(formData.numTeams) || 0;
+                const tooSmall = numPlayers > size;
+                return (
+                  <label
+                    key={size}
+                    className={`flex-1 flex flex-col items-center justify-center px-4 py-3 rounded-xl border-2 transition-all text-sm font-bold ${
+                      tooSmall
+                        ? "border-red-200 bg-red-50 text-red-300 cursor-not-allowed"
+                        : String(formData.drawSize) === String(size)
+                        ? "border-purple-500 bg-purple-50 text-purple-700 cursor-pointer"
+                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="drawSize"
+                      value={size}
+                      checked={String(formData.drawSize) === String(size)}
+                      onChange={(e) => !tooSmall && setFormData((p) => ({ ...p, drawSize: Number(e.target.value) }))}
+                      disabled={tooSmall}
+                      className="sr-only"
+                    />
+                    {size} Draw
+                    {tooSmall && <span className="text-[9px] font-normal">Max {size} players</span>}
+                  </label>
+                );
+              })}
+            </div>
+            {Number(formData.numTeams) > Number(formData.drawSize) && (
+              <p className="text-xs text-red-500 mt-1">
+                {formData.numTeams} players won't fit in a {formData.drawSize}-draw. Increase draw size.
+              </p>
             )}
           </div>
         )}

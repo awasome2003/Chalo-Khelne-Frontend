@@ -675,6 +675,20 @@ const GroupStageManagement = () => {
         return;
       }
 
+      // First initiate Round 2 (stage update) — only now, not earlier
+      await axios.post(
+        `/api/tournaments/round2/initiate`,
+        {
+          tournamentId,
+          option: 'knockout',
+          topPlayers: topPlayers.map(player => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            category: player.category
+          }))
+        }
+      );
+
       // Validate player count is power of 2
       const validationResponse = await axios.post(
         `/api/tournaments/direct-knockout/validate-players`,
@@ -733,33 +747,32 @@ const GroupStageManagement = () => {
   const handleRound2Option = async (option) => {
     try {
       setRound2Option(option);
+      setShowRound2Modal(false);
 
-      const response = await axios.post(
-        `/api/tournaments/round2/initiate`,
-        {
-          tournamentId,
-          option, // 'knockout' or 'group_stage'
-          topPlayers: topPlayers.map(player => ({
-            playerId: player.playerId,
-            playerName: player.playerName,
-            category: player.category
-          }))
-        }
-      );
+      if (option === 'knockout') {
+        // Don't call initiate API yet — wait until user completes the full flow
+        // Just open the player selection modal
+        setShowDirectKnockoutPlayerModal(true);
+      } else {
+        // For group_stage, initiate immediately (it only updates stage config)
+        const response = await axios.post(
+          `/api/tournaments/round2/initiate`,
+          {
+            tournamentId,
+            option,
+            topPlayers: topPlayers.map(player => ({
+              playerId: player.playerId,
+              playerName: player.playerName,
+              category: player.category
+            }))
+          }
+        );
 
-      if (response.data.success) {
-        setRound2Progress({ option, status: 'initiated' });
-        setShowRound2Modal(false);
-
-        if (option === 'knockout') {
-          // Show Direct Knockout player selection modal first
-          setShowDirectKnockoutPlayerModal(true);
-        } else {
-          // Set Round 2 mode and switch to Registered Players tab for selection
+        if (response.data.success) {
+          setRound2Progress({ option, status: 'initiated' });
           setIsRound2Mode(true);
-          setShowRound2Modal(false);
-          setSelectedTab("Registered Players"); // Switch to the existing player selection interface
-          setSelectedSubTab("Registered Players"); // Ensure we're on the correct sub-tab
+          setSelectedTab("Registered Players");
+          setSelectedSubTab("Registered Players");
         }
       }
     } catch (error) {

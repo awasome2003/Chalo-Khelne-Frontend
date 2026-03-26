@@ -9,7 +9,8 @@ import {
   Settings,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Gift,
 } from "lucide-react";
 
 const Sidebar = ({ collapsed, toggleSidebar }) => {
@@ -19,6 +20,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
     { to: "/msocial", icon: <Hash size={20} />, label: "Social" },
     { to: "/mnews", icon: <Newspaper size={20} />, label: "News" },
     { to: "/payments", icon: <CreditCard size={20} />, label: "Payments" },
+    { to: "/mcoupons", icon: <Gift size={20} />, label: "Coupons" },
     { to: "/msettings", icon: <Settings size={20} />, label: "Settings" },
   ];
 

@@ -1,8 +1,9 @@
 //Manager/TeamKnockouts.jsx
 import { useEffect, useState } from "react";
 import { FaUsers, FaCrown, FaUser, FaSyncAlt } from "react-icons/fa";
-import { Star, StarIcon, Loader2 } from "lucide-react";
+import { Star, StarIcon, Loader2, Trophy, RefreshCcw } from "lucide-react";
 import TeamKnockoutMatches from "./TeamKnockoutMatches";
+import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -42,6 +43,86 @@ const TeamKnockouts = () => {
   const [matchesToConfigure, setMatchesToConfigure] = useState([]);
   const [configuringIndex, setConfiguringIndex] = useState(0);
   const tournamentId = new URLSearchParams(location.search).get("tournamentId");
+
+  // Round Robin state
+  const [rrMatches, setRrMatches] = useState([]);
+  const [rrStandings, setRrStandings] = useState([]);
+  const [rrLoading, setRrLoading] = useState(false);
+  const [rrGenerated, setRrGenerated] = useState(false);
+  const [rrSchedule, setRrSchedule] = useState({
+    matchStartTime: dayjs().format("YYYY-MM-DDTHH:mm"),
+    matchInterval: "30",
+    courtNumber: "1",
+  });
+
+  const fetchRoundRobin = async () => {
+    if (!tournamentId) return;
+    try {
+      // Fetch round robin matches (round = 0)
+      const matchRes = await axios.get(`/api/tournaments/team-knockout/matches/${tournamentId}`);
+      if (matchRes.data?.success) {
+        const allMatches = matchRes.data.matches || [];
+        const roundRobinMatches = allMatches.filter((m) => m.round === 0);
+        setRrMatches(roundRobinMatches);
+        setRrGenerated(roundRobinMatches.length > 0);
+      }
+      // Fetch standings
+      const standingsRes = await axios.get(`/api/tournaments/team-knockout/round-robin/standings/${tournamentId}`);
+      if (standingsRes.data?.success) {
+        setRrStandings(standingsRes.data.data?.standings || []);
+      }
+    } catch (err) {
+      console.error("Error fetching round robin:", err);
+    }
+  };
+
+  const handleGenerateRoundRobin = async () => {
+    if (!tournamentId) return;
+    setRrLoading(true);
+    try {
+      const res = await axios.post("/api/tournaments/team-knockout/round-robin/generate", {
+        tournamentId,
+        scheduleDetails: {
+          matchStartTime: rrSchedule.matchStartTime,
+          matchInterval: rrSchedule.matchInterval,
+          courtNumber: rrSchedule.courtNumber,
+        },
+        tournamentType: tournamentType || "Singles",
+        setCount: setCount || 3,
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        fetchRoundRobin();
+      } else {
+        toast.error(res.data?.message || "Failed to generate");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to generate round robin matches");
+    } finally {
+      setRrLoading(false);
+    }
+  };
+
+  const handleDeleteRoundRobin = async () => {
+    if (!window.confirm("Are you sure? This will delete all round robin matches.")) return;
+    try {
+      const res = await axios.post("/api/tournaments/team-knockout/round-robin/delete", { tournamentId });
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        setRrMatches([]);
+        setRrStandings([]);
+        setRrGenerated(false);
+      }
+    } catch (err) {
+      toast.error("Failed to delete");
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTab === "Round Robin" && tournamentId) {
+      fetchRoundRobin();
+    }
+  }, [selectedTab, tournamentId]);
 
   const handleSelectFavorite = (booking) => {
     // Check if the booking is in an enabled state
@@ -897,7 +978,7 @@ const TeamKnockouts = () => {
       <div className="p-5">
         {/* Main Tabs - Always visible */}
         <div className="flex w-full justify-center space-x-3 mb-4">
-          {["Registered Teams", "Matches"].map((tab) => (
+          {["Registered Teams", "Round Robin", "Matches"].map((tab) => (
             <button
               key={tab}
               onClick={() => setSelectedTab(tab)}
@@ -941,6 +1022,33 @@ const TeamKnockouts = () => {
 
               {/* Tournament List */}
               <div className="div">
+                {/* Select All / Deselect All */}
+                {teams?.length >= 2 && (
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <button
+                      onClick={() => {
+                        if (selectedTeams.length === teams.length) {
+                          setSelectedTeams([]);
+                        } else {
+                          setSelectedTeams([...teams]);
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all w-auto
+                        bg-[#004E93] text-white hover:bg-[#003D75]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTeams.length === teams.length && teams.length > 0}
+                        readOnly
+                        className="w-4 h-4 rounded cursor-pointer accent-white"
+                      />
+                      {selectedTeams.length === teams.length ? "Deselect All" : "Select All"}
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">
+                      {selectedTeams.length}/{teams.length} selected
+                    </span>
+                  </div>
+                )}
                 <div className="flex flex-col bg-white gap-[20px] overflow-y-auto h-[450px] p-4 border border-gray-300 rounded-[24px] scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-200 scrollbar-hide">
                   {teams?.map((booking) => (
                     <div
@@ -1079,8 +1187,190 @@ const TeamKnockouts = () => {
               </div>
             )}
           </div>
+        ) : selectedTab === "Round Robin" ? (
+          // Round Robin View
+          <div className="max-w-5xl mx-auto">
+            {!rrGenerated ? (
+              // Generate Round Robin Form
+              <div className="bg-white rounded-2xl p-8 shadow-sm">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-[#004E93]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Generate Round Robin Matches</h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Every team plays every other team. Total matches: <strong>{teams.length > 0 ? (teams.length * (teams.length - 1)) / 2 : 0}</strong>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Start Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      value={rrSchedule.matchStartTime}
+                      onChange={(e) => setRrSchedule({ ...rrSchedule, matchStartTime: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Match Interval (min)</label>
+                    <input
+                      type="number"
+                      value={rrSchedule.matchInterval}
+                      onChange={(e) => setRrSchedule({ ...rrSchedule, matchInterval: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                      placeholder="30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Court Number</label>
+                    <input
+                      type="text"
+                      value={rrSchedule.courtNumber}
+                      onChange={(e) => setRrSchedule({ ...rrSchedule, courtNumber: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleGenerateRoundRobin}
+                  disabled={rrLoading || teams.length < 2}
+                  className="w-full py-3 bg-[#004E93] hover:bg-[#003d75] text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {rrLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trophy className="w-5 h-5" />}
+                  {rrLoading ? "Generating..." : "Generate Round Robin Matches"}
+                </button>
+
+                {teams.length < 2 && (
+                  <p className="text-center text-red-500 text-sm mt-3">
+                    Create teams first from the "Registered Teams" tab.
+                  </p>
+                )}
+              </div>
+            ) : (
+              // Round Robin Results
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Round Robin</h3>
+                    <p className="text-gray-500 text-sm">
+                      {rrMatches.length} matches • {rrMatches.filter((m) => m.status === "COMPLETED").length} completed
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={fetchRoundRobin}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"
+                    >
+                      <RefreshCcw className="w-4 h-4" /> Refresh
+                    </button>
+                    <button
+                      onClick={handleDeleteRoundRobin}
+                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-medium transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Points Table */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h4 className="font-bold text-gray-900">Points Table</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">#</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Team</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">P</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">W</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">L</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">SW</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">SL</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">GW</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">GL</th>
+                          <th className="text-center px-3 py-3 text-xs font-bold text-brand-600 uppercase tracking-wider font-black">Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {rrStandings.map((team, i) => (
+                          <tr key={team.teamId} className={`hover:bg-gray-50 ${i < 2 ? "bg-green-50/50" : ""}`}>
+                            <td className="px-6 py-3 font-bold text-gray-400">{i + 1}</td>
+                            <td className="px-4 py-3">
+                              <div className="font-semibold text-gray-900">{team.teamName}</div>
+                            </td>
+                            <td className="text-center px-3 py-3 text-gray-600">{team.played}</td>
+                            <td className="text-center px-3 py-3 font-semibold text-green-600">{team.won}</td>
+                            <td className="text-center px-3 py-3 font-semibold text-red-500">{team.lost}</td>
+                            <td className="text-center px-3 py-3 text-gray-600">{team.setsWon}</td>
+                            <td className="text-center px-3 py-3 text-gray-600">{team.setsLost}</td>
+                            <td className="text-center px-3 py-3 text-gray-600">{team.gamesWon}</td>
+                            <td className="text-center px-3 py-3 text-gray-600">{team.gamesLost}</td>
+                            <td className="text-center px-3 py-3 font-black text-[#004E93] text-base">{team.points}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Match List */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h4 className="font-bold text-gray-900">All Matches</h4>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {rrMatches.map((match) => {
+                      const t1 = match.team1Id?.teamName || "Team 1";
+                      const t2 = match.team2Id?.teamName || "Team 2";
+                      const isCompleted = match.status === "COMPLETED";
+                      return (
+                        <div key={match._id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                              isCompleted ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {isCompleted ? "Done" : "Pending"}
+                            </span>
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <span className={`font-semibold text-sm truncate ${isCompleted && match.matchWinner === "home" ? "text-green-600" : "text-gray-900"}`}>
+                                {t1}
+                              </span>
+                              {isCompleted && (
+                                <span className="text-xs font-bold text-gray-400">
+                                  {match.setsWon?.home || 0} - {match.setsWon?.away || 0}
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-300">vs</span>
+                              {isCompleted && (
+                                <span className="text-xs font-bold text-gray-400">
+                                  {match.setsWon?.away || 0} - {match.setsWon?.home || 0}
+                                </span>
+                              )}
+                              <span className={`font-semibold text-sm truncate ${isCompleted && match.matchWinner === "away" ? "text-green-600" : "text-gray-900"}`}>
+                                {t2}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 shrink-0">
+                            {match.courtNumber !== "TBD" && `Court ${match.courtNumber}`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          // Matches View
+          // Matches View (Knockout)
           <TeamKnockoutMatches tournament={selectedTournament} />
         )}
       </div>

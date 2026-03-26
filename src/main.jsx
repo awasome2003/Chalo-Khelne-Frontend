@@ -2,28 +2,37 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import axios from "axios";
+import { QueryClientProvider } from "@tanstack/react-query";
+import queryClient from "./config/queryClient";
 import { AuthProvider } from "./context/AuthContext";
 import NotificationProvider from "./context/NotificationContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import App from "./App";
+import { initSocket } from "./features/realtime";
+
+// Initialize WebSocket if user is authenticated
+if (localStorage.getItem("token")) {
+  initSocket();
+}
 
 // Set axios base URL for production (when no Vite proxy is available)
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 if (apiBaseUrl.startsWith("http")) {
-  // Production: strip /api suffix since axios calls already include /api
   axios.defaults.baseURL = apiBaseUrl.replace(/\/api$/, "");
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <NotificationProvider>
-        <BrowserRouter>
-          <App />
-          <ToastContainer />
-        </BrowserRouter>
-      </NotificationProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <NotificationProvider>
+          <BrowserRouter>
+            <App />
+            <ToastContainer />
+          </BrowserRouter>
+        </NotificationProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );

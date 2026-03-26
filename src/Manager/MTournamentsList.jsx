@@ -24,6 +24,7 @@ import {
   Lock,
   Shield,
   ChevronDown,
+  Target,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
@@ -482,7 +483,13 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 } else if (t.includes("group stage")) {
                   navigate(`/tournament-management/group-stage?tournamentId=${tournament._id}`);
                 } else if (t.includes("knockout")) {
-                  navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
+                  // Check if it's team knockout or singles knockout
+                  const kf = (tournament.knockoutFormat || "").toLowerCase();
+                  if (kf.includes("team")) {
+                    navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
+                  } else {
+                    navigate(`/tournament-management/direct-knockout?tournamentId=${tournament._id}`);
+                  }
                 } else {
                   onTournamentSelect(tournament._id);
                 }
@@ -664,8 +671,23 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   <Trophy className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className="text-left">
-                  <p className="text-base font-bold text-orange-900">Knockout</p>
-                  <p className="text-xs text-orange-600/70">Manage knockout brackets & finals</p>
+                  <p className="text-base font-bold text-orange-900">Team Knockout</p>
+                  <p className="text-xs text-orange-600/70">Manage team knockout brackets & finals</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowFlowChooser(false);
+                  navigate(`/tournament-management/direct-knockout?tournamentId=${flowChooserTournamentId}`);
+                }}
+                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-400 transition-all group"
+              >
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Target className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="text-left">
+                  <p className="text-base font-bold text-purple-900">Singles Knockout</p>
+                  <p className="text-xs text-purple-600/70">Direct elimination bracket (16/32/64 draw)</p>
                 </div>
               </button>
             </div>
