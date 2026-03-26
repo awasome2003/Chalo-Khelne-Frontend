@@ -31,14 +31,14 @@ const AddTurf = () => {
     const formData = new FormData();
     Object.keys(turfData).forEach(key => {
       if (key === 'photos') {
-        turfData.photos.forEach(photo => formData.append('photos', photo));
+        turfData.photos.forEach(photo => formData.append('turfImages', photo));
       } else {
         formData.append(key, turfData[key]);
       }
     });
 
     try {
-      const response = await axios.post(`/api/turf/turfs/`, formData, {
+      const response = await axios.post(`/api/turfs/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert('Turf added successfully!');
