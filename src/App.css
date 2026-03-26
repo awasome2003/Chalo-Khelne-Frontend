@@ -1,85 +1,23 @@
 /* ═══════════════════════════════════════════
-   GLOBAL STYLES — Chalo Khelne
-   Dark sporty theme base
+   GLOBAL STYLES — Chalo Khelne (Light Theme)
    ═══════════════════════════════════════════ */
 
 * {
   font-family: "Inter", "Roboto", sans-serif;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar — dark theme */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0B1220;
-}
-::-webkit-scrollbar-thumb {
-  background: #1E2D4A;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #2A3F66;
-}
-
-/* Scrollbar hide utility */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* Old navbar/sidebar hidden — replaced by new layout */
+.navbar { display: none; }
+.sidebar { display: none; }
+.outlets { background-color: transparent; }
 
 /* ═══════════════════════════════════════════
-   LEGACY CLASS OVERRIDES
-   Override old light-theme classes to work
-   with new dark layout without breaking them
+   LEGACY CLASS STYLES (light theme)
    ═══════════════════════════════════════════ */
-
-.outlets {
-  background-color: transparent;
-}
-
-.navbar {
-  display: none; /* Hidden — replaced by TopBar component */
-}
-
-.sidebar {
-  display: none; /* Hidden — replaced by Sidebar component */
-}
-
-/* Old sidebar active state — neutralize */
-.sidebar.collapsed .nav-link.active,
-.sidebar:not(.collapsed) .nav-link.active,
-.sidebar:not(.collapsed) .nav-link:hover {
-  background-color: transparent;
-  color: inherit;
-}
-
-/* ═══════════════════════════════════════════
-   LEGACY COMPONENT STYLES
-   Kept for pages not yet migrated to Tailwind
-   Updated to dark theme colors
-   ═══════════════════════════════════════════ */
-
-.tournament-card {
-  background-color: #111B2E;
-  color: #F1F5F9;
-  border-radius: 16px;
-  border: 1px solid #1E2D4A;
-}
-
-.tournament-card.active {
-  border: 2px solid #FF6A00;
-  box-shadow: 0 0 20px rgba(255, 106, 0, 0.1);
-}
 
 .nav-link {
   display: flex;
@@ -89,125 +27,93 @@ html {
   text-decoration: none;
   font-size: 16px;
   font-weight: 500;
-  color: #94A3B8;
+  color: #666;
   border-radius: 12px;
   transition: all 0.2s ease;
 }
-
 .nav-link:hover {
-  color: #F1F5F9;
-  background-color: #1A2744;
+  color: #333;
+  background-color: #F3F4F6;
 }
-
 .nav-link.active {
-  background-color: rgba(255, 106, 0, 0.1);
-  color: #FF9D32;
-  border-left: 2px solid #FF6A00;
+  background-color: #004E93;
+  color: #fff;
 }
 
-/* Form inputs — dark */
-.search {
+.tournament-card {
+  background-color: white;
+  color: #333;
   border-radius: 16px;
-  background: #111B2E;
-  border: 1px solid #1E2D4A;
-  color: #F1F5F9;
+  border: 1px solid #E5E7EB;
+}
+.tournament-card.active {
+  border: 2px solid #004E93;
+  box-shadow: 0 4px 12px rgba(0, 78, 147, 0.1);
 }
 
-/* Buttons — legacy override to dark */
-.createtournaments,
-.createstournaments,
-.create-groups,
-.addpost {
-  background: linear-gradient(135deg, #FF6A00, #FF9D32);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.createtournaments:hover,
-.createstournaments:hover,
-.create-groups:hover,
-.addpost:hover {
-  opacity: 0.9;
-  transform: scale(0.98);
-}
-
-.backbtn,
-.viewbtn {
-  background-color: transparent;
-  border: 1px solid #1E2D4A;
-  color: #94A3B8;
-  border-radius: 12px;
-}
-
-.backbtn:hover,
-.viewbtn:hover {
-  border-color: #2A3F66;
-  color: #F1F5F9;
-  background-color: #1A2744;
-}
-
-/* Tab styles — dark */
 .active-tab {
   background-color: transparent;
-  color: #FF9D32;
-  border-bottom: 2px solid #FF6A00;
+  color: #004E93;
+  border-bottom: 2px solid #004E93;
 }
-
 .inactive-tab {
   background-color: transparent;
-  color: #64748B;
+  color: #666;
 }
-
 .inactive-tab:hover {
-  background-color: #111B2E;
-  color: #F1F5F9;
+  background-color: #F9FAFB;
+  color: #333;
 }
 
-/* Group tabs */
 .groupstabs {
   margin: 0px !important;
   border-radius: 12px !important;
 }
 
-/* Generate matches, points table buttons */
 .generatematches,
 .pointtables {
   padding: 14px;
   border-radius: 12px;
 }
 
-/* Match time */
 .matchtime {
   margin: 20px 0px;
-  color: #94A3B8;
+  color: #6B7280;
 }
 
-/* Card generic */
-.card {
-  border-radius: 20px;
-  background: #111B2E;
-  border: 1px solid #1E2D4A;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+.createtournaments,
+.createstournaments,
+.create-groups,
+.addpost {
+  background: #FF6A00;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.createtournaments:hover,
+.addpost:hover {
+  background: #E55D00;
 }
 
-/* Profile card */
-.profilecard {
-  border-radius: 20px;
-  background: linear-gradient(135deg, #004E93, #1D6A8B);
+.backbtn, .viewbtn {
+  background-color: transparent;
+  border: 1px solid #E5E7EB;
+  color: #6B7280;
+  border-radius: 12px;
+}
+.backbtn:hover, .viewbtn:hover {
+  border-color: #D1D5DB;
+  background-color: #F9FAFB;
 }
 
-/* Social */
-.social {
-  color: #F1F5F9;
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 24px;
+.startmatch {
+  border-radius: 12px;
+  height: 48px;
+  background: #FF6A00;
+  color: white;
 }
 
-/* Referee add button */
 .addrefree {
   border: 1px solid #FF6A00;
   color: #FF6A00;
@@ -215,38 +121,19 @@ html {
   border-radius: 12px;
 }
 
-.addrefree:hover {
-  background-color: rgba(255, 106, 0, 0.1);
-}
-
-/* Start match */
-.startmatch {
-  border-radius: 12px;
-  height: 48px;
-  background: linear-gradient(135deg, #FF6A00, #FF9D32);
-  color: white;
-}
-
-/* Selection check */
-.selectioncheck {
-  color: #FF6A00;
-}
-
-/* Score display */
 .score {
   font-size: 12px;
   font-weight: 600;
-  color: #F1F5F9;
+  color: #333;
 }
 
-/* Request button */
 .requestbtn {
-  border-bottom: 2px solid #FF6A00;
+  border-bottom: 2px solid #004E93;
   border-radius: 0px;
 }
 
 /* ═══════════════════════════════════════════
-   ANIMATION UTILITIES
+   ANIMATIONS
    ═══════════════════════════════════════════ */
 
 @keyframes fadeIn {
@@ -254,34 +141,4 @@ html {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 106, 0, 0.3); }
-  50% { box-shadow: 0 0 20px 4px rgba(255, 106, 0, 0.15); }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.4s ease-out;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s infinite;
-}
-
-/* ═══════════════════════════════════════════
-   RESPONSIVE UTILITIES
-   ═══════════════════════════════════════════ */
-
-@media (max-width: 768px) {
-  .search-container input {
-    width: 100%;
-  }
-}
+.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
