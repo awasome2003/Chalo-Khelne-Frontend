@@ -105,7 +105,7 @@ const GroupStageManagement = () => {
         <p>Please select a tournament to view its details.</p>
         <button
           onClick={() => navigate('/mtournament-management')}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+          className="mt-4 bg-blue-500/100 text-white px-4 py-2 rounded"
         >
           Back to Tournament Management
         </button>
@@ -929,7 +929,7 @@ const GroupStageManagement = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/mtournament-management')}
-            className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors"
+            className="bg-[#1A2744] hover:bg-[#1E2D4A] px-4 py-2 rounded-lg transition-colors"
           >
             ← Back
           </button>
@@ -938,7 +938,7 @@ const GroupStageManagement = () => {
       </div>
 
       {/* External Tabs - Registered Players | Groups */}
-      <div className="bg-white shadow-md rounded-[16px] p-4">
+      <div className="bg-[#111B2E] shadow-md rounded-[16px] p-4">
         <div className="flex space-x-3 mb-[20px] gap-[24px]">
           {["Registered Players", "Groups"].map((tab) => (
             <button
@@ -972,7 +972,7 @@ const GroupStageManagement = () => {
         {/* Registered Players Tab Content */}
         {selectedTab === "Registered Players" && (
           <>
-            <div className="bg-white shadow-md selectedregisterplayer rounded-[16px]">
+            <div className="bg-[#111B2E] shadow-md selectedregisterplayer rounded-[16px]">
               <div className="flex space-x-3 playersgroups">
                 {["Registered Players", "Top Players", "Super Players"].map(
                   (subTab) => (
@@ -1010,8 +1010,8 @@ const GroupStageManagement = () => {
 
                     {/* Round 2 Guide */}
                     {isRound2Mode && (
-                      <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6">
-                        <h4 className="text-green-700 font-semibold mb-2 flex items-center gap-2">
+                      <div className="bg-emerald-500/10 border-l-4 border-green-500 rounded-lg p-4 mb-6">
+                        <h4 className="text-emerald-400 font-semibold mb-2 flex items-center gap-2">
                           <GiTrophyCup className="w-4 h-4" /> Round 2 Group Stage Setup
                         </h4>
                         <p className="text-sm text-green-600 mb-2">
@@ -1034,7 +1034,7 @@ const GroupStageManagement = () => {
                           placeholder={isRound2Mode ? "Search Top Players..." : "Search players by name..."}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full border border-[#2A3F66] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
@@ -1043,7 +1043,7 @@ const GroupStageManagement = () => {
                         <div className="relative">
                           <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
+                            className="w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
                           >
                             <span className="block truncate">
                               {categories.find(cat => cat.value === selectedRegisterPlayerCategory)?.label || 'Select Category'}
@@ -1054,7 +1054,7 @@ const GroupStageManagement = () => {
                           </button>
 
                           {isOpen && (
-                            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
+                            <div className="absolute z-10 mt-1 w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg shadow-lg">
                               <ul className="py-1">
                                 {categories.map((category) => (
                                   <li key={category.value}>
@@ -1063,7 +1063,7 @@ const GroupStageManagement = () => {
                                         setSelectedRegisterPlayerCategory(category.value);
                                         setIsOpen(false);
                                       }}
-                                      className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center justify-between transition-colors duration-150"
+                                      className="w-full px-4 py-2 text-left hover:bg-blue-500/10 flex items-center justify-between transition-colors duration-150"
                                     >
                                       <span>{category.label}</span>
                                       {selectedRegisterPlayerCategory === category.value && (
@@ -1082,7 +1082,7 @@ const GroupStageManagement = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={handleCreateGroupClick}
-                          className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 whitespace-nowrap"
+                          className="bg-[#FF6A00]/100 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 whitespace-nowrap"
                         >
                           <FiPlus /> Create Groups
                         </button>
@@ -1090,7 +1090,7 @@ const GroupStageManagement = () => {
                         {/* Delete Groups Button - For Testing */}
                         <button
                           onClick={showDeleteGroupsWarning}
-                          className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 whitespace-nowrap"
+                          className="bg-red-500/100 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 whitespace-nowrap"
                           title="Delete all groups (for testing)"
                         >
                           <FiTrash />  Clear Groups
@@ -1100,7 +1100,7 @@ const GroupStageManagement = () => {
 
                     {/* Player Count and Status Info */}
                     <div className="flex justify-between items-center mb-4">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-400">
                         {isRound2Mode ? (
                           `Showing ${topPlayers.length} Top Players available for Round 2`
                         ) : (
@@ -1110,7 +1110,7 @@ const GroupStageManagement = () => {
                           </>
                         )}
                       </div>
-                      <div className="flex gap-4 text-sm text-gray-600">
+                      <div className="flex gap-4 text-sm text-gray-400">
                         <span>
                           {isRound2Mode ? selectedRound2Players.length : selectedPlayers.length} selected
                         </span>
@@ -1129,8 +1129,8 @@ const GroupStageManagement = () => {
                     {(isRound2Mode ? topPlayers.length : filteredPlayers.length) > 0 ? (
                       <>
                         <div className="overflow-x-auto">
-                          <table className="w-full bg-white border border-gray-200 rounded-lg">
-                            <thead className="bg-gray-50">
+                          <table className="w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg">
+                            <thead className="bg-[#0E1628]">
                               <tr>
                                 <th className="px-4 py-3 text-left">
                                   <input
@@ -1154,13 +1154,13 @@ const GroupStageManagement = () => {
                                     className="rounded text-orange-500 focus:ring-orange-500"
                                   />
                                 </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Avatar</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Player Name</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Avatar</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Player Name</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">
                                   {isRound2Mode ? "Points" : "Categories"}
                                 </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Status</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">
                                   {isRound2Mode ? "Type" : "Seed Player"}
                                 </th>
                               </tr>
@@ -1173,7 +1173,7 @@ const GroupStageManagement = () => {
                                   const isSeeded = player.groupId?.includes('seeded');
 
                                   return (
-                                    <tr key={player._id || index} className="hover:bg-gray-50">
+                                    <tr key={player._id || index} className="hover:bg-[#0E1628]">
                                       <td className="px-4 py-3">
                                         <input
                                           type="checkbox"
@@ -1190,11 +1190,11 @@ const GroupStageManagement = () => {
                                         />
                                       </td>
                                       <td className="px-4 py-3">
-                                        <div className="font-medium text-gray-900">
+                                        <div className="font-medium text-gray-100">
                                           {player.playerName || 'Unknown Player'}
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">
+                                      <td className="px-4 py-3 text-sm text-gray-400">
                                         {player.points || 0} points
                                       </td>
                                       <td className="px-4 py-3">
@@ -1203,7 +1203,7 @@ const GroupStageManagement = () => {
                                         </span>
                                       </td>
                                       <td className="px-4 py-3">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-400">
                                           {isSeeded ? 'Seeded' : 'Round 1 Qualifier'}
                                         </span>
                                       </td>
@@ -1222,7 +1222,7 @@ const GroupStageManagement = () => {
                                   const isLocked = !!isInGroup;
 
                                   return (
-                                    <tr key={player.id || index} className={`hover:bg-gray-50 ${isLocked ? 'bg-gray-25' : ''}`}>
+                                    <tr key={player.id || index} className={`hover:bg-[#0E1628] ${isLocked ? 'bg-gray-25' : ''}`}>
                                       <td className="px-4 py-3">
                                         <input
                                           type="checkbox"
@@ -1240,11 +1240,11 @@ const GroupStageManagement = () => {
                                         />
                                       </td>
                                       <td className="px-4 py-3">
-                                        <div className={`font-medium ${isLocked ? 'text-gray-500' : 'text-gray-900'}`}>
+                                        <div className={`font-medium ${isLocked ? 'text-gray-500' : 'text-gray-100'}`}>
                                           {player.name || 'Unknown Player'}
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">
+                                      <td className="px-4 py-3 text-sm text-gray-400">
                                         {player.categories && player.categories.length > 0
                                           ? player.categories.map(cat => cat.name).join(", ")
                                           : 'N/A'
@@ -1252,11 +1252,11 @@ const GroupStageManagement = () => {
                                       </td>
                                       <td className="px-4 py-3">
                                         {isInGroup ? (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#1A2744] text-gray-200">
                                             <FiLock className="mr-1" /> {isInGroup}
                                           </span>
                                         ) : (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-emerald-300">
                                             <FiCheck className="mr-1" /> Available
                                           </span>
                                         )}
@@ -1268,8 +1268,8 @@ const GroupStageManagement = () => {
                                           className={`p-2 rounded-full transition-colors ${isLocked
                                             ? 'text-gray-300 cursor-not-allowed'
                                             : isSeeded
-                                              ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
-                                              : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                                              ? 'text-yellow-500 bg-yellow-500/10 hover:bg-yellow-100'
+                                              : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-500/10'
                                             }`}
                                           title={
                                             isLocked
@@ -1293,14 +1293,14 @@ const GroupStageManagement = () => {
                         {/* Pagination */}
                         {totalPages > 1 && (
                           <div className="flex items-center justify-between mt-6 px-4">
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-400">
                               Page {currentPage} of {totalPages}
                             </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handlePageChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-2 text-sm border border-[#2A3F66] rounded-md hover:bg-[#0E1628] disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 Previous
                               </button>
@@ -1315,8 +1315,8 @@ const GroupStageManagement = () => {
                                     key={pageNum}
                                     onClick={() => handlePageChange(pageNum)}
                                     className={`px-3 py-2 text-sm border rounded-md ${currentPage === pageNum
-                                      ? 'bg-orange-500 text-white border-orange-500'
-                                      : 'border-gray-300 hover:bg-gray-50'
+                                      ? 'bg-[#FF6A00]/100 text-white border-orange-500'
+                                      : 'border-[#2A3F66] hover:bg-[#0E1628]'
                                       }`}
                                   >
                                     {pageNum}
@@ -1327,7 +1327,7 @@ const GroupStageManagement = () => {
                               <button
                                 onClick={() => handlePageChange(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-2 text-sm border border-[#2A3F66] rounded-md hover:bg-[#0E1628] disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 Next
                               </button>
@@ -1336,7 +1336,7 @@ const GroupStageManagement = () => {
                         )}
                       </>
                     ) : (
-                      <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                      <div className="text-center py-12 bg-[#111B2E] border border-[#2A3F66] rounded-lg">
                         <div className="text-gray-500">
                           {searchTerm ? (
                             <>
@@ -1368,7 +1368,7 @@ const GroupStageManagement = () => {
                         <div className="relative">
                           <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
+                            className="w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
                           >
                             <span className="block truncate">
                               {categories.find(cat => cat.value === selectedTopPlayerCategory.toLowerCase())?.label || 'Select Category'}
@@ -1379,7 +1379,7 @@ const GroupStageManagement = () => {
                           </button>
 
                           {isOpen && (
-                            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
+                            <div className="absolute z-10 mt-1 w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg shadow-lg">
                               <ul className="py-1">
                                 {categories.map((category) => (
                                   <li key={category.value}>
@@ -1388,7 +1388,7 @@ const GroupStageManagement = () => {
                                         setSelectedTopPlayerCategory(category.label);
                                         setIsOpen(false);
                                       }}
-                                      className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center justify-between transition-colors duration-150"
+                                      className="w-full px-4 py-2 text-left hover:bg-blue-500/10 flex items-center justify-between transition-colors duration-150"
                                     >
                                       <span>{category.label}</span>
                                       {selectedTopPlayerCategory === category.label && (
@@ -1406,7 +1406,7 @@ const GroupStageManagement = () => {
 
                     {/* Top Players Info and Round 2 Controls */}
                     <div className="flex justify-between items-center mb-4">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-400">
                         Total Top Players: {topPlayers.length}
                       </div>
                       <div className="flex items-center gap-4">
@@ -1417,14 +1417,14 @@ const GroupStageManagement = () => {
                         {!round2Progress && topPlayers.length >= 2 && (
                           <button
                             onClick={initiateRound2}
-                            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 text-sm font-semibold"
+                            className="bg-emerald-500/100 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 text-sm font-semibold"
                           >
                             <MdRocket className="w-4 h-4" /> Proceed to Round 2
                           </button>
                         )}
                         {round2Progress && (
                           <div className="flex items-center gap-2">
-                            <div className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                            <div className="text-sm font-semibold text-green-600 bg-emerald-500/10 px-3 py-1 rounded-full">
                               Round 2 {round2Progress.option === 'knockout' ? 'Knockout' : 'Group Stage'} - {round2Progress.status}
                             </div>
                             <button
@@ -1444,19 +1444,19 @@ const GroupStageManagement = () => {
                   <div className="overflow-hidden">
                     {topPlayers.length > 0 ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full bg-white border border-gray-200 rounded-lg">
-                          <thead className="bg-gray-50">
+                        <table className="w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg">
+                          <thead className="bg-[#0E1628]">
                             <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Avatar</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Player Name</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Category</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Type</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Avatar</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Player Name</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Category</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Status</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Type</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {topPlayers.map((player, index) => (
-                              <tr key={player._id || index} className="hover:bg-gray-50">
+                              <tr key={player._id || index} className="hover:bg-[#0E1628]">
                                 <td className="px-4 py-3">
                                   <img
                                     src={`https://i.pravatar.cc/50?img=${Math.floor(Math.random() * 70)}`}
@@ -1465,11 +1465,11 @@ const GroupStageManagement = () => {
                                   />
                                 </td>
                                 <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">
+                                  <div className="font-medium text-gray-100">
                                     {player.playerName || 'Unknown Player'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
+                                <td className="px-4 py-3 text-sm text-gray-400">
                                   {player.category || 'Open'}
                                 </td>
                                 <td className="px-4 py-3">
@@ -1478,7 +1478,7 @@ const GroupStageManagement = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className="text-sm text-gray-600">
+                                  <span className="text-sm text-gray-400">
                                     {player.groupId?.includes('seeded') ? 'Seeded' : 'Round 1 Qualifier'}
                                   </span>
                                 </td>
@@ -1488,7 +1488,7 @@ const GroupStageManagement = () => {
                         </table>
                       </div>
                     ) : (
-                      <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                      <div className="text-center py-12 bg-[#111B2E] border border-[#2A3F66] rounded-lg">
                         <div className="text-gray-500">
                           <FaStar className="mx-auto text-4xl mb-4 text-gray-300" />
                           <p className="text-lg font-medium">No Top Players Yet</p>
@@ -1510,14 +1510,14 @@ const GroupStageManagement = () => {
                       <h3 className="text-lg font-semibold">Super Players - Final Knockout Phase</h3>
                       <button
                         onClick={() => setShowKnockoutModal(true)}
-                        className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-semibold"
+                        className="bg-red-500/100 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-semibold"
                       >
                         <MdFlashOn className="w-4 h-4" /> Start Knockout
                       </button>
                     </div>
 
                     <div className="bg-gradient-to-r from-purple-50 to-red-50 border-l-4 border-purple-500 rounded-lg p-4 mb-6">
-                      <h4 className="text-purple-700 font-semibold mb-2 flex items-center gap-2">
+                      <h4 className="text-purple-400 font-semibold mb-2 flex items-center gap-2">
                         <FaTrophy className="w-4 h-4" /> Tournament Final Phase
                       </h4>
                       <p className="text-sm text-purple-600 mb-2">
@@ -1535,48 +1535,48 @@ const GroupStageManagement = () => {
                   <div className="overflow-hidden">
                     {superPlayers.length > 0 ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full bg-white border border-gray-200 rounded-lg">
+                        <table className="w-full bg-[#111B2E] border border-[#2A3F66] rounded-lg">
                           <thead className="bg-gradient-to-r from-purple-50 to-red-50">
                             <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Avatar</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Player Name</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Points</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Record</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Status</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Selection</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Avatar</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Player Name</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Points</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Record</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Status</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-400">Selection</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {superPlayers.map((player, index) => (
-                              <tr key={player._id || index} className="hover:bg-purple-50">
+                              <tr key={player._id || index} className="hover:bg-purple-500/10">
                                 <td className="px-4 py-3">
                                   <img
                                     src={player.profileImage || player.playerId?.profileImage || `https://i.pravatar.cc/50?img=${Math.floor(Math.random() * 70)}`}
                                     alt={player.userName || player.playerName || player.playerId?.name || 'Player Avatar'}
-                                    className="w-10 h-10 rounded-full border-2 border-purple-200"
+                                    className="w-10 h-10 rounded-full border-2 border-purple-500/20"
                                   />
                                 </td>
                                 <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">
+                                  <div className="font-medium text-gray-100">
                                     {player.userName || player.playerName || player.playerId?.name || 'Unknown Player'}
                                   </div>
                                 </td>
                                 <td className="px-4 py-3 text-sm font-semibold text-purple-600">
                                   {player.points || 0} pts
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
+                                <td className="px-4 py-3 text-sm text-gray-400">
                                   <div className="flex flex-col">
                                     <span className="font-medium">{player.won || 0}W - {player.lost || 0}L</span>
                                     <span className="text-xs text-gray-500">Sets: {player.setsWon || 0} - {player.setsLost || 0}</span>
                                   </div>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-red-100 text-purple-800">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-red-100 text-purple-300">
                                     <GiLaurelCrown className="mr-1 w-3 h-3" /> Super Player
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className="text-sm text-gray-600">
+                                  <span className="text-sm text-gray-400">
                                     Round {player.selectedFromRound || 2} Winner
                                   </span>
                                 </td>
@@ -1586,13 +1586,13 @@ const GroupStageManagement = () => {
                         </table>
                       </div>
                     ) : (
-                      <div className="text-center py-8 bg-white border border-gray-200 rounded-lg">
+                      <div className="text-center py-8 bg-[#111B2E] border border-[#2A3F66] rounded-lg">
                         <div className="text-gray-500">
                           <div className="text-purple-500 text-6xl mb-4 flex justify-center">
                             <GiLaurelCrown className="w-16 h-16" />
                           </div>
-                          <p className="text-lg font-medium text-gray-700 mb-2">No Super Players Yet</p>
-                          <p className="text-sm text-gray-600 mb-4">
+                          <p className="text-lg font-medium text-gray-300 mb-2">No Super Players Yet</p>
+                          <p className="text-sm text-gray-400 mb-4">
                             Super Players will appear here after Top Players are selected from Round 2.
                           </p>
                           <div className="text-sm text-gray-500">
@@ -1619,7 +1619,7 @@ const GroupStageManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-[#F0F4F9] p-[52px] rounded-[24px] relative min-w-[395px] shadow-lg min-h-[291px]">
             <button
-              className="absolute top-0 right-6 text-xl text-gray-600 bg-transparent hover:bg-transparent w-0"
+              className="absolute top-0 right-6 text-xl text-gray-400 bg-transparent hover:bg-transparent w-0"
               onClick={resetModal}
             >
               <FiX />
@@ -1627,12 +1627,12 @@ const GroupStageManagement = () => {
             <h2 className="text-[16px] md:text-[18px] font-[600] text-center text-black mb-[10px]">
               {isRound2Mode ? "Create Round 2 Groups" : "Create Number of Groups"}
             </h2>
-            <p className="text-center text-gray-600 mb-6">
+            <p className="text-center text-gray-400 mb-6">
               {isRound2Mode ? `Selected Top Players for Round 2: ${selectedRound2Players.length}` : `Selected Players: ${selectedPlayers.length}`}
             </p>
 
             <div className="text-center">
-              <label className="block text-sm font-medium mb-2 text-gray-700">Number of Groups:</label>
+              <label className="block text-sm font-medium mb-2 text-gray-300">Number of Groups:</label>
               <input
                 type="number"
                 min="2"
@@ -1647,13 +1647,13 @@ const GroupStageManagement = () => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={resetModal}
-                className="px-6 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 text-gray-400 border rounded-lg hover:bg-[#0E1628]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleNextStep}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-6 py-2 bg-[#FF6A00]/100 text-white rounded-lg hover:bg-orange-600"
                 disabled={numGroups <= 1}
               >
                 Next
@@ -1668,7 +1668,7 @@ const GroupStageManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-[#F0F4F9] p-[52px] rounded-[24px] relative min-w-[395px] max-h-[453px] shadow-lg overflow-y-auto">
             <button
-              className="absolute top-0 right-6 text-xl text-gray-600 bg-transparent hover:bg-transparent w-0"
+              className="absolute top-0 right-6 text-xl text-gray-400 bg-transparent hover:bg-transparent w-0"
               onClick={resetModal}
             >
               <FiX />
@@ -1680,7 +1680,7 @@ const GroupStageManagement = () => {
             <div className="space-y-4 mb-6">
               {groupNames.map((name, index) => (
                 <div key={index}>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                  <label className="block text-sm font-medium mb-1 text-gray-300">
                     Group {index + 1}:
                   </label>
                   <input
@@ -1701,13 +1701,13 @@ const GroupStageManagement = () => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setModalStep(1)}
-                className="px-6 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 text-gray-400 border rounded-lg hover:bg-[#0E1628]"
               >
                 Back
               </button>
               <button
                 onClick={handleNextStep}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-6 py-2 bg-[#FF6A00]/100 text-white rounded-lg hover:bg-orange-600"
               >
                 Next
               </button>
@@ -1721,22 +1721,22 @@ const GroupStageManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-[#F0F4F9] p-[52px] rounded-[24px] relative min-w-[395px] max-h-[515px] shadow-lg overflow-y-auto">
             <button
-              className="absolute top-0 right-6 text-xl text-gray-600 bg-transparent hover:bg-transparent w-0"
+              className="absolute top-0 right-6 text-xl text-gray-400 bg-transparent hover:bg-transparent w-0"
               onClick={resetModal}
             >
               <FiX />
             </button>
-            <h2 className="md:text-[18px] font-[600] text-center text-gray-800 mb-4">
+            <h2 className="md:text-[18px] font-[600] text-center text-gray-200 mb-4">
               Distribute Players in Groups
             </h2>
-            <p className="text-center text-gray-600 mb-6">
+            <p className="text-center text-gray-400 mb-6">
               Total Selected Players: {isRound2Mode ? selectedRound2Players.length : selectedPlayers.length}
             </p>
 
             <div className="space-y-4 mb-6">
               {groupNames.map((name, index) => (
-                <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg">
-                  <label className="font-medium text-gray-700">{name}:</label>
+                <div key={index} className="flex items-center justify-between bg-[#111B2E] p-3 rounded-lg">
+                  <label className="font-medium text-gray-300">{name}:</label>
                   <input
                     type="number"
                     min="0"
@@ -1756,7 +1756,7 @@ const GroupStageManagement = () => {
             </div>
 
             <div className="text-center mb-6">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-400">
                 Assigned: {groupNames.reduce((sum, name) => sum + (parseInt(groupPlayers[name]) || 0), 0)} / {isRound2Mode ? selectedRound2Players.length : selectedPlayers.length}
               </p>
             </div>
@@ -1764,13 +1764,13 @@ const GroupStageManagement = () => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setModalStep(2)}
-                className="px-6 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 text-gray-400 border rounded-lg hover:bg-[#0E1628]"
               >
                 Back
               </button>
               <button
                 onClick={handleNextStep}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-6 py-2 bg-[#FF6A00]/100 text-white rounded-lg hover:bg-orange-600"
               >
                 Review
               </button>
@@ -1784,7 +1784,7 @@ const GroupStageManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-[#F0F4F9] p-[52px] rounded-[24px] relative min-w-[381px] min-h-[294px] shadow-lg">
             <button
-              className="absolute top-0 right-6 text-xl text-gray-600 bg-transparent hover:bg-transparent w-0"
+              className="absolute top-0 right-6 text-xl text-gray-400 bg-transparent hover:bg-transparent w-0"
               onClick={resetModal}
             >
               <FiX />
@@ -1794,29 +1794,29 @@ const GroupStageManagement = () => {
             </h2>
 
             <div className="space-y-3 mb-6">
-              <p className="text-center text-gray-600 mb-4">Distribution of Players:</p>
+              <p className="text-center text-gray-400 mb-4">Distribution of Players:</p>
               {groupNames.map((name, index) => (
-                <div key={index} className="flex justify-between bg-white p-2 rounded">
+                <div key={index} className="flex justify-between bg-[#111B2E] p-2 rounded">
                   <span className="font-medium">{name}:</span>
                   <span>{groupPlayers[name]} players</span>
                 </div>
               ))}
             </div>
 
-            <p className="text-center text-gray-600 mb-6">
+            <p className="text-center text-gray-400 mb-6">
               Are you sure you want to create these groups?
             </p>
 
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setModalStep(3)}
-                className="px-6 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 text-gray-400 border rounded-lg hover:bg-[#0E1628]"
               >
                 Back
               </button>
               <button
                 onClick={handleNextStep}
-                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                className="px-6 py-2 bg-emerald-500/100 text-white rounded-lg hover:bg-green-600"
               >
                 <FiPlus /> Create Groups
               </button>
@@ -1830,12 +1830,12 @@ const GroupStageManagement = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-[#F0F4F9] p-[52px] rounded-2xl relative min-w-[404px] min-h-[265px] shadow-lg">
             <button
-              className="absolute top-0 right-6 text-xl text-gray-600 bg-transparent hover:bg-transparent w-0"
+              className="absolute top-0 right-6 text-xl text-gray-400 bg-transparent hover:bg-transparent w-0"
               onClick={resetModal}
             >
               <FiX />
             </button>
-            <h2 className="text-lg font-semibold text-center text-gray-800 mb-4">
+            <h2 className="text-lg font-semibold text-center text-gray-200 mb-4">
               {isRound2Mode ? `Round 2 Groups Created Successfully!` : `Created ${numGroups} Groups Successfully`}
             </h2>
 
@@ -1843,7 +1843,7 @@ const GroupStageManagement = () => {
               <div className="text-green-500 text-6xl mb-4">
                 <FiCheck className="mx-auto" />
               </div>
-              <p className="text-gray-600">
+              <p className="text-gray-400">
                 {isRound2Mode
                   ? "Round 2 groups have been created with Top Players. You can now generate matches and proceed with Round 2!"
                   : "All groups have been created and players have been distributed."
@@ -1857,7 +1857,7 @@ const GroupStageManagement = () => {
             <div className="flex justify-center">
               <button
                 onClick={resetModal}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-6 py-2 bg-[#FF6A00]/100 text-white rounded-lg hover:bg-orange-600"
               >
                 Close
               </button>
@@ -1869,9 +1869,9 @@ const GroupStageManagement = () => {
       {/* Delete Warning Modal */}
       {showDeleteWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg relative max-w-md mx-4 shadow-lg">
+          <div className="bg-[#111B2E] p-8 rounded-lg relative max-w-md mx-4 shadow-lg">
             <button
-              className="absolute top-4 right-4 text-xl text-gray-600 hover:text-gray-800"
+              className="absolute top-4 right-4 text-xl text-gray-400 hover:text-gray-200"
               onClick={() => setShowDeleteWarning(false)}
             >
               <FiX />
@@ -1882,11 +1882,11 @@ const GroupStageManagement = () => {
                 <FiAlertTriangle />
               </div>
 
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              <h2 className="text-xl font-semibold text-gray-200 mb-4">
                 Delete All Groups?
               </h2>
 
-              <p className="text-gray-600 mb-6 text-left">
+              <p className="text-gray-400 mb-6 text-left">
                 <strong>Warning:</strong> This will permanently delete all groups and remove all player assignments for this tournament.
                 <br /><br />
                 This action cannot be undone. All players will be available for new group creation.
@@ -1895,13 +1895,13 @@ const GroupStageManagement = () => {
               <div className="flex justify-center gap-4">
                 <button
                   onClick={() => setShowDeleteWarning(false)}
-                  className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 text-gray-400 border border-[#2A3F66] rounded-lg hover:bg-[#0E1628]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeleteAllGroups}
-                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2"
+                  className="px-6 py-2 bg-red-500/100 text-white rounded-lg hover:bg-red-600 flex items-center gap-2"
                 >
                   <FiTrash /> Delete All Groups
                 </button>
@@ -1914,9 +1914,9 @@ const GroupStageManagement = () => {
       {/* Seeding Confirmation Modal */}
       {showSeedingModal && playerToSeed && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg relative max-w-md mx-4 shadow-lg">
+          <div className="bg-[#111B2E] p-8 rounded-lg relative max-w-md mx-4 shadow-lg">
             <button
-              className="absolute top-4 right-4 text-xl text-gray-600 hover:text-gray-800"
+              className="absolute top-4 right-4 text-xl text-gray-400 hover:text-gray-200"
               onClick={() => {
                 setShowSeedingModal(false);
                 setPlayerToSeed(null);
@@ -1930,25 +1930,25 @@ const GroupStageManagement = () => {
                 <FaStar />
               </div>
 
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              <h2 className="text-xl font-semibold text-gray-200 mb-4">
                 {seededPlayers.includes(playerToSeed.id) ? 'Remove Seeded Player?' : 'Add Seeded Player?'}
               </h2>
 
               <div className="text-left mb-6">
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-400 mb-4">
                   <strong>Player:</strong> {playerToSeed.name}
                 </p>
 
                 {seededPlayers.includes(playerToSeed.id) ? (
-                  <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <div className="bg-red-500/10 border border-red-500/20 rounded p-3">
                     <p className="text-red-700">
                       <FiInfo className="inline mr-2" />
                       This will remove the player from seeded status and Top Players list.
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                    <p className="text-blue-700">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded p-3">
+                    <p className="text-blue-400">
                       <FiInfo className="inline mr-2" />
                       This player will be marked as seeded and will:
                     </p>
@@ -1967,15 +1967,15 @@ const GroupStageManagement = () => {
                     setShowSeedingModal(false);
                     setPlayerToSeed(null);
                   }}
-                  className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 text-gray-400 border border-[#2A3F66] rounded-lg hover:bg-[#0E1628]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmSeedPlayer}
                   className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 ${seededPlayers.includes(playerToSeed.id)
-                    ? 'bg-red-500 hover:bg-red-600'
-                    : 'bg-yellow-500 hover:bg-yellow-600'
+                    ? 'bg-red-500/100 hover:bg-red-600'
+                    : 'bg-yellow-500/100 hover:bg-yellow-600'
                     }`}
                 >
                   <FaStar />
@@ -1990,25 +1990,25 @@ const GroupStageManagement = () => {
       {/* Round 2 Option Selection Modal */}
       {showRound2Modal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-[24px] relative max-w-2xl mx-4 shadow-2xl animate-fadeIn">
+          <div className="bg-[#111B2E] p-8 rounded-[24px] relative max-w-2xl mx-4 shadow-2xl animate-fadeIn">
             <button
-              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-200 hover:bg-[#1A2744] rounded-full transition-colors"
               onClick={() => setShowRound2Modal(false)}
             >
               <FiX className="w-6 h-6" />
             </button>
 
             <div className="text-center">
-              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <MdRocket className="w-10 h-10 text-green-500" />
               </div>
 
-              <h2 className="text-3xl font-bold text-gray-800 mb-3">
+              <h2 className="text-3xl font-bold text-gray-200 mb-3">
                 Choose Round 2 Format
               </h2>
 
-              <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                You have <strong className="text-gray-900">{topPlayers.length} Top Players</strong> ready for the next stage.
+              <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                You have <strong className="text-gray-100">{topPlayers.length} Top Players</strong> ready for the next stage.
                 Select how you want them to compete.
               </p>
 
@@ -2016,25 +2016,25 @@ const GroupStageManagement = () => {
                 {/* Group Stage Option */}
                 <div
                   className={`group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${round2Option === 'group_stage'
-                    ? 'border-blue-500 bg-blue-50/50 shadow-lg scale-[1.02]'
-                    : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+                    ? 'border-blue-500 bg-blue-500/10/50 shadow-lg scale-[1.02]'
+                    : 'border-[#2A3F66] hover:border-blue-300 hover:shadow-md'
                     }`}
                   onClick={() => setRound2Option('group_stage')}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-500 group-hover:bg-blue-500 group-hover:text-white'
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-blue-500/100 text-white' : 'bg-blue-100 text-blue-500 group-hover:bg-blue-500/100 group-hover:text-white'
                     }`}>
                     <GiTrophyCup className="w-7 h-7" />
                   </div>
-                  <h3 className="font-bold text-xl mb-2 text-gray-900">Group Stage 2</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                  <h3 className="font-bold text-xl mb-2 text-gray-100">Group Stage 2</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-4">
                     Create new groups with Top Players for another round of league matches.
                   </p>
-                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-white/50 p-3 rounded-lg">
+                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-[#111B2E]/50 p-3 rounded-lg">
                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>Round-robin format</li>
                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>Multiple matches per player</li>
                   </ul>
                   {round2Option === 'group_stage' && (
-                    <div className="absolute top-4 right-4 text-blue-500 bg-white rounded-full p-1 shadow-sm">
+                    <div className="absolute top-4 right-4 text-blue-500 bg-[#111B2E] rounded-full p-1 shadow-sm">
                       <FiCheck className="w-4 h-4" />
                     </div>
                   )}
@@ -2043,25 +2043,25 @@ const GroupStageManagement = () => {
                 {/* Knockout Option */}
                 <div
                   className={`group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${round2Option === 'knockout'
-                    ? 'border-red-500 bg-red-50/50 shadow-lg scale-[1.02]'
-                    : 'border-gray-200 hover:border-red-300 hover:shadow-md'
+                    ? 'border-red-500 bg-red-500/10/50 shadow-lg scale-[1.02]'
+                    : 'border-[#2A3F66] hover:border-red-300 hover:shadow-md'
                     }`}
                   onClick={() => setRound2Option('knockout')}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'knockout' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500 group-hover:bg-red-500 group-hover:text-white'
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'knockout' ? 'bg-red-500/100 text-white' : 'bg-red-100 text-red-500 group-hover:bg-red-500/100 group-hover:text-white'
                     }`}>
                     <MdFlashOn className="w-7 h-7" />
                   </div>
-                  <h3 className="font-bold text-xl mb-2 text-gray-900">Direct Knockout</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                  <h3 className="font-bold text-xl mb-2 text-gray-100">Direct Knockout</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-4">
                     Elimination matches. Winner advances, loser goes home.
                   </p>
-                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-white/50 p-3 rounded-lg">
+                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-[#111B2E]/50 p-3 rounded-lg">
                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>Single elimination bracket</li>
                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>Fast completion</li>
                   </ul>
                   {round2Option === 'knockout' && (
-                    <div className="absolute top-4 right-4 text-red-500 bg-white rounded-full p-1 shadow-sm">
+                    <div className="absolute top-4 right-4 text-red-500 bg-[#111B2E] rounded-full p-1 shadow-sm">
                       <FiCheck className="w-4 h-4" />
                     </div>
                   )}
@@ -2071,7 +2071,7 @@ const GroupStageManagement = () => {
               <div className="flex justify-center gap-4">
                 <button
                   onClick={() => setShowRound2Modal(false)}
-                  className="px-8 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors"
+                  className="px-8 py-3 text-gray-400 font-medium hover:bg-[#1A2744] rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
@@ -2094,7 +2094,7 @@ const GroupStageManagement = () => {
       {/* Knockout Scheduling Modal */}
       {showKnockoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+          <div className="bg-[#111B2E] rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MdFlashOn className="w-5 h-5 text-red-500" />
@@ -2102,7 +2102,7 @@ const GroupStageManagement = () => {
               </h3>
               <button
                 onClick={() => setShowKnockoutModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-400"
               >
                 ×
               </button>
@@ -2110,7 +2110,7 @@ const GroupStageManagement = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Court Number
                 </label>
                 <input
@@ -2121,13 +2121,13 @@ const GroupStageManagement = () => {
                     ...prev,
                     courtNumber: parseInt(e.target.value)
                   }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full p-2 border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   placeholder="Enter court number"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Match Start Time
                 </label>
                 <input
@@ -2137,12 +2137,12 @@ const GroupStageManagement = () => {
                     ...prev,
                     matchStartTime: e.target.value
                   }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full p-2 border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Interval Between Matches (minutes)
                 </label>
                 <input
@@ -2153,15 +2153,15 @@ const GroupStageManagement = () => {
                     ...prev,
                     intervalMinutes: parseInt(e.target.value)
                   }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full p-2 border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   placeholder="Enter interval in minutes"
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                 <div className="flex items-start gap-2">
                   <div className="text-blue-500 mt-0.5">ℹ️</div>
-                  <div className="text-sm text-blue-700">
+                  <div className="text-sm text-blue-400">
                     <p className="font-medium mb-1">Tournament Info:</p>
                     <p>• {superPlayers.length} Super Players will compete</p>
                     <p>• Bracket will auto-generate based on player count</p>
@@ -2174,13 +2174,13 @@ const GroupStageManagement = () => {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowKnockoutModal(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-gray-400 border border-[#2A3F66] rounded-lg hover:bg-[#0E1628]"
               >
                 Cancel
               </button>
               <button
                 onClick={generateKnockoutMatches}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2"
+                className="px-4 py-2 bg-red-500/100 text-white rounded-lg hover:bg-red-600 flex items-center gap-2"
               >
                 <MdFlashOn className="w-4 h-4" />
                 Generate Knockout
@@ -2193,10 +2193,10 @@ const GroupStageManagement = () => {
       {/* 🔥 DIRECT KNOCKOUT PLAYER SELECTION MODAL (ENHANCED FOR SIZE SELECTION) */}
       {showDirectKnockoutPlayerModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-[24px] relative max-w-5xl mx-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
+          <div className="bg-[#111B2E] p-8 rounded-[24px] relative max-w-5xl mx-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <h2 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
                   <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                     <MdFlashOn className="w-6 h-6 text-red-500" />
                   </div>
@@ -2206,7 +2206,7 @@ const GroupStageManagement = () => {
               </div>
               <button
                 onClick={() => setShowDirectKnockoutPlayerModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-[#1A2744] rounded-full transition-colors"
                 title="Close"
               >
                 <FiX className="w-6 h-6" />
@@ -2214,15 +2214,15 @@ const GroupStageManagement = () => {
             </div>
 
             <div className="mb-10">
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 mb-8 border border-gray-100">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 mb-8 border border-[#1E2D4A]">
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="bg-white p-2 rounded-lg shadow-sm">
+                  <div className="bg-[#111B2E] p-2 rounded-lg shadow-sm">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Available Pool</span>
                   </div>
                   <div className="h-px bg-gray-300 flex-1"></div>
                 </div>
-                <p className="text-lg text-gray-700">
-                  You have <span className="text-3xl font-bold text-gray-900 mx-1">{topPlayers.length}</span> Top Players qualified.
+                <p className="text-lg text-gray-300">
+                  You have <span className="text-3xl font-bold text-gray-100 mx-1">{topPlayers.length}</span> Top Players qualified.
                 </p>
               </div>
 
@@ -2242,24 +2242,24 @@ const GroupStageManagement = () => {
                       }}
                       disabled={!isAvailable}
                       className={`group relative overflow-hidden p-8 rounded-[20px] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-4 h-64 ${isAvailable
-                        ? 'border-gray-100 bg-white hover:border-red-500 hover:shadow-xl cursor-pointer'
-                        : 'border-gray-100 bg-gray-50/50 opacity-60 cursor-not-allowed grayscale'
+                        ? 'border-[#1E2D4A] bg-[#111B2E] hover:border-red-500 hover:shadow-xl cursor-pointer'
+                        : 'border-[#1E2D4A] bg-[#0E1628]/50 opacity-60 cursor-not-allowed grayscale'
                         }`}
                     >
                       {/* Decorative Background Element */}
-                      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 ${isAvailable ? 'bg-red-500' : 'bg-gray-400'}`}></div>
+                      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 ${isAvailable ? 'bg-red-500/100' : 'bg-gray-400'}`}></div>
 
-                      <div className={`text-6xl font-black tracking-tighter transition-transform group-hover:scale-110 ${isAvailable ? 'text-gray-900 group-hover:text-red-500' : 'text-gray-300'}`}>
+                      <div className={`text-6xl font-black tracking-tighter transition-transform group-hover:scale-110 ${isAvailable ? 'text-gray-100 group-hover:text-red-500' : 'text-gray-300'}`}>
                         {size}
                       </div>
 
                       <div className="text-center z-10 relative">
-                        <div className={`text-lg font-bold mb-1 ${isAvailable ? 'text-gray-700' : 'text-gray-400'}`}>
+                        <div className={`text-lg font-bold mb-1 ${isAvailable ? 'text-gray-300' : 'text-gray-400'}`}>
                           Round of {size}
                         </div>
                         <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${isAvailable
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-50 text-red-500'
+                          ? 'bg-green-100 text-emerald-400'
+                          : 'bg-red-500/10 text-red-500'
                           }`}>
                           {isAvailable ? '✅ Ready to Start' : `Need ${size - topPlayers.length} more`}
                         </div>
@@ -2277,17 +2277,17 @@ const GroupStageManagement = () => {
             </div>
 
             {/* Manual Selection Toggle */}
-            <div className="border-t border-gray-100 pt-8">
+            <div className="border-t border-[#1E2D4A] pt-8">
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Manual Selection</h3>
+                  <h3 className="text-lg font-bold text-gray-200">Manual Selection</h3>
                   <p className="text-sm text-gray-500">Custom bracket sizes or specific player selection</p>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedDirectKnockoutPlayers([])}
-                    className="text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                    className="text-xs font-medium text-red-500 bg-red-500/10 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
                   >
                     Reset Checkboxes
                   </button>
@@ -2299,7 +2299,7 @@ const GroupStageManagement = () => {
                         setSelectedDirectKnockoutPlayers(newSelection);
                       }}
                       disabled={topPlayers.length < count}
-                      className="text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      className="text-xs font-medium bg-[#1A2744] hover:bg-[#1E2D4A] text-gray-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                     >
                       Pick Top {count}
                     </button>
@@ -2325,15 +2325,15 @@ const GroupStageManagement = () => {
                         }
                       }}
                       className={`p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-center gap-3 group ${isSelected
-                        ? 'border-red-500 bg-red-50 shadow-sm'
-                        : 'border-gray-100 bg-white hover:border-gray-300'
+                        ? 'border-red-500 bg-red-500/10 shadow-sm'
+                        : 'border-[#1E2D4A] bg-[#111B2E] hover:border-[#2A3F66]'
                         }`}
                     >
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-500 border-red-500' : 'bg-transparent border-gray-300 group-hover:border-gray-400'
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-500/100 border-red-500' : 'bg-transparent border-[#2A3F66] group-hover:border-gray-400'
                         }`}>
                         {isSelected && <FiCheck className="w-3 h-3 text-white" />}
                       </div>
-                      <span className={`text-sm truncate font-medium ${isSelected ? 'text-red-900' : 'text-gray-600'}`}>
+                      <span className={`text-sm truncate font-medium ${isSelected ? 'text-red-900' : 'text-gray-400'}`}>
                         {player.playerName || player.name}
                       </span>
                     </div>
@@ -2341,15 +2341,15 @@ const GroupStageManagement = () => {
                 })}
               </div>
 
-              <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-100">
+              <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#1E2D4A]">
                 <div className="text-sm">
                   <span className="text-gray-500">Selected Count: </span>
-                  <span className={`font-bold text-lg ${selectedDirectKnockoutPlayers.length >= 4 ? 'text-green-600' : 'text-gray-900'}`}>{selectedDirectKnockoutPlayers.length}</span>
+                  <span className={`font-bold text-lg ${selectedDirectKnockoutPlayers.length >= 4 ? 'text-green-600' : 'text-gray-100'}`}>{selectedDirectKnockoutPlayers.length}</span>
                 </div>
                 <div className="flex gap-4">
                   <button
                     onClick={() => setShowDirectKnockoutPlayerModal(false)}
-                    className="px-6 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition-colors"
+                    className="px-6 py-2.5 text-gray-400 font-medium hover:bg-[#1A2744] rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
@@ -2373,9 +2373,9 @@ const GroupStageManagement = () => {
       {/* 🔥 DIRECT KNOCKOUT SCHEDULE MODAL (ENHANCED) */}
       {showDirectKnockoutScheduleModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-[24px] relative max-w-lg mx-4 shadow-2xl animate-fadeIn">
+          <div className="bg-[#111B2E] p-8 rounded-[24px] relative max-w-lg mx-4 shadow-2xl animate-fadeIn">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
                 <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                   <BiTrophy className="w-6 h-6 text-red-500" />
                 </div>
@@ -2383,43 +2383,43 @@ const GroupStageManagement = () => {
               </h2>
               <button
                 onClick={() => setShowDirectKnockoutScheduleModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-[#1A2744] rounded-full transition-colors"
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-8">
+            <div className="bg-blue-500/10/50 border border-blue-100 rounded-xl p-4 mb-8">
               <div className="flex gap-4">
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Players</p>
-                  <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length}</p>
+                  <p className="text-2xl font-bold text-gray-200">{selectedDirectKnockoutPlayers.length}</p>
                 </div>
                 <div className="h-auto w-px bg-blue-100"></div>
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Matches</p>
-                  <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length - 1}</p>
+                  <p className="text-2xl font-bold text-gray-200">{selectedDirectKnockoutPlayers.length - 1}</p>
                 </div>
                 <div className="h-auto w-px bg-blue-100"></div>
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Rounds</p>
-                  <p className="text-2xl font-bold text-gray-800">{Math.log2(selectedDirectKnockoutPlayers.length)}</p>
+                  <p className="text-2xl font-bold text-gray-200">{Math.log2(selectedDirectKnockoutPlayers.length)}</p>
                 </div>
               </div>
             </div>
 
             {/* Draw Method Selection */}
             <div className="mb-8">
-              <label className="block text-sm font-bold text-gray-700 mb-3">Bracket Draw Method</label>
+              <label className="block text-sm font-bold text-gray-300 mb-3">Bracket Draw Method</label>
               <div className="grid grid-cols-2 gap-4">
                 <div
                   className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'global'
-                    ? 'border-indigo-500 bg-indigo-50/50 shadow-md'
-                    : 'border-gray-100 hover:border-gray-300'
+                    ? 'border-indigo-500 bg-indigo-500/10/50 shadow-md'
+                    : 'border-[#1E2D4A] hover:border-[#2A3F66]'
                     }`}
                   onClick={() => setDrawMethod('global')}
                 >
-                  <div className="font-bold text-gray-900 mb-1">Global Rules 🌍</div>
+                  <div className="font-bold text-gray-100 mb-1">Global Rules 🌍</div>
                   <div className="text-xs text-gray-500 leading-snug">
                     Standard seeding protection logic (1 vs Last, etc). Best for balanced competition.
                   </div>
@@ -2428,12 +2428,12 @@ const GroupStageManagement = () => {
 
                 <div
                   className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'local'
-                    ? 'border-indigo-500 bg-indigo-50/50 shadow-md'
-                    : 'border-gray-100 hover:border-gray-300'
+                    ? 'border-indigo-500 bg-indigo-500/10/50 shadow-md'
+                    : 'border-[#1E2D4A] hover:border-[#2A3F66]'
                     }`}
                   onClick={() => setDrawMethod('local')}
                 >
-                  <div className="font-bold text-gray-900 mb-1">Local Rules 🏠</div>
+                  <div className="font-bold text-gray-100 mb-1">Local Rules 🏠</div>
                   <div className="text-xs text-gray-500 leading-snug">
                     Fixed custom slot assignments based on specific local templates.
                   </div>
@@ -2445,7 +2445,7 @@ const GroupStageManagement = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Start Date</label>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">Start Date</label>
                   <input
                     type="date"
                     value={knockoutSchedule.startDate}
@@ -2453,11 +2453,11 @@ const GroupStageManagement = () => {
                       ...prev,
                       startDate: e.target.value
                     }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Start Time</label>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">Start Time</label>
                   <input
                     type="time"
                     value={knockoutSchedule.startTime}
@@ -2465,14 +2465,14 @@ const GroupStageManagement = () => {
                       ...prev,
                       startTime: e.target.value
                     }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Court Number</label>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">Court Number</label>
                   <input
                     type="number"
                     min="1"
@@ -2483,11 +2483,11 @@ const GroupStageManagement = () => {
                       ...prev,
                       courtNumber: parseInt(e.target.value)
                     }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Interval (min)</label>
+                  <label className="block text-sm font-bold text-gray-300 mb-2">Interval (min)</label>
                   <input
                     type="number"
                     min="15"
@@ -2499,16 +2499,16 @@ const GroupStageManagement = () => {
                       ...prev,
                       intervalMinutes: parseInt(e.target.value)
                     }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-[#0E1628] border border-[#2A3F66] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4 mt-10 pt-6 border-t border-gray-100">
+            <div className="flex gap-4 mt-10 pt-6 border-t border-[#1E2D4A]">
               <button
                 onClick={() => setShowDirectKnockoutScheduleModal(false)}
-                className="flex-1 px-4 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors"
+                className="flex-1 px-4 py-3 text-gray-400 font-medium hover:bg-[#1A2744] rounded-xl transition-colors"
               >
                 Cancel
               </button>
@@ -2516,7 +2516,7 @@ const GroupStageManagement = () => {
                 onClick={handleDirectKnockoutCreation}
                 disabled={!knockoutSchedule.startDate || !knockoutSchedule.startTime}
                 className={`flex-1 px-4 py-3 rounded-xl text-white font-bold text-lg shadow-lg flex justify-center items-center gap-2 transition-all ${knockoutSchedule.startDate && knockoutSchedule.startTime
-                  ? 'bg-red-500 hover:bg-red-600 hover:-translate-y-0.5'
+                  ? 'bg-red-500/100 hover:bg-red-600 hover:-translate-y-0.5'
                   : 'bg-gray-300 cursor-not-allowed'
                   }`}
               >
