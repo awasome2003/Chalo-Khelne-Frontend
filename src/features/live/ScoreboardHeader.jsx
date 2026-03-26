@@ -1,79 +1,86 @@
 import { Trophy, Radio } from "lucide-react";
 
-/**
- * Top scoreboard bar. Shows players/teams, live score, sport badge, status.
- * Config-driven labels.
- */
 export default function ScoreboardHeader({ config, derived, matchFormat }) {
   const { p1, p2, p1Sets, p2Sets, status, isLive, isCompleted, winner, sportName } = derived;
 
-  const statusStyles = {
-    IN_PROGRESS: { bg: "bg-red-500", text: "LIVE", pulse: true },
-    COMPLETED: { bg: "bg-green-500", text: "COMPLETED", pulse: false },
-    SCHEDULED: { bg: "bg-blue-400", text: "UPCOMING", pulse: false },
-  };
-  const st = statusStyles[status] || statusStyles.SCHEDULED;
-
   return (
-    <div className="relative overflow-hidden rounded-2xl" style={{ background: `linear-gradient(135deg, ${config.color}dd, ${config.color}99)` }}>
+    <div className="relative overflow-hidden rounded-2xl bg-[#0B1220]">
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-4 left-4 text-8xl">{config.icon}</div>
-        <div className="absolute bottom-4 right-4 text-8xl rotate-12">{config.icon}</div>
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full opacity-[0.03]"
+          style={{ background: `radial-gradient(circle, ${config.color}, transparent)` }} />
+        <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-[0.03]"
+          style={{ background: `radial-gradient(circle, ${config.color}, transparent)` }} />
+        {/* Grid lines */}
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
       </div>
 
-      <div className="relative p-6 text-white">
-        {/* Sport + Status bar */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{config.icon}</span>
-            <span className="text-sm font-bold uppercase tracking-widest opacity-80">{sportName}</span>
+      <div className="relative px-8 py-8">
+        {/* Sport + Status */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2.5">
+            <span className="text-3xl">{config.icon}</span>
+            <span className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">{sportName}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`${st.bg} text-white text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5`}>
-              {st.pulse && <span className="w-2 h-2 bg-white rounded-full animate-ping" />}
-              {st.pulse && <Radio className="w-3 h-3" />}
-              {st.text}
-            </span>
-          </div>
+          {isLive && (
+            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-full">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              </span>
+              <Radio className="w-4 h-4 text-red-500" />
+              <span className="text-xs font-black text-red-400 tracking-wider">LIVE</span>
+            </div>
+          )}
+          {isCompleted && (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-full">
+              <Trophy className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-black text-emerald-400 tracking-wider">COMPLETED</span>
+            </div>
+          )}
+          {!isLive && !isCompleted && (
+            <span className="text-xs font-bold text-gray-500 bg-gray-800 px-3 py-1.5 rounded-full">UPCOMING</span>
+          )}
         </div>
 
         {/* Players + Score */}
         <div className="flex items-center justify-between">
           {/* Player 1 */}
-          <PlayerSide
-            name={p1}
-            setsWon={p1Sets}
-            isWinner={winner === p1}
-            isCompleted={isCompleted}
-          />
+          <PlayerSide name={p1} setsWon={p1Sets} isWinner={winner === p1} isCompleted={isCompleted} />
 
           {/* Center Score */}
-          <div className="flex flex-col items-center px-6">
-            <div className="text-5xl font-black tracking-wider">
-              {p1Sets} <span className="text-white/40 mx-1">—</span> {p2Sets}
+          <div className="flex flex-col items-center">
+            <div className="flex items-baseline gap-4">
+              <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${
+                winner === p1 ? "text-emerald-400" : "text-white"
+              }`}>
+                {p1Sets}
+              </span>
+              <span className="text-2xl font-bold text-gray-600">:</span>
+              <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${
+                winner === p2 ? "text-emerald-400" : "text-white"
+              }`}>
+                {p2Sets}
+              </span>
             </div>
-            <div className="text-xs font-medium opacity-60 mt-1">
-              {config.labels.matchResult || "Sets"} • Best of {matchFormat.totalSets}
+            <div className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+              {config.labels.matchResult || "Sets"} · Best of {matchFormat.totalSets}
             </div>
           </div>
 
           {/* Player 2 */}
-          <PlayerSide
-            name={p2}
-            setsWon={p2Sets}
-            isWinner={winner === p2}
-            isCompleted={isCompleted}
-            align="right"
-          />
+          <PlayerSide name={p2} setsWon={p2Sets} isWinner={winner === p2} isCompleted={isCompleted} align="right" />
         </div>
 
         {/* Winner Banner */}
         {isCompleted && winner && (
-          <div className="mt-5 pt-4 border-t border-white/20 flex items-center justify-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-300" />
-            <span className="font-black text-lg">{winner} wins!</span>
-            <span className="text-sm opacity-60">({p1Sets}-{p2Sets})</span>
+          <div className="mt-8 flex items-center justify-center gap-3 pt-6 border-t border-gray-800">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+              <Trophy className="w-4 h-4 text-yellow-900" />
+            </div>
+            <span className="font-black text-lg text-white">{winner} wins!</span>
+            <span className="text-sm text-gray-500 font-bold">({p1Sets}-{p2Sets})</span>
           </div>
         )}
       </div>
@@ -84,14 +91,27 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
 function PlayerSide({ name, setsWon, isWinner, isCompleted, align = "left" }) {
   const initial = name?.charAt(0)?.toUpperCase() || "?";
   return (
-    <div className={`flex flex-col items-${align === "right" ? "end" : "start"} flex-1 ${isCompleted && !isWinner ? "opacity-40" : ""}`}>
-      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black mb-2 ${
-        isWinner ? "bg-yellow-400 text-yellow-900 ring-4 ring-yellow-200/50 shadow-xl" : "bg-white/20"
+    <div className={`flex flex-col ${align === "right" ? "items-end" : "items-start"} flex-1 ${isCompleted && !isWinner ? "opacity-30" : ""}`}>
+      <div className={`relative w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black mb-3 transition-all ${
+        isWinner
+          ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-yellow-900 shadow-xl shadow-yellow-500/20 scale-110"
+          : "bg-[#1A2744] text-gray-500"
       }`}>
-        {isWinner ? <Trophy className="w-7 h-7" /> : initial}
+        {isWinner ? <Trophy className="w-8 h-8" /> : initial}
+        {isWinner && (
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        )}
       </div>
-      <span className="font-bold text-sm truncate max-w-[140px]">{name}</span>
-      {isWinner && <span className="text-[10px] font-bold text-yellow-300 uppercase mt-0.5">Winner</span>}
+      <span className={`font-black text-sm tracking-wide ${isWinner ? "text-emerald-400" : "text-gray-300"}`}>
+        {name}
+      </span>
+      {isWinner && (
+        <span className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.2em] mt-1">Champion</span>
+      )}
     </div>
   );
 }

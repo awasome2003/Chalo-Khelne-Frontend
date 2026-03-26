@@ -50,19 +50,19 @@ export default function LiveMatchPage() {
     : "";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0B1220]">
       {/* Top Bar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3 sticky top-0 z-20">
+      <div className="bg-[#0E1628] border-b border-[#1E2D4A] px-6 py-3 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(backTo)} className="p-2 hover:bg-gray-100 rounded-lg transition w-auto">
+            <button onClick={() => navigate(backTo)} className="p-2 hover:bg-[#1A2744] rounded-xl transition w-auto">
               <ArrowLeft className="w-5 h-5 text-gray-500" />
             </button>
             <div>
-              <h1 className="text-sm font-bold text-gray-800">
+              <h1 className="text-sm font-bold text-gray-200">
                 {match.roundName || match.round || "Match"} {match.matchNumber && `• M${match.matchNumber}`}
               </h1>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-500">
                 {derived.sportName}
                 {match.courtNumber && ` • Court ${match.courtNumber}`}
                 {derived.isLive && ` • Updated ${timeAgo}`}
@@ -73,10 +73,13 @@ export default function LiveMatchPage() {
 
           <div className="flex items-center gap-2">
             {derived.isLive && (
-              <span className="flex items-center gap-1.5 bg-red-50 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full">
+              <span className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-black px-3 py-1.5 rounded-full">
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
                 LIVE
               </span>
+            )}
+            {isRealtime && (
+              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full">⚡ RT</span>
             )}
           </div>
         </div>
@@ -115,8 +118,8 @@ export default function LiveMatchPage() {
             <MatchTimeline timeline={derived.timeline} config={config} />
 
             {/* Match Info Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="font-bold text-gray-800 text-sm mb-3">Match Info</h3>
+            <div className="bg-[#111B2E] rounded-2xl border border-[#1E2D4A] p-5">
+              <h3 className="font-bold text-gray-300 text-sm mb-3">Match Info</h3>
               <div className="space-y-2.5 text-sm">
                 <InfoRow label="Sport" value={derived.sportName} />
                 <InfoRow label="Format" value={`Best of ${matchFormat.totalSets} ${config.labels.set || "sets"}`} />
@@ -125,9 +128,9 @@ export default function LiveMatchPage() {
                 {matchFormat.marginToWin > 1 && <InfoRow label="Win by" value={`${matchFormat.marginToWin} point margin`} />}
                 <InfoRow label="Status" value={
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    derived.isLive ? "bg-red-100 text-red-700" :
-                    derived.isCompleted ? "bg-green-100 text-green-700" :
-                    "bg-gray-100 text-gray-600"
+                    derived.isLive ? "bg-red-500/10 text-red-400" :
+                    derived.isCompleted ? "bg-emerald-500/10 text-emerald-400" :
+                    "bg-gray-800 text-gray-400"
                   }`}>{derived.status}</span>
                 } />
               </div>
@@ -135,8 +138,8 @@ export default function LiveMatchPage() {
 
             {/* Quick Stats */}
             {derived.sets.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-bold text-gray-800 text-sm mb-3">Quick Stats</h3>
+              <div className="bg-[#111B2E] rounded-2xl border border-[#1E2D4A] p-5">
+                <h3 className="font-bold text-gray-300 text-sm mb-3">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <StatBox
                     label={`${config.labels.set || "Sets"} Won`}
@@ -172,24 +175,24 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex justify-between items-center">
       <span className="text-gray-500 text-xs">{label}</span>
-      <span className="font-medium text-gray-800 text-xs">{value}</span>
+      <span className="font-medium text-gray-300 text-xs">{value}</span>
     </div>
   );
 }
 
 function StatBox({ label, p1, p2, p1Name, p2Name }) {
   return (
-    <div className="bg-gray-50 rounded-xl p-3 text-center">
-      <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">{label}</div>
+    <div className="bg-[#0E1628] rounded-xl p-3 text-center">
+      <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">{label}</div>
       <div className="flex items-center justify-center gap-3">
         <div>
-          <div className={`text-lg font-black ${p1 > p2 ? "text-green-600" : "text-gray-400"}`}>{p1}</div>
-          <div className="text-[9px] text-gray-400">{p1Name}</div>
+          <div className={`text-lg font-black ${p1 > p2 ? "text-emerald-400" : "text-gray-600"}`}>{p1}</div>
+          <div className="text-[9px] text-gray-500">{p1Name}</div>
         </div>
-        <div className="text-gray-200 font-bold">—</div>
+        <div className="text-gray-700 font-bold">—</div>
         <div>
-          <div className={`text-lg font-black ${p2 > p1 ? "text-green-600" : "text-gray-400"}`}>{p2}</div>
-          <div className="text-[9px] text-gray-400">{p2Name}</div>
+          <div className={`text-lg font-black ${p2 > p1 ? "text-emerald-400" : "text-gray-600"}`}>{p2}</div>
+          <div className="text-[9px] text-gray-500">{p2Name}</div>
         </div>
       </div>
     </div>

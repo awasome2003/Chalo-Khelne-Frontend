@@ -6,15 +6,14 @@ export default function SidebarSection({ section, collapsed }) {
       {/* Section label — hidden when collapsed */}
       {section.label && !collapsed && (
         <div className="px-3 pt-4 pb-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">
+          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.15em]">
             {section.label}
           </span>
         </div>
       )}
 
-      {/* Divider when collapsed and section has label */}
       {section.label && collapsed && (
-        <div className="mx-3 my-2 border-t border-gray-200" />
+        <div className="mx-3 my-2 border-t border-[#1E2D4A]" />
       )}
 
       <div className="space-y-0.5 px-2">
