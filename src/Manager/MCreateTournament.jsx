@@ -170,6 +170,9 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     setFormData((prev) => ({
       ...prev,
       tournamentLevel: "",
+      playingFormat: "",
+      hasGroupStage: false,
+      hasKnockout: false,
       groupStageFormat: isTeamSport ? "Teams" : "Singles",
       knockoutFormat: isTeamSport ? "Teams Knockout" : "Singles",
     }));
@@ -286,7 +289,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
     }
 
     if (stepId === "format") {
-      if (!formData.hasGroupStage && !formData.hasKnockout) {
+      if (!formData.playingFormat) {
         setError("Select a playing format");
         return false;
       }
