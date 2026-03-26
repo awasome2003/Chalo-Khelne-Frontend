@@ -74,7 +74,7 @@ export default function Sidebar({ role = "manager", mobileOpen = false, onMobile
         <div className={`flex ${isExpanded ? "gap-2" : "flex-col gap-1 items-center"}`}>
           <button
             onClick={handleLogout}
-            className={`flex items-center gap-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition w-auto ${
+            className={`flex items-center gap-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition w-auto ${
               isExpanded ? "flex-1 px-3 py-2 text-xs font-medium" : "p-2"
             }`}
           >
@@ -84,7 +84,7 @@ export default function Sidebar({ role = "manager", mobileOpen = false, onMobile
 
           <button
             onClick={() => { setCollapsed(!collapsed); setHoverExpanded(false); }}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition w-auto hidden md:flex items-center justify-center"
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-400 hover:bg-[#1A2744] transition w-auto hidden md:flex items-center justify-center"
           >
             {collapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>

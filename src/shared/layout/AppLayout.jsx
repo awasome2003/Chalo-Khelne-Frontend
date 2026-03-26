@@ -14,7 +14,7 @@ export default function AppLayout({ role = "manager" }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-[#0B1220] overflow-hidden">
       <Sidebar
         role={role}
         mobileOpen={mobileMenuOpen}
