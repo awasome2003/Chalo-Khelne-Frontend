@@ -483,9 +483,9 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 } else if (t.includes("group stage")) {
                   navigate(`/tournament-management/group-stage?tournamentId=${tournament._id}`);
                 } else if (t.includes("knockout")) {
-                  // Check if it's team knockout or singles knockout
+                  // Check if it's Davis Cup / team knockout or singles knockout
                   const kf = (tournament.knockoutFormat || "").toLowerCase();
-                  if (kf.includes("team")) {
+                  if (kf.includes("team") || kf.includes("davis")) {
                     navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
                   } else {
                     navigate(`/tournament-management/direct-knockout?tournamentId=${tournament._id}`);
@@ -998,6 +998,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                                 <option value="Singles">Singles</option>
                                 <option value="Doubles">Doubles</option>
                                 <option value="Teams Knockout">Teams Knockout</option>
+                                <option value="Davis Cup">Davis Cup</option>
                               </select>
                             </div>
                           )}
