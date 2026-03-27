@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   X,
@@ -125,7 +125,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
     if (isEditMode && initialData) {
       // EDIT MODE: populate from tournament data
-      setSkipSportReset(true); // Prevent sport-change useEffect from wiping form
+      skipSportResetRef.current = true; // Prevent sport-change useEffect from wiping form
       const t = initialData;
       const tType = (t.type || "").toLowerCase();
       const formats = [];
@@ -225,8 +225,8 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPopup]);
 
-  // Track if form was just populated by edit mode (skip sport-change reset)
-  const [skipSportReset, setSkipSportReset] = useState(false);
+  // Ref to skip sport-change reset when edit mode populates the form
+  const skipSportResetRef = useRef(false);
 
   // When sport changes, fetch available levels
   useEffect(() => {
@@ -250,8 +250,8 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     fetchLevels();
 
     // Skip resetting formats if form was just populated by edit mode
-    if (skipSportReset) {
-      setSkipSportReset(false);
+    if (skipSportResetRef.current) {
+      skipSportResetRef.current = false;
       return;
     }
 
