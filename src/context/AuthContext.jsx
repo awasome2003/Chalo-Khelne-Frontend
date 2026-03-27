@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
     const user = data?.user || {}; // Prevent undefined errors
 
     const userData = {
-      _id: user?.id || "",
+      _id: user?.id || user?._id || "",
       email: user?.email || "",
       name: user?.name?.trim() || "Unknown",
       role: user?.role || "User",
