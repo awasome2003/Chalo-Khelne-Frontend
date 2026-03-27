@@ -130,6 +130,118 @@ const TEAM_KNOCKOUT_FORMATS = [
       { setNumber: 7, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: true },
     ],
   },
+
+  // ═══════════════════════════════════════════
+  // 3-PLAYER TEAM FORMATS (A,B,C vs X,Y,Z)
+  // ═══════════════════════════════════════════
+  {
+    id: "singles_3p_bo3",
+    name: "3-Player Singles — Best of 3",
+    shortName: "3P Singles BO3",
+    description: "Each player plays one singles set. All 3 players participate.",
+    totalSets: 3,
+    setsToWin: 2,
+    hasDoubles: false,
+    minPlayers: 3,
+    sets: [
+      { setNumber: 1, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: false },
+      { setNumber: 2, type: "singles", label: "Singles B vs Y", home: ["B"], away: ["Y"], isDecider: false },
+      { setNumber: 3, type: "singles", label: "Singles C vs Z", home: ["C"], away: ["Z"], isDecider: true },
+    ],
+  },
+  {
+    id: "singles_3p_bo5",
+    name: "3-Player Singles — Best of 5",
+    shortName: "3P Singles BO5",
+    description: "5 singles sets with cross-matches. Full 3-player rotation.",
+    totalSets: 5,
+    setsToWin: 3,
+    hasDoubles: false,
+    minPlayers: 3,
+    sets: [
+      { setNumber: 1, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: false },
+      { setNumber: 2, type: "singles", label: "Singles B vs Y", home: ["B"], away: ["Y"], isDecider: false },
+      { setNumber: 3, type: "singles", label: "Singles C vs Z", home: ["C"], away: ["Z"], isDecider: false },
+      { setNumber: 4, type: "singles", label: "Singles A vs Y", home: ["A"], away: ["Y"], isDecider: false },
+      { setNumber: 5, type: "singles", label: "Singles B vs Z", home: ["B"], away: ["Z"], isDecider: true },
+    ],
+  },
+  {
+    id: "doubles_3p_bo5",
+    name: "3-Player Mixed — Best of 5",
+    shortName: "3P Mixed BO5",
+    description: "2 singles + 1 doubles (captain picks pairing) + 2 cross-match singles. True Davis Cup.",
+    totalSets: 5,
+    setsToWin: 3,
+    hasDoubles: true,
+    minPlayers: 3,
+    sets: [
+      { setNumber: 1, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: false },
+      { setNumber: 2, type: "singles", label: "Singles B vs Y", home: ["B"], away: ["Y"], isDecider: false },
+      {
+        setNumber: 3,
+        type: "doubles",
+        label: "Doubles (Captain's Choice)",
+        isDecider: false,
+        requiresSelection: true,
+        options: [
+          { id: "bc_xy", label: "B+C vs X+Y", home: ["B", "C"], away: ["X", "Y"] },
+          { id: "ab_yz", label: "A+B vs Y+Z", home: ["A", "B"], away: ["Y", "Z"] },
+          { id: "ac_xz", label: "A+C vs X+Z", home: ["A", "C"], away: ["X", "Z"] },
+        ],
+        // Defaults used if no selection made
+        home: ["B", "C"],
+        away: ["X", "Y"],
+      },
+      { setNumber: 4, type: "singles", label: "Singles A vs Y", home: ["A"], away: ["Y"], isDecider: false },
+      { setNumber: 5, type: "singles", label: "Singles C vs Z", home: ["C"], away: ["Z"], isDecider: true },
+    ],
+  },
+  {
+    id: "doubles_3p_bo7",
+    name: "3-Player Mixed — Best of 7",
+    shortName: "3P Mixed BO7",
+    description: "Full rotation: 3 singles + 2 doubles (both captain's choice) + 2 cross-matches.",
+    totalSets: 7,
+    setsToWin: 4,
+    hasDoubles: true,
+    minPlayers: 3,
+    sets: [
+      { setNumber: 1, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: false },
+      { setNumber: 2, type: "singles", label: "Singles B vs Y", home: ["B"], away: ["Y"], isDecider: false },
+      { setNumber: 3, type: "singles", label: "Singles C vs Z", home: ["C"], away: ["Z"], isDecider: false },
+      {
+        setNumber: 4,
+        type: "doubles",
+        label: "Doubles 1 (Captain's Choice)",
+        isDecider: false,
+        requiresSelection: true,
+        options: [
+          { id: "ab_xy", label: "A+B vs X+Y", home: ["A", "B"], away: ["X", "Y"] },
+          { id: "ac_xz", label: "A+C vs X+Z", home: ["A", "C"], away: ["X", "Z"] },
+          { id: "bc_yz", label: "B+C vs Y+Z", home: ["B", "C"], away: ["Y", "Z"] },
+        ],
+        home: ["A", "B"],
+        away: ["X", "Y"],
+      },
+      { setNumber: 5, type: "singles", label: "Singles A vs Y", home: ["A"], away: ["Y"], isDecider: false },
+      {
+        setNumber: 6,
+        type: "doubles",
+        label: "Doubles 2 (Captain's Choice)",
+        isDecider: true,
+        requiresSelection: true,
+        options: [
+          { id: "bc_xy", label: "B+C vs X+Y", home: ["B", "C"], away: ["X", "Y"] },
+          { id: "ac_yz", label: "A+C vs Y+Z", home: ["A", "C"], away: ["Y", "Z"] },
+          { id: "ab_xz", label: "A+B vs X+Z", home: ["A", "B"], away: ["X", "Z"] },
+        ],
+        home: ["B", "C"],
+        away: ["X", "Y"],
+      },
+      { setNumber: 7, type: "singles", label: "Singles B vs Z", home: ["B"], away: ["Z"], isDecider: true },
+    ],
+  },
 ];
 
 /**
@@ -180,12 +292,78 @@ export function formatIdToLegacy(formatId) {
   const map = {
     singles_bo3: "Singles - 3 Sets",
     singles_bo5: "Singles - 5 Sets",
-    singles_bo7: "Singles - 5 Sets", // Backend doesn't support BO7 yet, fallback
+    singles_bo7: "Singles - 5 Sets",
     doubles_bo3: "Doubles - 3 Sets",
     doubles_bo5: "Doubles - 5 Sets",
-    doubles_bo7: "Doubles - 5 Sets", // Fallback
+    doubles_bo7: "Doubles - 5 Sets",
+    singles_3p_bo3: "Singles - 3 Sets",
+    singles_3p_bo5: "Singles - 5 Sets",
+    doubles_3p_bo5: "Doubles - 5 Sets",
+    doubles_3p_bo7: "Doubles - 5 Sets",
   };
   return map[formatId] || "Singles - 3 Sets";
+}
+
+/**
+ * Get formats filtered by minPlayers.
+ */
+export function getFormatsForTeamSize(playerCount) {
+  return TEAM_KNOCKOUT_FORMATS.filter((f) => f.minPlayers <= playerCount);
+}
+
+/**
+ * Resolve a set's players after captain makes doubles selection.
+ *
+ * @param {object} set — set definition from format
+ * @param {string|null} selectionId — chosen option id (e.g. "bc_xy")
+ * @returns {{ home: string[], away: string[], label: string }}
+ */
+export function resolveSetPlayers(set, selectionId = null) {
+  if (!set.requiresSelection) {
+    return { home: set.home, away: set.away, label: set.label };
+  }
+
+  if (selectionId) {
+    const option = set.options.find((o) => o.id === selectionId);
+    if (option) {
+      return { home: option.home, away: option.away, label: option.label };
+    }
+  }
+
+  // Fallback to defaults
+  return { home: set.home, away: set.away, label: set.label };
+}
+
+/**
+ * Map position letters to actual player names from team rosters.
+ *
+ * @param {string[]} positions — e.g. ["A", "B"]
+ * @param {object} team — team object with playerPositions { A: "John", B: "Mike", C: "Sarah" }
+ * @returns {string[]} — resolved player names
+ */
+export function resolvePlayerNames(positions, team) {
+  const posMap = team?.playerPositions || {};
+  return positions.map((pos) => {
+    const player = posMap[pos];
+    if (!player) return `Player ${pos}`;
+    return typeof player === "string" ? player : player.name || player.userName || `Player ${pos}`;
+  });
+}
+
+/**
+ * Get all sets that require captain selection for a format.
+ */
+export function getSelectableSets(formatId) {
+  const format = getTeamKnockoutFormat(formatId);
+  return format.sets.filter((s) => s.requiresSelection);
+}
+
+/**
+ * Check if a format supports 3-player teams.
+ */
+export function is3PlayerFormat(formatId) {
+  const format = getTeamKnockoutFormat(formatId);
+  return format.minPlayers >= 3;
 }
 
 export default TEAM_KNOCKOUT_FORMATS;
