@@ -698,6 +698,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
       {/* Edit Tournament — uses unified MCreateTournament in edit mode */}
       <MCreateTournament
+        key={editingTournament?._id || "edit"}
         showPopup={showEditModal}
         setShowPopup={setShowEditModal}
         mode="edit"

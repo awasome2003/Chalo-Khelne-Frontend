@@ -60,6 +60,45 @@ const STATIC_STEPS = [
  * - initialData: tournament object (for edit mode)
  * - onSuccess: () => void (optional callback after save)
  */
+/**
+ * Maps raw tournament API data to form field values.
+ */
+function mapTournamentToForm(t, defaults, auth) {
+  if (!t) return { ...defaults };
+  const tType = (t.type || "").toLowerCase();
+  const formats = [];
+  if (tType.includes("group stage")) formats.push("group+knockout");
+  if (tType === "knockout" && (t.knockoutFormat === "Singles" || t.knockoutFormat === "Doubles")) formats.push("singles-knockout");
+  if (t.knockoutFormat === "Davis Cup" || t.knockoutFormat === "Teams Knockout") formats.push("davis-cup");
+  if (formats.length === 0 && tType.includes("knockout")) formats.push("singles-knockout");
+
+  return {
+    ...defaults,
+    title: t.title || "",
+    hasGroupStage: tType.includes("group stage"),
+    hasKnockout: tType.includes("knockout"),
+    playingFormats: formats,
+    sportsType: t.sportsType || "",
+    tournamentLevel: t.tournamentLevel || "",
+    description: t.description || "",
+    organizerName: t.organizerName || "",
+    cancellationPolicy: t.cancellationPolicy || "NO",
+    eventLocation: Array.isArray(t.eventLocation) ? t.eventLocation.join(", ") : t.eventLocation || "",
+    startDate: t.startDate ? t.startDate.split("T")[0] : "",
+    endDate: t.endDate ? t.endDate.split("T")[0] : "",
+    termsAndConditions: t.termsAndConditions || "",
+    groupStageFormat: t.groupStageFormat || "Singles",
+    knockoutFormat: t.knockoutFormat || "Singles",
+    category: t.category || [{ name: "Open Category", fee: 0 }],
+    selectedTime: t.selectedTime || { startTime: "10:00", endTime: "18:00" },
+    numTeams: t.numTeams || "",
+    playerNoValue: t.playerNoValue || "2",
+    tournamentFee: t.tournamentFee || "0",
+    qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
+    managerId: t.managerId || [auth?._id || ""],
+  };
+}
+
 const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialData = null, onSuccess }) => {
   const isEditMode = mode === "edit";
   const [image, setImage] = useState(null);
@@ -108,77 +147,29 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     drawSize: 16,
   };
 
-  const [formData, setFormData] = useState({ ...defaultFormData });
-
-  // Pre-fill form when editing, reset when creating or closing
-  useEffect(() => {
-    if (!showPopup) {
-      // Reset everything when modal closes
-      setFormData({ ...defaultFormData });
-      setImage(null);
-      setImageFile(null);
-      setError("");
-      setSuccess("");
-      setCurrentStep(0);
-      setUserChangedSport(null);
-      return;
+  const [formData, setFormData] = useState(() => {
+    if (isEditMode && initialData) {
+      return mapTournamentToForm(initialData, defaultFormData, auth);
     }
+    return { ...defaultFormData };
+  });
+
+  // Sync form when modal opens, initialData changes, or mode changes
+  useEffect(() => {
+    if (!showPopup) return; // Component returns null anyway when !showPopup
 
     if (isEditMode && initialData) {
-      // EDIT MODE: populate from tournament data
-      // No skip flag needed — sport-change reset only triggers on userChangedSport
-      const t = initialData;
-      const tType = (t.type || "").toLowerCase();
-      const formats = [];
-      if (tType.includes("group stage")) formats.push("group+knockout");
-      if (tType === "knockout" && (t.knockoutFormat === "Singles" || t.knockoutFormat === "Doubles")) formats.push("singles-knockout");
-      if (t.knockoutFormat === "Davis Cup" || t.knockoutFormat === "Teams Knockout") formats.push("davis-cup");
-      if (formats.length === 0 && tType.includes("knockout")) formats.push("singles-knockout");
-
-      setFormData({
-        ...defaultFormData,
-        title: t.title || "",
-        hasGroupStage: tType.includes("group stage"),
-        hasKnockout: tType.includes("knockout"),
-        playingFormats: formats,
-        sportsType: t.sportsType || "",
-        tournamentLevel: t.tournamentLevel || "",
-        description: t.description || "",
-        organizerName: t.organizerName || "",
-        cancellationPolicy: t.cancellationPolicy || "NO",
-        eventLocation: Array.isArray(t.eventLocation) ? t.eventLocation.join(", ") : t.eventLocation || "",
-        startDate: t.startDate ? t.startDate.split("T")[0] : "",
-        endDate: t.endDate ? t.endDate.split("T")[0] : "",
-        termsAndConditions: t.termsAndConditions || "",
-        groupStageFormat: t.groupStageFormat || "Singles",
-        knockoutFormat: t.knockoutFormat || "Singles",
-        category: t.category || [{ name: "Open Category", fee: 0 }],
-        selectedTime: t.selectedTime || { startTime: "10:00", endTime: "18:00" },
-        numTeams: t.numTeams || "",
-        playerNoValue: t.playerNoValue || "2",
-        tournamentFee: t.tournamentFee || "0",
-        qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
-        managerId: t.managerId || [auth?._id || ""],
-      });
-
-      if (t.tournamentLogo) {
-        setImage(`/uploads/tournaments/${t.tournamentLogo}`);
-      } else {
-        setImage(null);
-      }
-      setImageFile(null);
-      setError("");
-      setSuccess("");
-      setCurrentStep(0);
+      setFormData(mapTournamentToForm(initialData, defaultFormData, auth));
+      setImage(initialData.tournamentLogo ? `/uploads/tournaments/${initialData.tournamentLogo}` : null);
     } else {
-      // CREATE MODE: blank form
       setFormData({ ...defaultFormData });
       setImage(null);
-      setImageFile(null);
-      setError("");
-      setSuccess("");
-      setCurrentStep(0);
     }
+    setImageFile(null);
+    setError("");
+    setSuccess("");
+    setCurrentStep(0);
+    setUserChangedSport(null);
   }, [showPopup, isEditMode, initialData]);
 
   // Generate dynamic form sections from ruleBook
