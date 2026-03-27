@@ -28,7 +28,7 @@ import {
 import dayjs from "dayjs";
 import { AuthContext } from "../context/AuthContext";
 import TeamKnockoutFormatSelector from "./TeamKnockoutFormatSelector";
-import { formatIdToLegacy } from "../config/teamKnockoutFormats";
+// Backend now uses formatId directly — no legacy mapping needed
 import {
   generateFormFields,
   validateRuleBookForm,
@@ -438,15 +438,10 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       const hasKO = formats.includes("singles-knockout") || formats.includes("davis-cup") || hasGS;
       const tournamentType = hasGS && hasKO ? "knockout + group stage" : hasKO ? "knockout" : hasGS ? "group stage" : "";
 
-      // If Davis Cup selected, set knockoutFormat and match format from selector
+      // If Davis Cup selected, set knockoutFormat and send formatId directly
       if (formats.includes("davis-cup")) {
         formData.knockoutFormat = "Davis Cup";
         if (formData.davisCupFormatId) {
-          // Map format ID to backend format string for team knockout
-          const legacyFormat = formatIdToLegacy(formData.davisCupFormatId);
-          formData.knockoutFormat = "Davis Cup";
-          // Store the team match format in tournament data
-          tournamentFormData.append("teamMatchFormat", legacyFormat);
           tournamentFormData.append("davisCupFormatId", formData.davisCupFormatId);
         }
       }
