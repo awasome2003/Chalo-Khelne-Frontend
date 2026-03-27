@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Trophy, Users, Grid3X3, Swords, Radio,
   Newspaper, MessageSquare, Shield, CreditCard, Tag,
-  Settings, BarChart3, Megaphone, Dumbbell, MapPin,
+  Settings, BarChart3, Megaphone, Dumbbell, MapPin, MessageCircle,
 } from "lucide-react";
 
 /**
@@ -44,6 +44,7 @@ export const SIDEBAR_SECTIONS = [
       { key: "referee", label: "Referee", icon: Shield, path: "/club-refree", roles: ["clubadmin"] },
       { key: "trainers", label: "Trainers", icon: Dumbbell, path: "/mtrainers", roles: ["manager"] },
       { key: "news", label: "News", icon: Newspaper, path: "/mnews", roles: ["manager"] },
+      { key: "forum", label: "Forum", icon: MessageCircle, path: "/forum", roles: ["manager", "clubadmin"] },
       { key: "staff", label: "Staff Admin", icon: Users, path: "/staff-admin", roles: ["clubadmin"] },
     ],
   },

@@ -38,6 +38,7 @@ import KnockoutPage from "./Manager/Tournament/KnockoutPage";
 // Feature modules
 import { LiveMatchPage } from "./features/live";
 import { TournamentDashboardPage } from "./features/dashboard";
+import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
 
 const ManagerApp = () => {
   return (
@@ -80,6 +81,11 @@ const ManagerApp = () => {
           {/* Finance */}
           <Route path="/payments" element={<MPayments />} />
           <Route path="/mcoupons" element={<MCoupons />} />
+
+          {/* Forum */}
+          <Route path="/forum" element={<ThreadList />} />
+          <Route path="/forum/new" element={<CreateThreadPage />} />
+          <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
 
           {/* Notifications & Settings */}
           <Route path="/notification" element={<NotificationPage />} />
