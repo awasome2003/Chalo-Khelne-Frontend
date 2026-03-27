@@ -125,6 +125,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
     if (isEditMode && initialData) {
       // EDIT MODE: populate from tournament data
+      setSkipSportReset(true); // Prevent sport-change useEffect from wiping form
       const t = initialData;
       const tType = (t.type || "").toLowerCase();
       const formats = [];
@@ -224,6 +225,9 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPopup]);
 
+  // Track if form was just populated by edit mode (skip sport-change reset)
+  const [skipSportReset, setSkipSportReset] = useState(false);
+
   // When sport changes, fetch available levels
   useEffect(() => {
     if (!formData.sportsType) {
@@ -244,6 +248,12 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       }
     };
     fetchLevels();
+
+    // Skip resetting formats if form was just populated by edit mode
+    if (skipSportReset) {
+      setSkipSportReset(false);
+      return;
+    }
 
     const sportObj = sportsList.find((s) => s.name === formData.sportsType);
     const isTeamSport = sportObj?.category === "Team";
