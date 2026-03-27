@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Bell, Plus, Search } from "lucide-react";
+import { Menu, Bell, Plus } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import MCreateTournament from "../../Manager/MCreateTournament";
@@ -19,14 +19,6 @@ export default function TopBar({ onMenuClick }) {
             <button onClick={onMenuClick} className="p-2 hover:bg-gray-100 rounded-xl md:hidden w-auto">
               <Menu className="w-5 h-5 text-gray-600" />
             </button>
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search tournaments, players..."
-                className="pl-10 pr-4 py-2 w-72 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] focus:bg-white transition"
-              />
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
