@@ -120,12 +120,13 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       setError("");
       setSuccess("");
       setCurrentStep(0);
+      setUserChangedSport(null);
       return;
     }
 
     if (isEditMode && initialData) {
       // EDIT MODE: populate from tournament data
-      skipSportResetRef.current = true; // Prevent sport-change useEffect from wiping form
+      // No skip flag needed — sport-change reset only triggers on userChangedSport
       const t = initialData;
       const tType = (t.type || "").toLowerCase();
       const formats = [];
@@ -225,12 +226,15 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPopup]);
 
-  // Ref to skip sport-change reset when edit mode populates the form
-  const skipSportResetRef = useRef(false);
+  // Track the sport that was set by the user manually (not by edit pre-fill)
+  const [userChangedSport, setUserChangedSport] = useState(null);
 
-  // When sport changes, fetch available levels
+  // When user manually changes sport, reset formats and fetch levels
   useEffect(() => {
-    if (!formData.sportsType) {
+    if (userChangedSport === null) return;
+    const sport = userChangedSport;
+
+    if (!sport) {
       setAvailableLevels([]);
       setRuleBook(null);
       setRuleBookValues({});
@@ -240,7 +244,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
     const fetchLevels = async () => {
       try {
-        const res = await axios.get(`/api/sport-rules/sport/${formData.sportsType}/levels`);
+        const res = await axios.get(`/api/sport-rules/sport/${sport}/levels`);
         setAvailableLevels(res.data.data || []);
       } catch (err) {
         console.error("Failed to fetch levels:", err);
@@ -249,13 +253,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     };
     fetchLevels();
 
-    // Skip resetting formats if form was just populated by edit mode
-    if (skipSportResetRef.current) {
-      skipSportResetRef.current = false;
-      return;
-    }
-
-    const sportObj = sportsList.find((s) => s.name === formData.sportsType);
+    const sportObj = sportsList.find((s) => s.name === sport);
     const isTeamSport = sportObj?.category === "Team";
     setFormData((prev) => ({
       ...prev,
@@ -270,6 +268,18 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     setRuleBookValues({});
     setRuleBookErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userChangedSport]);
+
+  // Fetch levels when sportsType changes (including from edit pre-fill) — levels only, no format reset
+  useEffect(() => {
+    if (!formData.sportsType) return;
+    const fetchLevels = async () => {
+      try {
+        const res = await axios.get(`/api/sport-rules/sport/${formData.sportsType}/levels`);
+        setAvailableLevels(res.data.data || []);
+      } catch {}
+    };
+    fetchLevels();
   }, [formData.sportsType]);
 
   // When sport+level selected, fetch ruleBook
@@ -677,7 +687,10 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                 <select
                   name="sportsType"
                   value={formData.sportsType}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    setUserChangedSport(e.target.value); // Trigger format reset only on manual change
+                  }}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="">Select Sport</option>
