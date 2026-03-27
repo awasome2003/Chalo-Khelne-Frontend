@@ -10,6 +10,7 @@ import RbacManagement from "./SuperAdmin/RbacManagement";
 import VendorMarketplace from "./SuperAdmin/VendorMarketplace";
 import DashboardLayout from "./SuperAdmin/DashboardLayout";
 import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
+import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
 
 const SuperAdminapp = () => {
   return (
@@ -28,6 +29,8 @@ const SuperAdminapp = () => {
           <Route path="/forum" element={<ThreadList />} />
           <Route path="/forum/new" element={<CreateThreadPage />} />
           <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
+          <Route path="/forum-chat" element={<ForumChatList />} />
+          <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
         </Route>
       </Routes>
     </>

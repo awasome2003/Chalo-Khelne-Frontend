@@ -39,6 +39,7 @@ import KnockoutPage from "./Manager/Tournament/KnockoutPage";
 import { LiveMatchPage } from "./features/live";
 import { TournamentDashboardPage } from "./features/dashboard";
 import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
+import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
 
 const ManagerApp = () => {
   return (
@@ -86,6 +87,8 @@ const ManagerApp = () => {
           <Route path="/forum" element={<ThreadList />} />
           <Route path="/forum/new" element={<CreateThreadPage />} />
           <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
+          <Route path="/forum-chat" element={<ForumChatList />} />
+          <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
 
           {/* Notifications & Settings */}
           <Route path="/notification" element={<NotificationPage />} />
