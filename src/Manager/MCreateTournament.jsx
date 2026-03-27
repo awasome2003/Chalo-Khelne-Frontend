@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { AuthContext } from "../context/AuthContext";
+import TeamKnockoutFormatSelector from "./TeamKnockoutFormatSelector";
+import { formatIdToLegacy } from "../config/teamKnockoutFormats";
 import {
   generateFormFields,
   validateRuleBookForm,
@@ -145,6 +147,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     knockoutFormat: "Singles",
     qualifyPerGroup: "2",
     drawSize: 16,
+    davisCupFormatId: "",
   };
 
   const [formData, setFormData] = useState(() => {
@@ -435,9 +438,17 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       const hasKO = formats.includes("singles-knockout") || formats.includes("davis-cup") || hasGS;
       const tournamentType = hasGS && hasKO ? "knockout + group stage" : hasKO ? "knockout" : hasGS ? "group stage" : "";
 
-      // If Davis Cup selected, ensure knockoutFormat is set
-      if (formats.includes("davis-cup") && !formData.knockoutFormat?.includes("Davis")) {
+      // If Davis Cup selected, set knockoutFormat and match format from selector
+      if (formats.includes("davis-cup")) {
         formData.knockoutFormat = "Davis Cup";
+        if (formData.davisCupFormatId) {
+          // Map format ID to backend format string for team knockout
+          const legacyFormat = formatIdToLegacy(formData.davisCupFormatId);
+          formData.knockoutFormat = "Davis Cup";
+          // Store the team match format in tournament data
+          tournamentFormData.append("teamMatchFormat", legacyFormat);
+          tournamentFormData.append("davisCupFormatId", formData.davisCupFormatId);
+        }
       }
 
       if (!formData.title || !tournamentType || !formData.sportsType) {
@@ -1046,6 +1057,14 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               </p>
             )}
           </div>
+        )}
+
+        {/* Davis Cup Format Selector */}
+        {formData.playingFormats?.includes("davis-cup") && (
+          <TeamKnockoutFormatSelector
+            value={formData.davisCupFormatId || ""}
+            onChange={(fmtId) => setFormData((p) => ({ ...p, davisCupFormatId: fmtId }))}
+          />
         )}
 
         {/* Qualify Per Group */}
