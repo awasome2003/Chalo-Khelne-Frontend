@@ -11,6 +11,7 @@ import ClubAdminProfile from "./ClubAdmin/ClubAdminProfile";
 import CSocial from "./ClubAdmin/CSocial";
 import CRefree from "./ClubAdmin/CRefree";
 import ClubAdminFinance from "./ClubAdmin/ClubAdminFinance";
+import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
 
 const ClubAdminApp = () => {
   return (
@@ -24,9 +25,12 @@ const ClubAdminApp = () => {
           <Route path="/turf/edit/:id" element={<EditTurf />} />
           <Route path="/staff-admin" element={<ManagerAdmin />} />
           <Route path="/payment-history" element={<PaymentHistory />} />
-            <Route path="/club-social" element={<CSocial />} />
-              <Route path="/club-refree" element={<CRefree />} />
-              <Route path="/club-finance" element={<ClubAdminFinance />} />
+          <Route path="/club-social" element={<CSocial />} />
+          <Route path="/club-refree" element={<CRefree />} />
+          <Route path="/club-finance" element={<ClubAdminFinance />} />
+          <Route path="/forum" element={<ThreadList />} />
+          <Route path="/forum/new" element={<CreateThreadPage />} />
+          <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
         </Route>
       </Route>
     </Routes>

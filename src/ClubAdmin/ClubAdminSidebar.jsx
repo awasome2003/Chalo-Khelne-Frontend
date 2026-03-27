@@ -59,6 +59,11 @@ const ClubAdminSidebar = ({ collapsed, toggleSidebar }) => {
             icon: <FaTachometerAlt />,
             label: "Financial Overview",
           },
+          {
+            to: "/forum",
+            icon: <FaTachometerAlt />,
+            label: "Forum",
+          },
         ].map(({ to, icon, label }) => (
           <NavLink
             key={to}
