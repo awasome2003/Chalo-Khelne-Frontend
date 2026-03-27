@@ -50,7 +50,18 @@ const STATIC_STEPS = [
   { id: "details", label: "Schedule & Details", icon: <Calendar className="w-4 h-4" /> },
 ];
 
-const MCreateTournament = ({ showPopup, setShowPopup }) => {
+/**
+ * Unified Tournament Form — supports both create and edit mode.
+ *
+ * Props:
+ * - showPopup: boolean
+ * - setShowPopup: (bool) => void
+ * - mode: "create" | "edit" (default: "create")
+ * - initialData: tournament object (for edit mode)
+ * - onSuccess: () => void (optional callback after save)
+ */
+const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialData = null, onSuccess }) => {
+  const isEditMode = mode === "edit";
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,6 +109,55 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
   };
 
   const [formData, setFormData] = useState({ ...defaultFormData });
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (isEditMode && initialData && showPopup) {
+      const t = initialData;
+      const tType = (t.type || "").toLowerCase();
+      const formats = [];
+      if (tType.includes("group stage")) formats.push("group+knockout");
+      if (tType === "knockout" && (t.knockoutFormat === "Singles" || t.knockoutFormat === "Doubles")) formats.push("singles-knockout");
+      if (t.knockoutFormat === "Davis Cup" || t.knockoutFormat === "Teams Knockout") formats.push("davis-cup");
+      if (formats.length === 0 && tType.includes("knockout")) formats.push("singles-knockout");
+
+      setFormData({
+        ...defaultFormData,
+        title: t.title || "",
+        hasGroupStage: tType.includes("group stage"),
+        hasKnockout: tType.includes("knockout"),
+        playingFormats: formats,
+        sportsType: t.sportsType || "",
+        tournamentLevel: t.tournamentLevel || "",
+        description: t.description || "",
+        organizerName: t.organizerName || "",
+        cancellationPolicy: t.cancellationPolicy || "NO",
+        eventLocation: Array.isArray(t.eventLocation) ? t.eventLocation.join(", ") : t.eventLocation || "",
+        startDate: t.startDate ? t.startDate.split("T")[0] : "",
+        endDate: t.endDate ? t.endDate.split("T")[0] : "",
+        termsAndConditions: t.termsAndConditions || "",
+        groupStageFormat: t.groupStageFormat || "Singles",
+        knockoutFormat: t.knockoutFormat || "Singles",
+        category: t.category || [{ name: "Open Category", fee: 0 }],
+        selectedTime: t.selectedTime || { startTime: "10:00", endTime: "18:00" },
+        numTeams: t.numTeams || "",
+        playerNoValue: t.playerNoValue || "2",
+        tournamentFee: t.tournamentFee || "0",
+        qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
+        managerId: t.managerId || [auth?._id || ""],
+      });
+
+      if (t.tournamentLogo) {
+        setImage(`/uploads/tournaments/${t.tournamentLogo}`);
+      }
+      setCurrentStep(0);
+    } else if (!isEditMode && showPopup) {
+      setFormData({ ...defaultFormData });
+      setImage(null);
+      setImageFile(null);
+      setCurrentStep(0);
+    }
+  }, [isEditMode, initialData, showPopup]);
 
   // Generate dynamic form sections from ruleBook
   const { sections: ruleBookSections, defaults: ruleBookDefaults } = useMemo(
@@ -396,22 +456,34 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
       if (formData.managerId?.length) tournamentFormData.append("managerId", JSON.stringify(formData.managerId));
       if (formData.eventLocation) tournamentFormData.append("eventLocation", formData.eventLocation);
 
-      await axios.post(`/api/tournaments/createTournament`, tournamentFormData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      if (isEditMode && initialData?._id) {
+        // EDIT MODE — update existing tournament
+        await axios.put(`/api/tournaments/edit/${initialData._id}`, tournamentFormData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setSuccess("Tournament updated successfully!");
+      } else {
+        // CREATE MODE — create new tournament
+        await axios.post(`/api/tournaments/createTournament`, tournamentFormData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setSuccess("Tournament created successfully!");
+      }
 
-      setSuccess("Tournament created successfully!");
       setTimeout(() => {
         setShowPopup(false);
-        // Navigate to tournament management to show the new tournament
-        window.location.href = "/mtournament-management";
+        onSuccess?.();
+        if (!isEditMode) window.location.href = "/mtournament-management";
       }, 1500);
     } catch (error) {
-      console.error("Error creating tournament:", error);
-      setError(error.response?.data?.message || "Failed to create tournament");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} tournament:`, error);
+      setError(error.response?.data?.message || `Failed to ${isEditMode ? "update" : "create"} tournament`);
     } finally {
       setIsSubmitting(false);
     }
@@ -1188,7 +1260,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
         {/* ─── Header ─── */}
         <div className="px-8 py-4 border-b border-gray-100 flex items-center justify-between bg-white z-10 w-full">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Create New Tournament</h2>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{isEditMode ? "Edit Tournament" : "Create New Tournament"}</h2>
             <p className="text-sm text-gray-500 mt-0.5">
               Step {currentStep + 1} of {steps.length} — {activeStep?.label}
             </p>
@@ -1295,7 +1367,7 @@ const MCreateTournament = ({ showPopup, setShowPopup }) => {
                   disabled={isSubmitting}
                   className="px-8 py-2.5 bg-[#FF5B04] hover:bg-[#E04F00] text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 transform active:scale-95 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Creating..." : "Create Tournament"}
+                  {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Tournament" : "Create Tournament")}
                 </button>
               ) : (
                 <button

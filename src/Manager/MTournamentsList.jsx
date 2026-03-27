@@ -29,6 +29,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import MCreateTournament from "./MCreateTournament";
 
 const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
   const { user } = useContext(AuthContext);
@@ -695,10 +696,28 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
         </div>
       )}
 
-      {/* Edit Tournament Modal - Premium Design */}
-      {showEditModal && editingTournament && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Edit Tournament — uses unified MCreateTournament in edit mode */}
+      <MCreateTournament
+        showPopup={showEditModal}
+        setShowPopup={setShowEditModal}
+        mode="edit"
+        initialData={editingTournament}
+        onSuccess={() => {
+          // Refresh tournament list
+          const fetchTournaments = async () => {
+            try {
+              const user = JSON.parse(localStorage.getItem("user"));
+              const response = await axios.get(`/api/tournaments/manager/${user?._id}`);
+              setTournaments(response.data.tournaments || []);
+            } catch {}
+          };
+          fetchTournaments();
+        }}
+      />
+
+      {/* OLD EDIT MODAL REMOVED — replaced by MCreateTournament mode="edit" above */}
+      {false && (
+        <div className="hidden">
             <div className="px-8 py-5 border-b border-gray-200 flex items-center justify-between bg-white z-10">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Edit Tournament</h2>
