@@ -200,9 +200,10 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     fetchSports();
   }, []);
 
-  // Reset everything when popup opens
+  // Reset everything when popup opens in CREATE mode only
+  // (Edit mode is handled by the useEffect above that uses mapTournamentToForm)
   useEffect(() => {
-    if (showPopup) {
+    if (showPopup && !isEditMode) {
       setFormData({ ...defaultFormData });
       setImage(null);
       setImageFile(null);
