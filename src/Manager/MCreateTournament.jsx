@@ -110,9 +110,21 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
   const [formData, setFormData] = useState({ ...defaultFormData });
 
-  // Pre-fill form when editing
+  // Pre-fill form when editing, reset when creating or closing
   useEffect(() => {
-    if (isEditMode && initialData && showPopup) {
+    if (!showPopup) {
+      // Reset everything when modal closes
+      setFormData({ ...defaultFormData });
+      setImage(null);
+      setImageFile(null);
+      setError("");
+      setSuccess("");
+      setCurrentStep(0);
+      return;
+    }
+
+    if (isEditMode && initialData) {
+      // EDIT MODE: populate from tournament data
       const t = initialData;
       const tType = (t.type || "").toLowerCase();
       const formats = [];
@@ -149,15 +161,23 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
       if (t.tournamentLogo) {
         setImage(`/uploads/tournaments/${t.tournamentLogo}`);
+      } else {
+        setImage(null);
       }
+      setImageFile(null);
+      setError("");
+      setSuccess("");
       setCurrentStep(0);
-    } else if (!isEditMode && showPopup) {
+    } else {
+      // CREATE MODE: blank form
       setFormData({ ...defaultFormData });
       setImage(null);
       setImageFile(null);
+      setError("");
+      setSuccess("");
       setCurrentStep(0);
     }
-  }, [isEditMode, initialData, showPopup]);
+  }, [showPopup, isEditMode, initialData]);
 
   // Generate dynamic form sections from ruleBook
   const { sections: ruleBookSections, defaults: ruleBookDefaults } = useMemo(
