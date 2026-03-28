@@ -11,6 +11,7 @@ import VendorMarketplace from "./SuperAdmin/VendorMarketplace";
 import DashboardLayout from "./SuperAdmin/DashboardLayout";
 import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
 import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
+import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const SuperAdminapp = () => {
   return (
@@ -31,6 +32,8 @@ const SuperAdminapp = () => {
           <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
           <Route path="/forum-chat" element={<ForumChatList />} />
           <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
+          <Route path="/group-chat" element={<GroupChatList />} />
+          <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
         </Route>
       </Routes>
     </>

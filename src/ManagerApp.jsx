@@ -40,6 +40,7 @@ import { LiveMatchPage } from "./features/live";
 import { TournamentDashboardPage } from "./features/dashboard";
 import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
 import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
+import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const ManagerApp = () => {
   return (
@@ -89,6 +90,8 @@ const ManagerApp = () => {
           <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
           <Route path="/forum-chat" element={<ForumChatList />} />
           <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
+          <Route path="/group-chat" element={<GroupChatList />} />
+          <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
 
           {/* Notifications & Settings */}
           <Route path="/notification" element={<NotificationPage />} />

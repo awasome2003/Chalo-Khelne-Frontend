@@ -46,6 +46,7 @@ export const SIDEBAR_SECTIONS = [
       { key: "news", label: "News", icon: Newspaper, path: "/mnews", roles: ["manager"] },
       { key: "forum", label: "Forum", icon: MessageCircle, path: "/forum", roles: ["manager", "clubadmin"] },
       { key: "forum-chat", label: "Chat Rooms", icon: MessageSquare, path: "/forum-chat", roles: ["manager", "clubadmin"] },
+      { key: "group-chat", label: "Group Chats", icon: MessageCircle, path: "/group-chat", roles: ["manager", "clubadmin"] },
       { key: "staff", label: "Staff Admin", icon: Users, path: "/staff-admin", roles: ["clubadmin"] },
     ],
   },
