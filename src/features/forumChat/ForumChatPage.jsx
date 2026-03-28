@@ -37,11 +37,11 @@ export default function ForumChatPage() {
   // Search users
   const handleSearch = async (query) => {
     setSearchQuery(query);
-    if (query.length < 2) { setSearchResults([]); return; }
+    if (query.length < 1) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const res = await axios.get(`/api/chat/search-players?search=${query}`);
-      const users = res.data?.users || res.data || [];
+      const res = await axios.get(`/api/forum-chat/search-users?q=${query}`);
+      const users = res.data?.users || [];
       // Filter out existing members
       const memberIds = (forum?.members || []).map((m) => m.userId?.toString());
       setSearchResults(users.filter((u) => !memberIds.includes(u._id?.toString())));
@@ -202,7 +202,7 @@ export default function ForumChatPage() {
                   </div>
                 )}
 
-                {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
+                {!searching && searchQuery.length >= 1 && searchResults.length === 0 && (
                   <p className="text-center text-sm text-gray-400 py-4">No users found</p>
                 )}
 
