@@ -47,6 +47,7 @@ export default function Sidebar() {
     { name: "News", href: "/news", icon: NewspaperIcon },
     { name: "Roles & Permissions", href: "/rbac", icon: ShieldCheckIcon },
     { name: "Vendor Marketplace", href: "/vendor-marketplace", icon: ArrowUpTrayIcon },
+    { name: "Group Chats", href: "/group-chat", icon: ChatBubbleLeftRightIcon },
   ];
 
   const handleFileChange = (e) => {

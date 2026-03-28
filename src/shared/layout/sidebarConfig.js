@@ -44,7 +44,7 @@ export const SIDEBAR_SECTIONS = [
       { key: "referee", label: "Referee", icon: Shield, path: "/club-refree", roles: ["clubadmin"] },
       { key: "trainers", label: "Trainers", icon: Dumbbell, path: "/mtrainers", roles: ["manager"] },
       { key: "news", label: "News", icon: Newspaper, path: "/mnews", roles: ["manager"] },
-      { key: "group-chat", label: "Group Chats", icon: MessageCircle, path: "/group-chat", roles: ["manager", "clubadmin"] },
+      { key: "group-chat", label: "Group Chats", icon: MessageCircle, path: "/group-chat", roles: ["manager", "clubadmin", "superadmin", "corporate_admin"] },
       { key: "staff", label: "Staff Admin", icon: Users, path: "/staff-admin", roles: ["clubadmin"] },
     ],
   },

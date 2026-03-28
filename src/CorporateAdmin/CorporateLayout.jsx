@@ -7,7 +7,8 @@ import {
     ArrowRightOnRectangleIcon,
     Bars3Icon,
     XMarkIcon,
-    TrophyIcon
+    TrophyIcon,
+    ChatBubbleLeftRightIcon
 } from "@heroicons/react/24/outline";
 import MNavbar from "../Manager/MNavbar";
 import { AuthContext } from "../context/AuthContext";
@@ -23,6 +24,7 @@ export default function CorporateLayout() {
         { name: "Tournaments", href: "/corporate-tournaments", icon: TrophyIcon },
         { name: "Staff Management", href: "/corporate-staff", icon: UserGroupIcon },
         { name: "Profile", href: "/corporate-profile", icon: BuildingOfficeIcon },
+        { name: "Group Chats", href: "/group-chat", icon: ChatBubbleLeftRightIcon },
     ];
 
     const handleLogout = () => {

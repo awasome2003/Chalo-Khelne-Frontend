@@ -11,8 +11,7 @@ import ClubAdminProfile from "./ClubAdmin/ClubAdminProfile";
 import CSocial from "./ClubAdmin/CSocial";
 import CRefree from "./ClubAdmin/CRefree";
 import ClubAdminFinance from "./ClubAdmin/ClubAdminFinance";
-import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
-import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
+import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const ClubAdminApp = () => {
   return (
@@ -29,11 +28,8 @@ const ClubAdminApp = () => {
           <Route path="/club-social" element={<CSocial />} />
           <Route path="/club-refree" element={<CRefree />} />
           <Route path="/club-finance" element={<ClubAdminFinance />} />
-          <Route path="/forum" element={<ThreadList />} />
-          <Route path="/forum/new" element={<CreateThreadPage />} />
-          <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
-          <Route path="/forum-chat" element={<ForumChatList />} />
-          <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
+          <Route path="/group-chat" element={<GroupChatList />} />
+          <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
         </Route>
       </Route>
     </Routes>
