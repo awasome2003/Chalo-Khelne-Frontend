@@ -38,8 +38,7 @@ import KnockoutPage from "./Manager/Tournament/KnockoutPage";
 // Feature modules
 import { LiveMatchPage } from "./features/live";
 import { TournamentDashboardPage } from "./features/dashboard";
-import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
-import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
+import { ChatList as GroupChatListPage, ChatPage as GroupChatDetailPage } from "./features/groupChat";
 import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const ManagerApp = () => {
@@ -84,14 +83,9 @@ const ManagerApp = () => {
           <Route path="/payments" element={<MPayments />} />
           <Route path="/mcoupons" element={<MCoupons />} />
 
-          {/* Forum */}
-          <Route path="/forum" element={<ThreadList />} />
-          <Route path="/forum/new" element={<CreateThreadPage />} />
-          <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
-          <Route path="/forum-chat" element={<ForumChatList />} />
-          <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
-          <Route path="/group-chat" element={<GroupChatList />} />
-          <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
+          {/* Group Chat */}
+          <Route path="/group-chat" element={<GroupChatListPage />} />
+          <Route path="/group-chat/:chatId" element={<GroupChatDetailPage />} />
 
           {/* Notifications & Settings */}
           <Route path="/notification" element={<NotificationPage />} />

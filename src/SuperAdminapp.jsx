@@ -9,8 +9,6 @@ import NewsManagement from "./SuperAdmin/NewsManagement";
 import RbacManagement from "./SuperAdmin/RbacManagement";
 import VendorMarketplace from "./SuperAdmin/VendorMarketplace";
 import DashboardLayout from "./SuperAdmin/DashboardLayout";
-import { ThreadList, ThreadDetail, CreateThreadPage } from "./features/forum";
-import { ForumList as ForumChatList, ForumChatPage } from "./features/forumChat";
 import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const SuperAdminapp = () => {
@@ -27,11 +25,6 @@ const SuperAdminapp = () => {
           <Route path="/news" element={<NewsManagement />} />
           <Route path="/rbac" element={<RbacManagement />} />
           <Route path="/vendor-marketplace" element={<VendorMarketplace />} />
-          <Route path="/forum" element={<ThreadList />} />
-          <Route path="/forum/new" element={<CreateThreadPage />} />
-          <Route path="/forum/thread/:threadId" element={<ThreadDetail />} />
-          <Route path="/forum-chat" element={<ForumChatList />} />
-          <Route path="/forum-chat/:forumId" element={<ForumChatPage />} />
           <Route path="/group-chat" element={<GroupChatList />} />
           <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
         </Route>
