@@ -1,4 +1,4 @@
-import { FileText, Image as ImageIcon, Download } from "lucide-react";
+import { FileText, Download, Eye } from "lucide-react";
 
 export default function MessageBubble({ message, isOwn }) {
   const timeStr = new Date(message.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -20,12 +20,10 @@ export default function MessageBubble({ message, isOwn }) {
             ? "bg-[#004E93] text-white rounded-br-md"
             : "bg-white border border-gray-200 text-gray-800 rounded-bl-md"
         }`}>
-          {/* Text */}
           {message.text && (
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
           )}
 
-          {/* Attachments */}
           {message.attachments?.length > 0 && (
             <div className={`${message.text ? "mt-2 pt-2 border-t" : ""} ${isOwn ? "border-white/20" : "border-gray-100"} space-y-1.5`}>
               {message.attachments.map((att, i) => (
@@ -34,7 +32,6 @@ export default function MessageBubble({ message, isOwn }) {
             </div>
           )}
 
-          {/* Time */}
           <p className={`text-[10px] mt-1 ${isOwn ? "text-white/60" : "text-gray-400"} text-right`}>
             {timeStr}
           </p>
@@ -45,38 +42,78 @@ export default function MessageBubble({ message, isOwn }) {
 }
 
 function AttachmentPreview({ attachment, isOwn }) {
-  const isImage = attachment.type === "image";
-  const isPdf = attachment.type === "pdf";
-  const serverUrl = window.location.origin;
+  const mimeType = (attachment.type || "").toLowerCase();
+  const isImage = mimeType.startsWith("image") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachment.name || "");
+  const isPdf = mimeType.includes("pdf") || /\.pdf$/i.test(attachment.name || "");
+  const fileUrl = attachment.url?.startsWith("http") ? attachment.url : `${window.location.origin}/${attachment.url}`;
+
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = attachment.name || "download";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      window.open(fileUrl, "_blank");
+    }
+  };
 
   if (isImage) {
     return (
-      <a href={`${serverUrl}/${attachment.url}`} target="_blank" rel="noopener noreferrer">
+      <div className="relative group">
         <img
-          src={`${serverUrl}/${attachment.url}`}
+          src={fileUrl}
           alt={attachment.name}
-          className="max-w-[240px] rounded-xl object-cover cursor-pointer hover:opacity-90 transition"
+          className="max-w-[240px] rounded-xl object-cover"
         />
-      </a>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition w-auto" title="View">
+            <Eye className="w-4 h-4 text-gray-700" />
+          </a>
+          <button onClick={handleDownload}
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition w-auto" title="Download">
+            <Download className="w-4 h-4 text-gray-700" />
+          </button>
+        </div>
+        {attachment.name && (
+          <p className={`text-[10px] mt-1 truncate ${isOwn ? "text-white/50" : "text-gray-400"}`}>{attachment.name}</p>
+        )}
+      </div>
     );
   }
 
   return (
-    <a
-      href={`${serverUrl}/${attachment.url}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl transition ${
-        isOwn ? "bg-white/10 hover:bg-white/20" : "bg-gray-50 hover:bg-gray-100"
-      }`}
-    >
-      {isPdf ? <FileText className="w-4 h-4 flex-shrink-0" /> : <Download className="w-4 h-4 flex-shrink-0" />}
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
+      isOwn ? "bg-white/10" : "bg-gray-50"
+    }`}>
+      {isPdf ? <FileText className="w-5 h-5 flex-shrink-0 text-red-400" /> : <FileText className="w-5 h-5 flex-shrink-0 text-blue-400" />}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium truncate">{attachment.name}</p>
-        <p className={`text-[10px] ${isOwn ? "text-white/50" : "text-gray-400"}`}>
-          {(attachment.size / 1024).toFixed(0)} KB
-        </p>
+        <p className="text-xs font-medium truncate">{attachment.name || "File"}</p>
+        {attachment.size > 0 && (
+          <p className={`text-[10px] ${isOwn ? "text-white/50" : "text-gray-400"}`}>
+            {attachment.size > 1048576 ? `${(attachment.size / 1048576).toFixed(1)} MB` : `${(attachment.size / 1024).toFixed(0)} KB`}
+          </p>
+        )}
       </div>
-    </a>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+          className={`p-1.5 rounded-lg transition w-auto ${isOwn ? "hover:bg-white/20" : "hover:bg-gray-200"}`} title="View">
+          <Eye className="w-3.5 h-3.5" />
+        </a>
+        <button onClick={handleDownload}
+          className={`p-1.5 rounded-lg transition w-auto ${isOwn ? "hover:bg-white/20" : "hover:bg-gray-200"}`} title="Download">
+          <Download className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
