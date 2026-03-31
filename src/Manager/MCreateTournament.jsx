@@ -27,6 +27,7 @@ import {
   Edit2,
 } from "lucide-react";
 import dayjs from "dayjs";
+import { Switch } from "@mui/material";
 import { AuthContext } from "../context/AuthContext";
 import TeamKnockoutFormatSelector from "./TeamKnockoutFormatSelector";
 // Backend now uses formatId directly — no legacy mapping needed
@@ -1586,13 +1587,14 @@ function CustomRuleInput({ label, field, type = "number", min, max, step, value,
 function CustomRuleToggle({ label, field, value, onChange }) {
   const checked = !!value[field];
   return (
-    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-200">
       <span className="text-xs font-semibold text-gray-600">{label}</span>
-      <button type="button" onClick={() => onChange((prev) => ({ ...prev, [field]: !prev[field] }))}
-        className={`relative rounded-full transition flex-shrink-0 ${checked ? "bg-orange-500" : "bg-gray-300"}`}
-        style={{ width: 40, height: 22 }}>
-        <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? "translate-x-[18px]" : "translate-x-0"}`} />
-      </button>
+      <Switch
+        checked={checked}
+        onChange={() => onChange((prev) => ({ ...prev, [field]: !prev[field] }))}
+        size="small"
+        sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: "#FF6A00" }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#FF6A00" } }}
+      />
     </div>
   );
 }
