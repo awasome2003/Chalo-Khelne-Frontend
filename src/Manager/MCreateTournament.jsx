@@ -1587,10 +1587,11 @@ function CustomRuleToggle({ label, field, value, onChange }) {
   const checked = !!value[field];
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-      <label className="text-xs font-semibold text-gray-600">{label}</label>
+      <span className="text-xs font-semibold text-gray-600">{label}</span>
       <button type="button" onClick={() => onChange((prev) => ({ ...prev, [field]: !prev[field] }))}
-        className={`relative w-10 h-5 rounded-full transition ${checked ? "bg-orange-500" : "bg-gray-300"}`}>
-        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
+        className={`relative rounded-full transition flex-shrink-0 ${checked ? "bg-orange-500" : "bg-gray-300"}`}
+        style={{ width: 40, height: 22 }}>
+        <span className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? "translate-x-[18px]" : "translate-x-0"}`} />
       </button>
     </div>
   );
