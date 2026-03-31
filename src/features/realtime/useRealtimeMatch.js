@@ -47,9 +47,17 @@ export default function useRealtimeMatch(matchId) {
       },
 
       onSetComplete: (data) => {
-        // Invalidate to get fresh data with full set details
-        queryClient.invalidateQueries({ queryKey: ["liveMatch", matchId] });
-        queryClient.invalidateQueries({ queryKey: ["matchLiveState", matchId] });
+        // Update cache directly with set data, then background refetch for full details
+        queryClient.setQueryData(["liveMatch", matchId], (old) => {
+          if (!old) return old;
+          return { ...old, currentSet: data.currentSet, sets: data.sets || old.sets };
+        });
+        queryClient.setQueryData(["matchLiveState", matchId], (old) => {
+          if (!old) return old;
+          return { ...old, currentSet: data.currentSet, sets: data.sets || old.sets };
+        });
+        // Background refetch for complete data (no loading flicker)
+        queryClient.invalidateQueries({ queryKey: ["liveMatch", matchId], refetchType: "none" });
       },
 
       onMatchComplete: (data) => {
