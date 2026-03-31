@@ -10,6 +10,10 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import App from "./App";
 import { initSocket } from "./features/realtime";
+import { setupAxiosInterceptors } from "./services/authInterceptor";
+
+// Setup global axios interceptors — auto token, 401 handling, error toasts
+setupAxiosInterceptors();
 
 // Initialize WebSocket if user is authenticated (lazy — don't block startup)
 try {

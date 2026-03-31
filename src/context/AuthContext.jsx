@@ -1,88 +1,118 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
+import { registerLogout } from "../services/authInterceptor";
 
 export const AuthContext = createContext(null);
 
+/**
+ * Decode JWT to check expiry.
+ */
+function isTokenExpired(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.exp) return false;
+    return payload.exp < Math.floor(Date.now() / 1000);
+  } catch {
+    return true;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState(() => {
-    // Initialize auth state from localStorage
     const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+
+    // Validate token on init
+    if (storedToken && isTokenExpired(storedToken)) {
+      // Token expired — clear everything
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("loginTime");
+      return null;
+    }
+
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem("token");
+    const token = localStorage.getItem("token");
+    return !!token && !isTokenExpired(token);
   });
 
-  useEffect(() => {
-    const checkAutoLogout = () => {
-      const storedLoginTime = localStorage.getItem("loginTime");
-      if (!storedLoginTime) return;
+  // Logout function
+  const logout = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("loginTime");
+    setAuth(null);
+    setIsAuthenticated(false);
+  }, []);
 
-      // Calculate remaining session time
-      const loginTime = parseInt(storedLoginTime, 10);
-      const currentTime = Date.now();
-      const sessionDuration = 3600000; // 1 hour (adjust as needed)
-      const elapsed = currentTime - loginTime;
-      const remaining = sessionDuration - elapsed;
+  // Register logout with axios interceptor
+  useEffect(() => {
+    registerLogout(logout);
+  }, [logout]);
+
+  // Auto-logout timer based on JWT expiry
+  useEffect(() => {
+    if (!auth) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      if (!payload.exp) return;
+
+      const expiresAt = payload.exp * 1000;
+      const remaining = expiresAt - Date.now();
 
       if (remaining <= 0) {
-        logout(); // Auto-logout if session expired
-      } else {
-        // Set new timeout for remaining time
-        const timeoutId = setTimeout(logout, remaining);
-        return timeoutId;
+        logout();
+        return;
       }
-    };
 
-    let timeoutId;
-    if (auth) {
-      // Only set timeout if user is authenticated
-      timeoutId = checkAutoLogout();
-    }
+      // Set timer to auto-logout when token expires
+      const timeoutId = setTimeout(() => {
+        logout();
+        // Don't redirect here — interceptor handles it on next API call
+      }, remaining);
 
-    // Cleanup timeout on unmount or auth change
-    return () => timeoutId && clearTimeout(timeoutId);
-  }, [auth]); // Re-run when auth state changes
+      return () => clearTimeout(timeoutId);
+    } catch {}
+  }, [auth, logout]);
 
+  // Login function
   const login = (data) => {
-
-    const user = data?.user || {}; // Prevent undefined errors
+    const user = data?.user || {};
 
     const userData = {
       _id: user?.id || user?._id || "",
       email: user?.email || "",
       name: user?.name?.trim() || "Unknown",
       role: user?.role || "User",
-      mobile: user?.mobile || "N/A", // Mobile is missing in API response
-      image: user?.profileImage || "https://via.placeholder.com/120", // Default image
-      dob: user?.dateOfBirth || "N/A", // Check if provided in future
-      gender: user?.sex || "N/A", // Ensure gender is handled
+      mobile: user?.mobile || "N/A",
+      image: user?.profileImage || "https://via.placeholder.com/120",
+      dob: user?.dateOfBirth || "N/A",
+      gender: user?.sex || "N/A",
       sports:
         Array.isArray(user?.sports) && user.sports.length > 0
           ? user.sports.join(", ")
-          : "No Sports Info", // Check if sports exists
-
+          : "No Sports Info",
       win: user?.win || 0,
       lose: user?.lose || 0,
       draw: user?.draw || 0,
       isCorporate: user?.isCorporate || false,
     };
 
-    console.log("Formatted User Data:", userData); // Debugging: Verify before saving
-
     localStorage.setItem("token", data?.token || "");
     localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("loginTime", Date.now().toString());
     setAuth(userData);
     setIsAuthenticated(true);
-  };
-
-  const logout = () => {
-    // Clear all auth-related storage
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("loginTime");
-    setAuth(null);
-    setIsAuthenticated(false);
   };
 
   return (
