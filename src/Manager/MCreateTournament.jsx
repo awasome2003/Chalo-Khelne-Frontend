@@ -24,6 +24,7 @@ import {
   Award,
   Info,
   Settings,
+  Edit2,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { AuthContext } from "../context/AuthContext";
@@ -43,6 +44,43 @@ const SECTION_ICONS = {
   tieBreaker: <Zap className="w-5 h-5 text-amber-500" />,
   tournamentRules: <Award className="w-5 h-5 text-indigo-500" />,
 };
+
+// ─── Sport-aware defaults for unranked (custom rules) tournaments ───
+const UNRANKED_DEFAULTS = {
+  sets: {
+    "format.totalSets": 3,
+    "format.pointsPerSet": 11,
+    "format.gamesPerSet": 3,
+    "format.winByMargin": 2,
+    "format.deuceEnabled": true,
+    "format.tiebreakEnabled": false,
+    "format.serviceAlternate": 2,
+  },
+  innings: {
+    "format.oversCount": 20,
+    "format.inningsCount": 2,
+    "format.totalSets": 2,
+  },
+  time: {
+    "format.halvesCount": 2,
+    "format.halvesDuration": 45,
+    "format.totalSets": 2,
+  },
+  single: {
+    "format.totalSets": 1,
+  },
+};
+
+const SPORT_SCORING_TYPES = {
+  "Table Tennis": "sets", "Badminton": "sets", "Tennis": "sets", "Pickleball": "sets", "Volleyball": "sets", "Squash": "sets",
+  "Cricket": "innings", "Football": "time", "Basketball": "time", "Hockey": "time", "Kabaddi": "time",
+  "Chess": "single", "Carrom": "single",
+};
+
+function getUnrankedDefaults(sportName) {
+  const type = SPORT_SCORING_TYPES[sportName] || "sets";
+  return { ...(UNRANKED_DEFAULTS[type] || UNRANKED_DEFAULTS.sets) };
+}
 
 // ─── Step definitions (static steps — dynamic ones inserted at runtime) ───
 const STATIC_STEPS = [
@@ -183,12 +221,13 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
   // Build wizard steps — insert "Sport Config" only when ruleBook has sections
   const steps = useMemo(() => {
-    const hasSportConfig = ruleBookSections.length > 0 || ruleBook;
+    const isUnranked = formData.tournamentLevel === "unranked";
+    const hasSportConfig = ruleBookSections.length > 0 || ruleBook || isUnranked;
     return STATIC_STEPS.filter((s) => {
       if (s.id === "sportConfig") return hasSportConfig;
       return true;
     });
-  }, [ruleBookSections, ruleBook]);
+  }, [ruleBookSections, ruleBook, formData.tournamentLevel]);
 
   // Fetch active sports on mount
   useEffect(() => {
@@ -277,12 +316,23 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     fetchLevels();
   }, [formData.sportsType]);
 
-  // When sport+level selected, fetch ruleBook
+  // When sport+level selected, fetch ruleBook OR show custom form for unranked
   useEffect(() => {
     if (!formData.sportsType || !formData.tournamentLevel) {
       setRuleBook(null);
       setRuleBookValues({});
       setRuleBookErrors({});
+      return;
+    }
+
+    // Unranked = custom rules, no ruleBook fetch
+    if (formData.tournamentLevel === "unranked") {
+      setRuleBook(null);
+      // Set sport-aware defaults for custom rules
+      const defaults = getUnrankedDefaults(formData.sportsType);
+      setRuleBookValues(defaults);
+      setRuleBookErrors({});
+      setLoadingRules(false);
       return;
     }
 
@@ -715,6 +765,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                   {availableLevels.map((level) => (
                     <option key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</option>
                   ))}
+                  <option value="unranked">Unranked (Custom Rules)</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -786,8 +837,75 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
   // ───────────────────────────────────
   const renderStepSportConfig = () => (
     <div className="space-y-6">
-      {/* Locked Rules (read-only) */}
-      {(loadingRules || ruleBook) && (
+      {/* Unranked: Custom Rules (all editable) */}
+      {formData.tournamentLevel === "unranked" && (
+        <div className="bg-white p-6 rounded-2xl border border-orange-200 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-orange-100 pb-3">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <Edit2 className="w-5 h-5 text-orange-500" /> Custom Rules
+              <span className="text-xs font-medium bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Editable</span>
+            </h3>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              {formData.sportsType} — Unranked
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 bg-orange-50 p-3 rounded-xl">
+            Define your own match rules. These will apply to all matches in this tournament.
+          </p>
+
+          {/* Dynamic fields based on scoring type */}
+          {(() => {
+            const scoringType = SPORT_SCORING_TYPES[formData.sportsType] || "sets";
+
+            if (scoringType === "sets") return (
+              <div className="grid grid-cols-2 gap-4">
+                <CustomRuleInput label="Total Sets (odd)" field="format.totalSets" type="number" min={1} max={9} step={2}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Points per Game" field="format.pointsPerSet" type="number" min={1} max={50}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Games per Set" field="format.gamesPerSet" type="number" min={1} max={9}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Win by Margin" field="format.winByMargin" type="number" min={1} max={10}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleToggle label="Deuce Enabled" field="format.deuceEnabled"
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleToggle label="Tiebreak Enabled" field="format.tiebreakEnabled"
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Service Alternate" field="format.serviceAlternate" type="number" min={1} max={5}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+              </div>
+            );
+
+            if (scoringType === "innings") return (
+              <div className="grid grid-cols-2 gap-4">
+                <CustomRuleInput label="Overs per Innings" field="format.oversCount" type="number" min={1} max={50}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Innings Count" field="format.inningsCount" type="number" min={1} max={4}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+              </div>
+            );
+
+            if (scoringType === "time") return (
+              <div className="grid grid-cols-2 gap-4">
+                <CustomRuleInput label="Number of Halves" field="format.halvesCount" type="number" min={1} max={4}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+                <CustomRuleInput label="Half Duration (min)" field="format.halvesDuration" type="number" min={1} max={90}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+              </div>
+            );
+
+            return (
+              <div className="grid grid-cols-2 gap-4">
+                <CustomRuleInput label="Total Rounds" field="format.totalSets" type="number" min={1} max={9}
+                  value={ruleBookValues} onChange={setRuleBookValues} />
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Locked Rules (read-only) — only for ranked tournaments */}
+      {formData.tournamentLevel !== "unranked" && (loadingRules || ruleBook) && (
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-gray-50 pb-3">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -1292,7 +1410,25 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
   // ═══════════════════════════════════════════
   //  RENDER ACTIVE STEP
   // ═══════════════════════════════════════════
+  // Check if rules are locked (tournament started)
+  const isRulesLocked = isEditMode && initialData && initialData.currentStage !== "registration";
+
   const renderActiveStep = () => {
+    const lockedSteps = ["sportConfig", "format"];
+    if (isRulesLocked && lockedSteps.includes(activeStep?.id)) {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
+          <Lock className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-amber-800 mb-1">Rules Locked</h3>
+          <p className="text-sm text-amber-600">
+            This tournament has already started ({initialData.currentStage.replace(/_/g, " ")}).
+            Match rules and format cannot be changed after matches are generated.
+          </p>
+          <p className="text-xs text-amber-500 mt-3">You can still edit title, description, dates, and categories.</p>
+        </div>
+      );
+    }
+
     switch (activeStep?.id) {
       case "basic": return renderStepBasic();
       case "sportConfig": return renderStepSportConfig();
@@ -1434,6 +1570,31 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     </div>
   );
 };
+
+function CustomRuleInput({ label, field, type = "number", min, max, step, value, onChange }) {
+  const val = value[field] ?? "";
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
+      <input type={type} min={min} max={max} step={step} value={val}
+        onChange={(e) => onChange((prev) => ({ ...prev, [field]: type === "number" ? Number(e.target.value) : e.target.value }))}
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400/20 focus:border-orange-400 transition" />
+    </div>
+  );
+}
+
+function CustomRuleToggle({ label, field, value, onChange }) {
+  const checked = !!value[field];
+  return (
+    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+      <label className="text-xs font-semibold text-gray-600">{label}</label>
+      <button type="button" onClick={() => onChange((prev) => ({ ...prev, [field]: !prev[field] }))}
+        className={`relative w-10 h-5 rounded-full transition ${checked ? "bg-orange-500" : "bg-gray-300"}`}>
+        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0.5"}`} />
+      </button>
+    </div>
+  );
+}
 
 function FormatCheck({ color }) {
   const colors = { blue: "bg-blue-500", orange: "bg-orange-500", purple: "bg-purple-500" };

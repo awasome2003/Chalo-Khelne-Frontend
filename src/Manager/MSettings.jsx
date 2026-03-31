@@ -144,7 +144,7 @@ export default function MSettings() {
                   <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} autoFocus
                     className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-48" />
                 ) : (
-                  <p className="text-sm font-semibold text-gray-800">{profile?.name || "—"}</p>
+                  <p className="text-sm font-semibold text-gray-800">{profile?.email || auth?.email || "—"}</p>
                 )}
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function MSettings() {
                   <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoFocus
                     className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-56" />
                 ) : (
-                  <p className="text-sm font-semibold text-gray-800">{profile?.email || "—"}</p>
+                  <p className="text-sm font-semibold text-gray-800">{profile?.email || auth?.email || '-'}</p>
                 )}
               </div>
             </div>
