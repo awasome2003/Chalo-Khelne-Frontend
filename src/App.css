@@ -10,8 +10,9 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Old Manager navbar hidden — replaced by new AppLayout TopBar */
-/* Note: .sidebar is NOT hidden globally because ClubAdmin still uses it */
+/* Old navbar/sidebar hidden — all roles now use shared AppLayout */
+.navbar { display: none; }
+.sidebar { display: none; }
 .outlets { background-color: transparent; }
 
 /* ═══════════════════════════════════════════

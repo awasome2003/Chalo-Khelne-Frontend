@@ -1,10 +1,10 @@
 import { Routes, Route } from "react-router-dom";
-import ClubAdminLayout from "./ClubAdmin/ClubAdminLayout";
+import { AppLayout } from "./shared/layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ClubAdminDashboard from "./ClubAdmin/ClubAdminDashboard";
 import TurfManagement from "./ClubAdmin/TurfManagement";
 import ViewTurf from "./ClubAdmin/ViewTurf";
 import EditTurf from "./ClubAdmin/EditTurf";
-import ProtectedRoute from "./components/ProtectedRoute";
 import PaymentHistory from "./ClubAdmin/PaymentHistory";
 import ManagerAdmin from "./ClubAdmin/ManagerAdmin";
 import ClubAdminProfile from "./ClubAdmin/ClubAdminProfile";
@@ -16,7 +16,7 @@ import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features
 const ClubAdminApp = () => {
   return (
     <Routes>
-      <Route element={<ClubAdminLayout />}>
+      <Route element={<AppLayout role="clubadmin" />}>
         <Route element={<ProtectedRoute role="clubAdmin" />}>
           <Route path="/club-dashboard" element={<ClubAdminDashboard />} />
           <Route path="/turf-management" element={<TurfManagement />} />
