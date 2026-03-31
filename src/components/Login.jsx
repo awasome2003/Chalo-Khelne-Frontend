@@ -82,7 +82,7 @@ const LoginForm = ({ onClose, switchToForgot }) => {
       try {
         const response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/login`,
-          values
+          { email: values.email?.trim().toLowerCase(), password: values.password?.trim() }
         );
         toast.success("Authentication Successful");
         login(response.data);
