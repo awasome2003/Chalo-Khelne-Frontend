@@ -70,7 +70,6 @@ const ManagerApp = () => {
 
           {/* Facility */}
           <Route path="/mslot-Bookingt" element={<MSlot_Booking />} />
-          <Route path="/add-turf" element={<AddTurf />} />
           <Route path="/turf-details/:id" element={<MTurfDetails />} />
 
           {/* Management */}
