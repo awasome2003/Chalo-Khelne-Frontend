@@ -1,786 +1,326 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
 import {
-  User,
-  Lock,
-  Mail,
-  Phone,
-  Bell,
-  Globe,
-  Palette,
-  Shield,
-  HelpCircle,
-  Info,
-  LogOut,
-  ChevronRight,
-  Settings,
-  Moon,
-  Sun,
-  Eye,
-  Loader2,
+  User, Lock, Mail, Phone, Bell, Globe, Shield, HelpCircle, Info,
+  LogOut, Settings, Eye, Loader2, Check, X, Edit2, Save,
 } from "lucide-react";
 
-function Msettings() {
-  const { logout } = useContext(AuthContext);
+export default function MSettings() {
+  const { auth, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const managerId = auth?._id;
 
-  // Dynamic state that you can populate from API
-  const [userData, setUserData] = useState({
-    email: "",
-    phone: "",
-    name: "",
-  });
-
-  const [settings, setSettings] = useState({
-    notifications: {
-      email: false,
-      sms: false,
-      tournaments: false,
-      bookings: false,
-    },
-    privacy: {
-      publicProfile: false,
-      shareContact: false,
-    },
-    preferences: {
-      theme: "light",
-      language: "English",
-    },
-  });
-
-  const [appInfo, setAppInfo] = useState({
-    version: "",
-    supportPhone: "",
-    supportEmail: "",
-    description: "",
-  });
-
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Password
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  // Simulate API calls - Replace these with your actual API calls
+  // Fetch profile
   useEffect(() => {
-    fetchUserData();
-    fetchSettings();
-    fetchAppInfo();
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      // Replace with your API call
-      // const response = await fetch('/api/user/profile');
-      // const data = await response.json();
-
-      // Simulated data - replace with actual API response
-      setTimeout(() => {
-        setUserData({
-          email: "user@example.com",
-          phone: "+91-9876543210",
-          name: "John Doe",
-        });
-      }, 1000);
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
-
-  const fetchSettings = async () => {
-    try {
-      // Replace with your API call
-      // const response = await fetch('/api/user/settings');
-      // const data = await response.json();
-
-      // Simulated data - replace with actual API response
-      setTimeout(() => {
-        setSettings({
-          notifications: {
-            email: true,
-            sms: false,
-            tournaments: true,
-            bookings: false,
-          },
-          privacy: {
-            publicProfile: true,
-            shareContact: false,
-          },
-          preferences: {
-            theme: "light",
-            language: "English",
-          },
-        });
+    if (!managerId) { setLoading(false); return; }
+    (async () => {
+      try {
+        const res = await axios.get(`/api/managers/${managerId}/profile`);
+        if (res.data?.success) {
+          setProfile(res.data.manager);
+          setNameInput(res.data.manager.name || "");
+          setEmailInput(res.data.manager.email || "");
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
         setLoading(false);
-      }, 1200);
-    } catch (error) {
-      console.error("Error fetching settings:", error);
-      setLoading(false);
-    }
-  };
-
-  const fetchAppInfo = async () => {
-    try {
-      // Replace with your API call
-      // const response = await fetch('/api/app/info');
-      // const data = await response.json();
-
-      // Simulated data - replace with actual API response
-      setTimeout(() => {
-        setAppInfo({
-          version: "v1.2.3",
-          supportPhone: "+91-1234567890",
-          supportEmail: "support@example.com",
-          description:
-            "This app helps manage tournaments and turf bookings efficiently with a modern, user-friendly interface.",
-        });
-      }, 800);
-    } catch (error) {
-      console.error("Error fetching app info:", error);
-    }
-  };
-
-  const updateSettings = async (newSettings) => {
-    setSaving(true);
-    try {
-      // Replace with your API call
-      // const response = await fetch('/api/user/settings', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(newSettings)
-      // });
-
-      // Simulate API call
-      setTimeout(() => {
-        setSettings(newSettings);
-        setSaving(false);
-      }, 500);
-    } catch (error) {
-      console.error("Error updating settings:", error);
-      setSaving(false);
-    }
-  };
-
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
-
-    // Validate passwords
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError("New passwords do not match");
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters long");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Replace with your actual password update API endpoint
-      const response = await fetch("/api/managers/update-password", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          // Add authorization header if needed
-          // 'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setPasswordSuccess("Password updated successfully!");
-        setPasswordForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        setTimeout(() => {
-          setShowPasswordModal(false);
-          setPasswordSuccess("");
-        }, 2000);
-      } else {
-        setPasswordError(data.error || "Failed to update password");
       }
-    } catch (error) {
-      console.error("Error updating password:", error);
-      setPasswordError("Network error. Please try again.");
+    })();
+  }, [managerId]);
+
+  // Save name/email
+  const handleSaveProfile = async (field) => {
+    setSaving(true);
+    try {
+      const data = {};
+      if (field === "name") data.name = nameInput.trim();
+      if (field === "email") data.email = emailInput.trim();
+
+      const res = await axios.put(`/api/managers/${managerId}/profile`, data);
+      if (res.data?.success) {
+        setProfile((p) => ({ ...p, ...res.data.manager }));
+        toast.success(`${field === "name" ? "Name" : "Email"} updated!`);
+        setEditingName(false);
+        setEditingEmail(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  // Change password
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await axios.put(`/api/managers/${managerId}/change-password`, {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      if (res.data?.success) {
+        setPasswordSuccess("Password updated successfully!");
+        setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        setTimeout(() => { setShowPasswordModal(false); setPasswordSuccess(""); }, 2000);
+      }
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || "Failed to update password");
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
-  const handleNotificationChange = (key) => {
-    const newSettings = {
-      ...settings,
-      notifications: {
-        ...settings.notifications,
-        [key]: !settings.notifications[key],
-      },
-    };
-    updateSettings(newSettings);
-  };
-
-  const handlePrivacyChange = (key) => {
-    const newSettings = {
-      ...settings,
-      privacy: {
-        ...settings.privacy,
-        [key]: !settings.privacy[key],
-      },
-    };
-    updateSettings(newSettings);
-  };
-
-  const handleThemeChange = (theme) => {
-    const newSettings = {
-      ...settings,
-      preferences: {
-        ...settings.preferences,
-        theme,
-      },
-    };
-    updateSettings(newSettings);
-  };
-
-  const handleLanguageChange = (language) => {
-    const newSettings = {
-      ...settings,
-      preferences: {
-        ...settings.preferences,
-        language,
-      },
-    };
-    updateSettings(newSettings);
-  };
-
-  const SettingItem = ({
-    icon: Icon,
-    title,
-    subtitle,
-    children,
-    onClick,
-    showArrow = false,
-    loading: itemLoading = false,
-  }) => (
-    <div
-      className={`bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:shadow-md ${
-        onClick ? "cursor-pointer hover:bg-gray-50" : ""
-      } ${itemLoading ? "opacity-50" : ""}`}
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            {itemLoading ? (
-              <Loader2 className="h-5 w-5 text-white animate-spin" />
-            ) : (
-              <Icon className="h-5 w-5 text-white" />
-            )}
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900">{title}</h3>
-            {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {children}
-          {showArrow && <ChevronRight className="h-5 w-5 text-gray-400" />}
-          {saving && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
-        </div>
-      </div>
-    </div>
-  );
-
-  const Toggle = ({ checked, onChange, disabled = false }) => (
-    <button
-      type="button"
-      disabled={disabled || saving}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-        disabled || saving ? "opacity-50 cursor-not-allowed" : ""
-      } ${checked ? "bg-blue-600" : "bg-gray-200"}`}
-      onClick={onChange}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-6" : "translate-x-1"
-        }`}
-      />
-    </button>
-  );
-
-  const LoadingSkeleton = () => (
-    <div className="animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-    </div>
-  );
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center justify-center">
-              <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-              <span className="ml-2 text-gray-600">Loading settings...</span>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-[#004E93] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
-      <div className="mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-700 rounded-xl flex items-center justify-center">
-              <Settings className="h-6 w-6 text-white" />
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-black text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Manage your account and preferences</p>
+      </div>
+
+      <div className="space-y-5">
+        {/* Profile Card */}
+        <Section icon={User} title="Profile">
+          <div className="flex items-center gap-4 mb-5 pb-5 border-b border-gray-100">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-2xl font-black">
+              {(profile?.name || auth?.name || "U").charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-              <p className="text-gray-500">Manage your account preferences</p>
-              {userData.name && (
-                <p className="text-sm text-gray-400">
-                  Welcome, {userData.name}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Account Settings */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <User className="h-5 w-5 mr-2 text-blue-600" />
-              Account Settings
-            </h2>
-
-            <SettingItem
-              icon={Lock}
-              title="Change Password"
-              subtitle="Update your password"
-              showArrow
-              onClick={() => setShowPasswordModal(true)}
-            />
-
-            <SettingItem
-              icon={Mail}
-              title="Email Address"
-              subtitle={userData.email || "Loading..."}
-              showArrow
-              loading={!userData.email}
-              onClick={() => {
-                /* Handle email change */
-              }}
-            />
-
-            <SettingItem
-              icon={Phone}
-              title="Phone Number"
-              subtitle={userData.phone || "Loading..."}
-              showArrow
-              loading={!userData.phone}
-              onClick={() => {
-                /* Handle phone change */
-              }}
-            />
-          </div>
-
-          {/* Notifications */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Bell className="h-5 w-5 mr-2 text-blue-600" />
-              Notifications
-            </h2>
-
-            <SettingItem
-              icon={Mail}
-              title="Email Notifications"
-              subtitle="Receive updates via email"
-            >
-              <Toggle
-                checked={settings.notifications.email}
-                onChange={() => handleNotificationChange("email")}
-              />
-            </SettingItem>
-
-            <SettingItem
-              icon={Phone}
-              title="SMS Notifications"
-              subtitle="Receive text messages"
-            >
-              <Toggle
-                checked={settings.notifications.sms}
-                onChange={() => handleNotificationChange("sms")}
-              />
-            </SettingItem>
-
-            <SettingItem
-              icon={Bell}
-              title="Tournament Updates"
-              subtitle="New tournament notifications"
-            >
-              <Toggle
-                checked={settings.notifications.tournaments}
-                onChange={() => handleNotificationChange("tournaments")}
-              />
-            </SettingItem>
-
-            <SettingItem
-              icon={Bell}
-              title="Booking Alerts"
-              subtitle="Turf booking notifications"
-            >
-              <Toggle
-                checked={settings.notifications.bookings}
-                onChange={() => handleNotificationChange("bookings")}
-              />
-            </SettingItem>
-          </div>
-
-          {/* Preferences */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Palette className="h-5 w-5 mr-2 text-blue-600" />
-              Preferences
-            </h2>
-
-            <SettingItem
-              icon={Globe}
-              title="Language"
-              subtitle="Choose your language"
-            >
-              <select
-                value={settings.preferences.language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                disabled={saving}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                <option value="English">English</option>
-                <option value="Hindi">Hindi</option>
-                <option value="Spanish">Spanish</option>
-                <option value="French">French</option>
-              </select>
-            </SettingItem>
-
-            <SettingItem
-              icon={settings.preferences.theme === "light" ? Sun : Moon}
-              title="App Theme"
-              subtitle="Choose your preferred theme"
-            >
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleThemeChange("light")}
-                  disabled={saving}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-                    settings.preferences.theme === "light"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Light
-                </button>
-                <button
-                  onClick={() => handleThemeChange("dark")}
-                  disabled={saving}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-                    settings.preferences.theme === "dark"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Dark
-                </button>
-              </div>
-            </SettingItem>
-          </div>
-
-          {/* Privacy */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Shield className="h-5 w-5 mr-2 text-blue-600" />
-              Privacy & Security
-            </h2>
-
-            <SettingItem
-              icon={Eye}
-              title="Public Profile"
-              subtitle="Show profile to other users"
-            >
-              <Toggle
-                checked={settings.privacy.publicProfile}
-                onChange={() => handlePrivacyChange("publicProfile")}
-              />
-            </SettingItem>
-
-            <SettingItem
-              icon={Phone}
-              title="Share Contact Info"
-              subtitle="Allow teams to see your contact"
-            >
-              <Toggle
-                checked={settings.privacy.shareContact}
-                onChange={() => handlePrivacyChange("shareContact")}
-              />
-            </SettingItem>
-          </div>
-        </div>
-
-        {/* Support & About */}
-        <div className="grid gap-6 md:grid-cols-2 mt-6">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <HelpCircle className="h-5 w-5 mr-2 text-blue-600" />
-              Support & Help
-            </h2>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex gap-[20px]">
-                <div className="flex items-center space-x-1">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  {appInfo.supportPhone ? (
-                    <span className="text-sm text-gray-600">
-                      {appInfo.supportPhone}
-                    </span>
-                  ) : (
-                    <LoadingSkeleton />
-                  )}
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  {appInfo.supportEmail ? (
-                    <span className="text-sm text-gray-600">
-                      {appInfo.supportEmail}
-                    </span>
-                  ) : (
-                    <LoadingSkeleton />
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3 border-gray-200">
-                <div className="flex gap-[20px]">
-                  <a
-                    href="#"
-                    className="block text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    FAQs
-                  </a>
-                  <a
-                    href="#"
-                    className="block text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    Terms & Conditions
-                  </a>
-                  <a
-                    href="#"
-                    className="block text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    Privacy Policy
-                  </a>
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-gray-800">{profile?.name || auth?.name || "Manager"}</h3>
+              <p className="text-sm text-gray-500">{profile?.email || auth?.email}</p>
+              <span className="text-[10px] font-bold text-[#004E93] bg-[#004E93]/10 px-2 py-0.5 rounded-full mt-1 inline-block">Manager</span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Info className="h-5 w-5 mr-2 text-blue-600" />
-              About
-            </h2>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">App Version</span>
-                  {appInfo.version ? (
-                    <span className="text-sm font-medium text-gray-900">
-                      {appInfo.version}
-                    </span>
-                  ) : (
-                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-                  )}
-                </div>
-                {appInfo.description ? (
-                  <p className="text-sm text-gray-600">{appInfo.description}</p>
+          {/* Editable Name */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+            <div className="flex items-center gap-3">
+              <User className="w-4 h-4 text-gray-400" />
+              <div>
+                <p className="text-xs text-gray-400 font-medium">Full Name</p>
+                {editingName ? (
+                  <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} autoFocus
+                    className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-48" />
                 ) : (
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-800">{profile?.name || "—"}</p>
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Logout Button */}
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={handleLogout}
-            className="bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 px-4 rounded-lg border border-red-200 transition-colors duration-200 flex items-center justify-center space-x-2"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-
-        {/* Password Change Modal */}
-        {showPasswordModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-4 border-b pb-2">
-                <h3 className="text-lg font-semibold text-gray-900 whitespace-nowrap">
-                  Change Password
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setPasswordError("");
-                    setPasswordSuccess("");
-                    setPasswordForm({
-                      currentPassword: "",
-                      newPassword: "",
-                      confirmPassword: "",
-                    });
-                  }}
-                  className="text-xl text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label="Close modal"
-                >
-                  &times;
+            {editingName ? (
+              <div className="flex gap-1.5">
+                <button onClick={() => handleSaveProfile("name")} disabled={saving}
+                  className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition w-auto">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+                <button onClick={() => { setEditingName(false); setNameInput(profile?.name || ""); }}
+                  className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition w-auto">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
+            ) : (
+              <button onClick={() => setEditingName(true)} className="p-1.5 text-gray-400 hover:text-[#004E93] hover:bg-blue-50 rounded-lg transition w-auto">
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        currentPassword: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        newPassword: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                    minLength="6"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                {passwordError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {passwordError}
-                  </div>
+          {/* Editable Email */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-gray-400" />
+              <div>
+                <p className="text-xs text-gray-400 font-medium">Email Address</p>
+                {editingEmail ? (
+                  <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoFocus
+                    className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-56" />
+                ) : (
+                  <p className="text-sm font-semibold text-gray-800">{profile?.email || "—"}</p>
                 )}
+              </div>
+            </div>
+            {editingEmail ? (
+              <div className="flex gap-1.5">
+                <button onClick={() => handleSaveProfile("email")} disabled={saving}
+                  className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition w-auto">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+                <button onClick={() => { setEditingEmail(false); setEmailInput(profile?.email || ""); }}
+                  className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition w-auto">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setEditingEmail(true)} className="p-1.5 text-gray-400 hover:text-[#004E93] hover:bg-blue-50 rounded-lg transition w-auto">
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-                {passwordSuccess && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                    {passwordSuccess}
-                  </div>
-                )}
-
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPasswordModal(false);
-                      setPasswordError("");
-                      setPasswordSuccess("");
-                      setPasswordForm({
-                        currentPassword: "",
-                        newPassword: "",
-                        confirmPassword: "",
-                      });
-                    }}
-                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Updating...
-                      </>
-                    ) : (
-                      "Update Password"
-                    )}
-                  </button>
-                </div>
-              </form>
+          {/* Account ID */}
+          <div className="flex items-center gap-3 py-3">
+            <Shield className="w-4 h-4 text-gray-400" />
+            <div>
+              <p className="text-xs text-gray-400 font-medium">Account ID</p>
+              <p className="text-xs text-gray-500 font-mono">{managerId}</p>
             </div>
           </div>
-        )}
+        </Section>
+
+        {/* Security */}
+        <Section icon={Lock} title="Security">
+          <button onClick={() => setShowPasswordModal(true)}
+            className="w-full flex items-center justify-between py-3 hover:bg-gray-50 rounded-xl px-3 -mx-3 transition group">
+            <div className="flex items-center gap-3">
+              <Lock className="w-4 h-4 text-gray-400 group-hover:text-[#004E93]" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-800">Change Password</p>
+                <p className="text-xs text-gray-400">Update your account password</p>
+              </div>
+            </div>
+            <div className="text-xs text-[#004E93] font-semibold opacity-0 group-hover:opacity-100 transition">Change →</div>
+          </button>
+        </Section>
+
+        {/* App Info */}
+        <Section icon={Info} title="About">
+          <div className="space-y-3">
+            <InfoRow label="App Name" value="Chalo Khelne" />
+            <InfoRow label="Version" value="v2.0.0" />
+            <InfoRow label="Role" value="Manager" />
+            <InfoRow label="Support" value="support@chalokhelne.com" />
+          </div>
+          <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
+            <a href="/l/terms-and-conditions" className="text-xs text-[#004E93] font-medium hover:underline">Terms & Conditions</a>
+            <a href="/l/privacy-policy" className="text-xs text-[#004E93] font-medium hover:underline">Privacy Policy</a>
+            <a href="/l/faq" className="text-xs text-[#004E93] font-medium hover:underline">FAQs</a>
+          </div>
+        </Section>
+
+        {/* Logout */}
+        <button onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 transition active:scale-[0.98]">
+          <LogOut className="w-4 h-4" /> Sign Out
+        </button>
       </div>
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800">Change Password</h3>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordError(""); setPasswordSuccess(""); setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" }); }}
+                className="p-1.5 hover:bg-gray-100 rounded-lg w-auto">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handlePasswordChange} className="p-6 space-y-4">
+              <PasswordInput label="Current Password" value={passwordForm.currentPassword}
+                onChange={(v) => setPasswordForm((p) => ({ ...p, currentPassword: v }))} />
+              <PasswordInput label="New Password" value={passwordForm.newPassword}
+                onChange={(v) => setPasswordForm((p) => ({ ...p, newPassword: v }))} />
+              <PasswordInput label="Confirm New Password" value={passwordForm.confirmPassword}
+                onChange={(v) => setPasswordForm((p) => ({ ...p, confirmPassword: v }))} />
+
+              {passwordError && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm font-medium">{passwordError}</div>}
+              {passwordSuccess && <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-2.5 rounded-xl text-sm font-medium">{passwordSuccess}</div>}
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowPasswordModal(false); setPasswordError(""); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-gray-600 font-semibold text-sm hover:bg-gray-100 transition w-auto">
+                  Cancel
+                </button>
+                <button type="submit" disabled={changingPassword}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2">
+                  {changingPassword ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</> : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default Msettings;
+// Sub-components
+function Section({ icon: Icon, title, children }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#004E93]" />
+        </div>
+        <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div className="flex justify-between items-center py-1.5">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-sm font-semibold text-gray-800">{value}</span>
+    </div>
+  );
+}
+
+function PasswordInput({ label, value, onChange }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
+      <div className="relative">
+        <input type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} required minLength={label.includes("New") ? 6 : undefined}
+          className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+        <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-auto">
+          <Eye className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
