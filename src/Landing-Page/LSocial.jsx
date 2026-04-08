@@ -100,8 +100,8 @@ const LSocial = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3"
           >
-            <span className="w-12 h-[1px] bg-blue-600" />
-            <span className="text-blue-500 text-xs font-black uppercase tracking-[0.4em] italic">Network Grid</span>
+            <span className="w-12 h-[1px] bg-orange-500" />
+            <span className="text-orange-500 text-xs font-black uppercase tracking-[0.4em] italic">Network Grid</span>
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -141,7 +141,7 @@ const LSocial = () => {
 
               <button
                 onClick={handleAction}
-                className="px-10 py-5 bg-blue-600 text-white font-black italic uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-blue-500/20 flex items-center gap-3 hover:bg-blue-700 transition-all"
+                className="px-10 py-5 bg-orange-500 text-white font-black italic uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-500/20 flex items-center gap-3 hover:bg-orange-600 transition-all"
               >
                 Draft Intel <Plus className="w-5 h-5" />
               </button>
@@ -159,7 +159,7 @@ const LSocial = () => {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="group bg-white rounded-[3rem] overflow-hidden border border-black/5 shadow-2xl shadow-black/5 hover:border-blue-600/20 transition-all"
+                    className="group bg-white rounded-[3rem] overflow-hidden border border-black/5 shadow-2xl shadow-black/5 hover:border-orange-500/20 transition-all"
                   >
                     <div className="p-8 pb-0 flex items-center justify-between">
                       <div className="flex items-center gap-5">
@@ -169,7 +169,7 @@ const LSocial = () => {
                         <div>
                           <h3 className="text-xl font-black italic uppercase tracking-tight text-gray-900 leading-none mb-1">{post.user.name}</h3>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{post.user.role}</span>
+                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{post.user.role}</span>
                             <span className="text-gray-300">•</span>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{post.date}</span>
                           </div>
@@ -212,7 +212,7 @@ const LSocial = () => {
                             <Heart className="w-6 h-6" />
                             <span className="text-[10px] font-black uppercase tracking-widest leading-none italic">{post.likes}</span>
                           </button>
-                          <button onClick={handleAction} className="flex items-center gap-3 text-gray-400 hover:text-blue-500 transition-all">
+                          <button onClick={handleAction} className="flex items-center gap-3 text-gray-400 hover:text-orange-500 transition-all">
                             <MessageCircle className="w-6 h-6" />
                             <span className="text-[10px] font-black uppercase tracking-widest leading-none italic">{post.comments}</span>
                           </button>
@@ -228,10 +228,10 @@ const LSocial = () => {
 
           {/* Sidebar Stats & Features */}
           <aside className="w-full lg:w-96 space-y-12">
-            <div className="p-8 rounded-[3rem] bg-gray-900 text-white space-y-8 relative overflow-hidden shadow-2xl shadow-blue-500/10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="p-8 rounded-[3rem] bg-gray-900 text-white space-y-8 relative overflow-hidden shadow-2xl shadow-orange-500/10">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 blur-3xl -translate-y-1/2 translate-x-1/2" />
               <div className="space-y-4 relative z-10">
-                <div className="p-3 bg-blue-500/20 rounded-2xl w-fit border border-blue-500/30">
+                <div className="p-3 bg-orange-500/20 rounded-2xl w-fit border border-orange-500/30">
                   <Target className="w-6 h-6 text-blue-400" />
                 </div>
                 <h3 className="text-2xl font-black italic uppercase tracking-tight">Operation Stats</h3>
@@ -265,7 +265,7 @@ const LSocial = () => {
                     <Calendar className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="font-black italic text-gray-900 uppercase tracking-tight group-hover:text-blue-600 transition-colors">{event.title}</p>
+                    <p className="font-black italic text-gray-900 uppercase tracking-tight group-hover:text-orange-500 transition-colors">{event.title}</p>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{event.location}</p>
                   </div>
                 </motion.div>
@@ -322,10 +322,10 @@ const SignInModal = ({ onClose }) => (
       className="bg-white rounded-[3rem] max-w-md w-full p-12 relative shadow-2xl overflow-hidden text-center"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 via-indigo-600 to-purple-600" />
       <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors"><X className="w-6 h-6" /></button>
 
-      <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 mx-auto mb-8 shadow-inner">
+      <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center text-orange-500 mx-auto mb-8 shadow-inner">
         <LogIn className="w-10 h-10" />
       </div>
 
@@ -333,7 +333,7 @@ const SignInModal = ({ onClose }) => (
       <p className="text-gray-500 font-medium italic mb-10">Authentication required to enlist in the tactical network grid.</p>
 
       <div className="space-y-4">
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black italic uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3">
+        <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-5 rounded-2xl font-black italic uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3">
           Sign In
         </button>
         <button className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 py-5 rounded-2xl font-black italic uppercase tracking-widest text-[10px] transition-all">

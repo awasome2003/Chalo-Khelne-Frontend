@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 // import { useEffect, useState } from "react";
 // import axios from "axios";
 // import { SlidersHorizontal, Pencil, Eye } from "lucide-react";
@@ -178,7 +179,7 @@
 //         )
 //       );
 //     } catch (error) {
-//       alert("Failed to update status");
+//       toast.error("Failed to update status");
 //       console.error("Status update error:", error);
 //     }
 //   };
@@ -413,12 +414,11 @@ export default function Approved() {
         )
       );
     } catch (error) {
-      alert("Failed to update status");
+      toast.error("Failed to update status");
       console.error("Status update error:", error);
     }
   };
 const handleRoleUpdate = async () => {
-  console.log("🚀 Updating role to:", newRole);
 
   try {
     const res = await axios.put(
@@ -426,7 +426,6 @@ const handleRoleUpdate = async () => {
       { role: newRole }
     );
 
-    console.log("✅ Response from server:", res.data);
 
     // ✅ Update UI locally with new role
     setSelectedUser((prevUser) => ({
@@ -449,7 +448,7 @@ const handleRoleUpdate = async () => {
     setIsEditingRole(false);
   } catch (err) {
     console.error("Role update failed", err);
-    alert("Role update failed");
+    toast.info("Role update failed");
   }
 };
 

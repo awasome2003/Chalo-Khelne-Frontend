@@ -171,7 +171,7 @@ const TurfManagement = () => {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition w-auto ${
-              activeTab === tab.key ? "bg-[#004E93] text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              activeTab === tab.key ? "bg-orange-500 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
             <tab.icon className="w-4 h-4" /> {tab.label}
@@ -192,7 +192,7 @@ const TurfManagement = () => {
           <Section icon={Camera} title="Turf Photos">
             <div className="grid grid-cols-3 gap-4">
               {[0, 1, 2].map((idx) => (
-                <div key={idx} className={`relative rounded-2xl border-2 border-dashed overflow-hidden transition-all ${images[idx] ? "border-[#004E93] bg-blue-50/30" : "border-gray-200 hover:border-[#004E93] hover:bg-blue-50/20"}`}>
+                <div key={idx} className={`relative rounded-2xl border-2 border-dashed overflow-hidden transition-all ${images[idx] ? "border-orange-500 bg-blue-50/30" : "border-gray-200 hover:border-orange-500 hover:bg-blue-50/20"}`}>
                   {images[idx] ? (
                     <>
                       <img src={images[idx]} alt="" className="w-full h-36 object-cover" />
@@ -234,14 +234,14 @@ const TurfManagement = () => {
               <div className="flex-1">
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sport Name</label>
                 <input type="text" value={sportInput} onChange={(e) => setSportInput(e.target.value)} placeholder="or pick below"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
               </div>
               <div className="w-28">
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">₹/hr</label>
                 <input type="number" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} placeholder="500"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
               </div>
-              <button type="button" onClick={() => addSport()} className="px-4 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white rounded-xl text-sm font-semibold transition w-auto">
+              <button type="button" onClick={() => addSport()} className="px-4 py-2.5 bg-orange-500 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold transition w-auto">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
@@ -250,7 +250,7 @@ const TurfManagement = () => {
             <div className="flex flex-wrap gap-1.5 mt-3">
               {SPORTS_PRESETS.filter((s) => !sportsList.some((sl) => sl.name === s)).map((s) => (
                 <button key={s} type="button" onClick={() => { setSportInput(s); }}
-                  className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-[#004E93]/10 hover:text-[#004E93] transition w-auto">
+                  className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-orange-500/10 hover:text-orange-500 transition w-auto">
                   {s}
                 </button>
               ))}
@@ -262,9 +262,9 @@ const TurfManagement = () => {
                 {sportsList.map((sport, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-[#004E93]" />
+                      <Star className="w-4 h-4 text-orange-500" />
                       <span className="text-sm font-semibold text-gray-800">{sport.name}</span>
-                      {sport.pricePerHour > 0 && <span className="text-xs text-[#004E93] bg-[#004E93]/10 px-2 py-0.5 rounded-full font-bold">₹{sport.pricePerHour}/hr</span>}
+                      {sport.pricePerHour > 0 && <span className="text-xs text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full font-bold">₹{sport.pricePerHour}/hr</span>}
                       {sport.pricePerHour === 0 && <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">FREE</span>}
                     </div>
                     <button type="button" onClick={() => removeSport(idx)} className="text-red-400 hover:text-red-600 transition w-auto">
@@ -288,13 +288,13 @@ const TurfManagement = () => {
                 {DAYS.map((day) => (
                   <button key={day} type="button" onClick={() => toggleDay(day)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition w-auto ${
-                      selectedDays.includes(day) ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      selectedDays.includes(day) ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}>
                     {day.slice(0, 3)}
                   </button>
                 ))}
                 <button type="button" onClick={() => setSelectedDays(selectedDays.length === DAYS.length ? [] : [...DAYS])}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#004E93] bg-[#004E93]/10 hover:bg-[#004E93]/20 transition w-auto">
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 transition w-auto">
                   {selectedDays.length === DAYS.length ? "Clear All" : "Select All"}
                 </button>
               </div>
@@ -323,7 +323,7 @@ const TurfManagement = () => {
               Cancel
             </button>
             <button type="submit" disabled={isSubmitting}
-              className="flex-1 md:flex-none md:px-12 py-3 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]">
+              className="flex-1 md:flex-none md:px-12 py-3 rounded-xl bg-orange-500 hover:bg-orange-700 text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]">
               {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : <><Check className="w-4 h-4" /> Add Turf</>}
             </button>
           </div>
@@ -337,17 +337,17 @@ const TurfManagement = () => {
           <div className="relative mb-4 max-w-sm">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search turfs..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
           </div>
 
           {isLoading ? (
-            <div className="text-center py-16"><Loader2 className="w-8 h-8 text-[#004E93] animate-spin mx-auto" /></div>
+            <div className="text-center py-16"><Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" /></div>
           ) : filteredTurfs.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
               <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-700">No turfs yet</h3>
               <p className="text-sm text-gray-400 mt-1">Add your first turf to get started</p>
-              <button onClick={() => setActiveTab("add")} className="mt-4 px-5 py-2 bg-[#004E93] text-white text-sm font-semibold rounded-xl w-auto">
+              <button onClick={() => setActiveTab("add")} className="mt-4 px-5 py-2 bg-orange-500 text-white text-sm font-semibold rounded-xl w-auto">
                 <Plus className="w-4 h-4 inline mr-1" /> Add Turf
               </button>
             </div>
@@ -359,7 +359,7 @@ const TurfManagement = () => {
                   {turf.images?.[0] ? (
                     <img src={`/${turf.images[0]}`} alt={turf.name} className="w-full h-40 object-cover" />
                   ) : (
-                    <div className="w-full h-40 bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center">
+                    <div className="w-full h-40 bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center">
                       <MapPin className="w-10 h-10 text-white/40" />
                     </div>
                   )}
@@ -381,7 +381,7 @@ const TurfManagement = () => {
                     {/* Sports */}
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {turf.sports?.map((s, i) => (
-                        <span key={i} className="text-[10px] font-semibold text-[#004E93] bg-[#004E93]/10 px-2 py-0.5 rounded-full">
+                        <span key={i} className="text-[10px] font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
                           {s.name} {s.pricePerHour > 0 && `₹${s.pricePerHour}`}
                         </span>
                       ))}
@@ -401,7 +401,7 @@ const TurfManagement = () => {
                       <Link to={`/turf/${turf._id}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition">
                         <Eye className="w-3.5 h-3.5" /> View
                       </Link>
-                      <Link to={`/turf/edit/${turf._id}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#004E93] text-xs font-semibold rounded-xl transition">
+                      <Link to={`/turf/edit/${turf._id}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-orange-500 text-xs font-semibold rounded-xl transition">
                         <Edit2 className="w-3.5 h-3.5" /> Edit
                       </Link>
                       <button onClick={() => handleDeleteTurf(turf._id)}
@@ -426,8 +426,8 @@ function Section({ icon: Icon, title, children }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-[#004E93]" />
+        <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-orange-500" />
         </div>
         <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
       </div>
@@ -443,7 +443,7 @@ function Input({ label, value, onChange, icon: Icon, type = "text", ...props }) 
       <div className="relative">
         {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />}
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition`}
+          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition`}
           {...props} />
       </div>
     </div>
@@ -455,7 +455,7 @@ function Textarea({ label, value, onChange, rows = 3, ...props }) {
     <div>
       <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
       <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows}
-        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none"
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition resize-none"
         {...props} />
     </div>
   );

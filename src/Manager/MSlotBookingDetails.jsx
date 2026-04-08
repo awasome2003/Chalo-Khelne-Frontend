@@ -319,7 +319,7 @@ const TurfDetails = () => {
             </h3>
             <button
               onClick={() => navigate(`/turf-bookings/${id}`)}
-              className="w-full bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-orange-500 text-white px-4 py-3 rounded hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
             >
               <Icon name="calendar_today" />
               View User Bookings

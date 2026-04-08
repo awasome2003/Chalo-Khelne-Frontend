@@ -44,9 +44,8 @@ export default function ActivityFeed({ completed }) {
           const winner = m.winner
             ? typeof m.winner === "object" ? (m.winner.playerName || m.winner.userName) : m.winner
             : null;
-          const score = m.result?.finalScore
-            ? `${m.result.finalScore.player1Sets}-${m.result.finalScore.player2Sets}`
-            : "";
+          const _r = (() => { try { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); return readMatchResult(m); } catch { return null; } })();
+          const score = _r?.completed ? `${_r.player1Score}-${_r.player2Score}` : "";
 
           return (
             <div key={m._id} className="px-5 py-3 hover:bg-gray-50 transition">

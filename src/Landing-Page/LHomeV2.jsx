@@ -27,7 +27,7 @@ const Section = ({ children, className = "" }) => (
 
 // ─── HERO ───────────────────────────────────────────────────────
 const Hero = ({ navigate }) => (
-  <section className="relative min-h-[100vh] flex items-center bg-brand-950 overflow-hidden">
+  <section className="relative min-h-[100vh] flex items-center bg-gray-950 overflow-hidden">
     {/* Background image — full cover */}
     <div className="absolute inset-0">
       <img
@@ -36,8 +36,8 @@ const Hero = ({ navigate }) => (
         className="w-full h-full object-cover"
       />
       {/* Dark overlays for readability */}
-      <div className="absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/85 to-brand-950/40" />
-      <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-transparent to-brand-950/60" />
+      <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 to-gray-950/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-gray-950/60" />
     </div>
 
     {/* Content */}
@@ -45,8 +45,8 @@ const Hero = ({ navigate }) => (
       <div className="max-w-3xl">
         <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0}>
           <div className="flex items-center gap-3 mb-8">
-            <div className="h-px w-10 bg-brand-500" />
-            <span className="text-xs font-bold text-brand-400 uppercase tracking-[0.2em]">
+            <div className="h-px w-10 bg-gray-500" />
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
               Sports Management Platform
             </span>
           </div>
@@ -61,7 +61,7 @@ const Hero = ({ navigate }) => (
         >
           Play. Compete.
           <br />
-          <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">
             Dominate.
           </span>
         </motion.h1>
@@ -86,7 +86,7 @@ const Hero = ({ navigate }) => (
         >
           <button
             onClick={() => navigate("/l/event")}
-            className="group px-7 py-3.5 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-accent-500/20 hover:shadow-accent-500/30 flex items-center gap-2"
+            className="group px-7 py-3.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 flex items-center gap-2"
           >
             Join Tournament
             <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -108,7 +108,7 @@ const Hero = ({ navigate }) => (
           className="mt-14 flex flex-wrap gap-3"
         >
           {[
-            { val: "15+", label: "Sports", dot: "bg-blue-400" },
+            { val: "15+", label: "Sports", dot: "bg-orange-400" },
             { val: "Live", label: "Scoring Engine", dot: "bg-red-400" },
             { val: "6", label: "User Roles", dot: "bg-green-400" },
             { val: "4", label: "Tournament Levels", dot: "bg-amber-400" },
@@ -127,187 +127,74 @@ const Hero = ({ navigate }) => (
     </div>
 
     {/* Bottom gradient fade into next section */}
-    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-brand-950 to-transparent pointer-events-none" />
+    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-950 to-transparent pointer-events-none" />
   </section>
 );
 
 // ─── FEATURES ───────────────────────────────────────────────────
+import { MapPin as MapPinIcon, Trophy as TrophyIcon, Zap as ZapIcon, Users as UsersIcon, Newspaper as NewsIcon, ArrowLeftRight, ArrowRight as ArrowRightIcon } from "lucide-react";
+
 const featureList = [
-  {
-    title: "Turf & Venue Booking",
-    desc: "Browse facilities, check live slot availability, and book slots instantly with hourly pricing.",
-    link: "/l/turf-content",
-    accent: "blue",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Tournament Engine",
-    desc: "Group stage, knockout, team events with auto match generation, live scoring, and leaderboards.",
-    link: "/l/event",
-    accent: "amber",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Training & Coaching",
-    desc: "Find certified coaches near you. Book personal or group sessions and track your progress.",
-    link: "/l/trainer",
-    accent: "green",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Player Community",
-    desc: "Connect with players, share achievements, invite friends to tournaments. Built-in chat and feed.",
-    link: "/l/social",
-    accent: "violet",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Sports News",
-    desc: "Tournament announcements, club updates, and training tips — all sports news in one feed.",
-    link: "/l/news",
-    accent: "cyan",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Equipment Exchange",
-    desc: "Buy, sell, or donate sports gear. Top players pass on legacy equipment to upcoming talent.",
-    link: "/l/event",
-    accent: "orange",
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    ),
-  },
+  { title: "Turf & Venue Booking", desc: "Browse facilities, check live slot availability, and book slots instantly with hourly pricing.", link: "/l/turf-content", icon: MapPinIcon, color: "bg-orange-500", light: "bg-orange-50 text-orange-500" },
+  { title: "Tournament Engine", desc: "Group stage, knockout, team events with auto match generation, live scoring, and leaderboards.", link: "/l/event", icon: TrophyIcon, color: "bg-amber-500", light: "bg-amber-50 text-amber-600" },
+  { title: "Training & Coaching", desc: "Find certified coaches near you. Book personal or group sessions and track your progress.", link: "/l/trainer", icon: ZapIcon, color: "bg-emerald-500", light: "bg-emerald-50 text-emerald-600" },
+  { title: "Player Community", desc: "Connect with players, share achievements, invite friends to tournaments. Built-in chat and feed.", link: "/l/social", icon: UsersIcon, color: "bg-violet-500", light: "bg-violet-50 text-violet-600" },
+  { title: "Sports News", desc: "Tournament announcements, club updates, and training tips — all sports news in one feed.", link: "/l/news", icon: NewsIcon, color: "bg-cyan-500", light: "bg-cyan-50 text-cyan-600" },
+  { title: "Equipment Exchange", desc: "Buy, sell, or donate sports gear. Top players pass on legacy equipment to upcoming talent.", link: "/l/event", icon: ArrowLeftRight, color: "bg-rose-500", light: "bg-rose-50 text-rose-600" },
 ];
 
-const accentStyles = {
-  blue:   { bar: "bg-brand-500",   iconBg: "bg-brand-500/10",   iconText: "text-brand-500",   hoverBorder: "hover:border-brand-500/30" },
-  amber:  { bar: "bg-amber-500",  iconBg: "bg-amber-500/10",  iconText: "text-amber-500",  hoverBorder: "hover:border-amber-500/30" },
-  green:  { bar: "bg-emerald-500",iconBg: "bg-emerald-500/10",iconText: "text-emerald-500",hoverBorder: "hover:border-emerald-500/30" },
-  violet: { bar: "bg-violet-500", iconBg: "bg-violet-500/10", iconText: "text-violet-500", hoverBorder: "hover:border-violet-500/30" },
-  cyan:   { bar: "bg-cyan-500",   iconBg: "bg-cyan-500/10",   iconText: "text-cyan-500",   hoverBorder: "hover:border-cyan-500/30" },
-  orange: { bar: "bg-orange-500", iconBg: "bg-orange-500/10", iconText: "text-orange-500", hoverBorder: "hover:border-orange-500/30" },
-};
-
-const accentFull = {
-  blue:   { gradient: "from-brand-600 to-brand-500",   glow: "shadow-brand-500/20",   ring: "ring-brand-500/20",   bg: "bg-brand-500",   text: "text-brand-400" },
-  amber:  { gradient: "from-amber-500 to-yellow-500", glow: "shadow-amber-500/20",  ring: "ring-amber-500/20",  bg: "bg-amber-500",  text: "text-amber-400" },
-  green:  { gradient: "from-emerald-600 to-emerald-500", glow: "shadow-emerald-500/20", ring: "ring-emerald-500/20", bg: "bg-emerald-500", text: "text-emerald-400" },
-  violet: { gradient: "from-violet-600 to-violet-500", glow: "shadow-violet-500/20", ring: "ring-violet-500/20", bg: "bg-violet-500", text: "text-violet-400" },
-  cyan:   { gradient: "from-cyan-600 to-cyan-500",   glow: "shadow-cyan-500/20",   ring: "ring-cyan-500/20",   bg: "bg-cyan-500",   text: "text-cyan-400" },
-  orange: { gradient: "from-orange-600 to-orange-500", glow: "shadow-orange-500/20", ring: "ring-orange-500/20", bg: "bg-orange-500", text: "text-orange-400" },
-};
-
-const FeatureCard = ({ feature, index, navigate }) => {
-  const a = accentFull[feature.accent] || accentFull.blue;
-  return (
-    <motion.div
-      variants={fadeUp}
-      custom={index}
-      onClick={() => navigate(feature.link)}
-      className="group relative cursor-pointer"
-    >
-      <div className={`relative bg-brand-900 rounded-2xl border border-white/[0.06] overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-white/[0.12] hover:shadow-2xl ${a.glow}`}>
-        {/* Hover gradient glow behind card */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${a.gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500`} />
-
-        {/* Top accent line */}
-        <div className={`h-[3px] bg-gradient-to-r ${a.gradient}`} />
-
-        <div className="relative p-7">
-          {/* Icon + Number row */}
-          <div className="flex items-start justify-between mb-6">
-            <div className={`w-14 h-14 bg-gradient-to-br ${a.gradient} rounded-2xl flex items-center justify-center text-white shadow-lg ${a.glow} group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-              {feature.icon}
-            </div>
-            <span className="text-[40px] font-black text-white/[0.03] group-hover:text-white/[0.06] transition-colors leading-none select-none">
-              0{index + 1}
-            </span>
-          </div>
-
-          <h3 className="text-base font-bold text-white group-hover:text-white transition-colors">
-            {feature.title}
-          </h3>
-          <p className="mt-2.5 text-sm text-slate-500 leading-relaxed group-hover:text-slate-400 transition-colors">
-            {feature.desc}
-          </p>
-
-          {/* Bottom: Explore link */}
-          <div className="mt-6 pt-5 border-t border-white/[0.04] flex items-center justify-between">
-            <span className={`text-xs font-bold uppercase tracking-wider ${a.text} opacity-0 group-hover:opacity-100 transition-all duration-300`}>
-              Explore
-            </span>
-            <div className={`w-8 h-8 rounded-lg bg-white/[0.04] group-hover:bg-gradient-to-br ${a.gradient} flex items-center justify-center transition-all duration-300`}>
-              <svg className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
 const Features = ({ navigate }) => (
-  <Section id="features" className="relative py-28 bg-brand-950 overflow-hidden">
-    {/* Background decoration */}
-    <div className="absolute inset-0 pointer-events-none">
-      <div className="absolute top-20 -left-40 w-80 h-80 bg-brand-500/[0.03] rounded-full blur-[100px]" />
-      <div className="absolute bottom-20 -right-40 w-96 h-96 bg-violet-500/[0.03] rounded-full blur-[100px]" />
-      {/* Grid dots */}
-      <div className="absolute inset-0" style={{
-        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)',
-        backgroundSize: '32px 32px'
-      }} />
-    </div>
-
-    <div className="relative max-w-6xl mx-auto px-6">
+  <Section id="features" className="py-20 bg-[#F5F7FA]">
+    <div className="max-w-6xl mx-auto px-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-16">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-14">
         <motion.div variants={fadeUp}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-[3px] bg-gradient-to-r from-brand-500 to-cyan-400 rounded-full" />
-            <span className="text-xs font-bold text-brand-400 uppercase tracking-[0.2em]">Core Features</span>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-[3px] bg-orange-500 rounded-full" />
+            <span className="text-xs font-bold text-orange-500 uppercase tracking-[0.15em]">Core Features</span>
           </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-[1.1]">
-            Everything you need
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight leading-tight">
+            Everything you need to
             <br />
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">to dominate sports.</span>
+            <span className="text-orange-500">dominate sports.</span>
           </h2>
         </motion.div>
-        <motion.p variants={fadeUp} custom={1} className="mt-4 lg:mt-0 text-sm text-slate-500 max-w-xs lg:text-right leading-relaxed">
+        <motion.p variants={fadeUp} custom={1} className="mt-4 lg:mt-0 text-sm text-gray-500 max-w-xs lg:text-right leading-relaxed">
           From booking turfs to running full tournaments — one platform, every sport.
         </motion.p>
       </div>
 
       {/* Cards grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {featureList.map((f, i) => (
-          <FeatureCard key={f.title} feature={f} index={i} navigate={navigate} />
-        ))}
+        {featureList.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <motion.div
+              key={f.title}
+              variants={fadeUp}
+              custom={i}
+              onClick={() => navigate(f.link)}
+              className="group bg-white rounded-2xl border border-gray-100 hover:border-orange-200 p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+            >
+              {/* Icon */}
+              <div className={`w-12 h-12 ${f.light} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                <Icon className="w-5 h-5" />
+              </div>
+
+              <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
+                {f.title}
+              </h3>
+              <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                {f.desc}
+              </p>
+
+              {/* Explore link */}
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                Explore <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   </Section>
@@ -325,14 +212,14 @@ const HowItWorks = () => (
   <Section className="py-20 bg-slate-50">
     <div className="max-w-6xl mx-auto px-6">
       <motion.div variants={fadeUp} className="mb-12">
-        <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-2">How It Works</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">How It Works</p>
         <h2 className="text-3xl font-bold text-slate-900">Up and running in 4 steps</h2>
       </motion.div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {steps.map((s, i) => (
           <motion.div key={s.num} variants={fadeUp} custom={i} className="p-6 bg-white rounded-xl border border-slate-100">
-            <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded">{s.num}</span>
+            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">{s.num}</span>
             <h3 className="mt-4 text-base font-semibold text-slate-900">{s.title}</h3>
             <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{s.desc}</p>
           </motion.div>
@@ -352,7 +239,7 @@ const SportsGrid = () => (
   <Section className="py-20 bg-white">
     <div className="max-w-6xl mx-auto px-6">
       <motion.div variants={fadeUp} className="mb-12">
-        <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-2">Multi-Sport</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Multi-Sport</p>
         <h2 className="text-3xl font-bold text-slate-900">15+ Sports Supported</h2>
         <p className="mt-2 text-sm text-slate-500">Each sport has custom scoring rules, match formats, and tournament configs.</p>
       </motion.div>
@@ -361,7 +248,7 @@ const SportsGrid = () => (
         {sports.map((s) => (
           <span
             key={s}
-            className="px-4 py-2 bg-slate-50 hover:bg-brand-50 hover:text-brand-700 border border-slate-100 hover:border-brand-200 rounded-lg text-sm font-medium text-slate-700 transition-colors cursor-default"
+            className="px-4 py-2 bg-slate-50 hover:bg-orange-50 hover:text-orange-700 border border-slate-100 hover:border-orange-200 rounded-lg text-sm font-medium text-slate-700 transition-colors cursor-default"
           >
             {s}
           </span>
@@ -377,12 +264,12 @@ const Tournaments = ({ tournaments, navigate }) => (
     <div className="max-w-6xl mx-auto px-6">
       <motion.div variants={fadeUp} className="flex items-end justify-between mb-10 flex-wrap gap-4">
         <div>
-          <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-2">Tournaments</p>
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tournaments</p>
           <h2 className="text-3xl font-bold text-slate-900">Upcoming Events</h2>
         </div>
         <button
           onClick={() => navigate("/l/event")}
-          className="text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+          className="text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
         >
           View all &rarr;
         </button>
@@ -404,7 +291,7 @@ const Tournaments = ({ tournaments, navigate }) => (
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors truncate">
+                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-orange-600 transition-colors truncate">
                     {t.title}
                   </h3>
                   <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase shrink-0">
@@ -425,7 +312,7 @@ const Tournaments = ({ tournaments, navigate }) => (
                 <span className={`text-sm font-semibold ${t.tournamentFee > 0 ? "text-slate-900" : "text-green-600"}`}>
                   {t.tournamentFee > 0 ? `₹${t.tournamentFee}` : "Free"}
                 </span>
-                <span className="text-xs text-brand-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs text-gray-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                   View →
                 </span>
               </div>
@@ -443,12 +330,12 @@ const Venues = ({ venues, navigate }) => (
     <div className="max-w-6xl mx-auto px-6">
       <motion.div variants={fadeUp} className="flex items-end justify-between mb-10 flex-wrap gap-4">
         <div>
-          <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-2">Venues</p>
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Venues</p>
           <h2 className="text-3xl font-bold text-slate-900">Book a Facility</h2>
         </div>
         <button
           onClick={() => navigate("/l/turf-content")}
-          className="text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+          className="text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
         >
           Browse all &rarr;
         </button>
@@ -485,7 +372,7 @@ const Venues = ({ venues, navigate }) => (
                 </div>
 
                 <div className="p-4">
-                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-brand-600 transition-colors truncate">
+                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-orange-600 transition-colors truncate">
                     {v.name}
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5 truncate">
@@ -527,7 +414,7 @@ const Venues = ({ venues, navigate }) => (
 
 // ─── CTA ────────────────────────────────────────────────────────
 const CTA = ({ navigate }) => (
-  <Section className="py-20 bg-brand-900">
+  <Section className="py-20 bg-gray-900">
     <div className="max-w-3xl mx-auto px-6 text-center">
       <motion.h2 variants={fadeUp} className="text-3xl font-bold text-white">
         Ready to get started?
@@ -537,10 +424,10 @@ const CTA = ({ navigate }) => (
       </motion.p>
       <motion.div variants={fadeUp} custom={2} className="mt-8 flex justify-center gap-3">
         <button
-          onClick={() => navigate("/register")}
-          className="px-6 py-3 bg-accent-600 hover:bg-accent-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          onClick={() => navigate("/login")}
+          className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-orange-500/20"
         >
-          Create Free Account
+          Sign In
         </button>
         <button
           onClick={() => navigate("/l/event")}
@@ -555,7 +442,7 @@ const CTA = ({ navigate }) => (
 
 // ─── FOOTER ─────────────────────────────────────────────────────
 const Footer = ({ navigate }) => (
-  <footer className="bg-brand-950 pt-16 pb-8">
+  <footer className="bg-gray-950 pt-16 pb-8">
     <div className="max-w-6xl mx-auto px-6">
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
         <div>

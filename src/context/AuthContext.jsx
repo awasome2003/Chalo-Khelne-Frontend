@@ -75,11 +75,19 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Set timer to auto-logout when token expires
+      // setTimeout uses 32-bit int — max ~24.8 days (2147483647 ms).
+      // If remaining exceeds this, the timer fires immediately (overflow).
+      // Cap at 24 hours and re-check on next mount/auth change.
+      const MAX_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+      const delay = Math.min(remaining, MAX_TIMEOUT);
+
       const timeoutId = setTimeout(() => {
-        logout();
-        // Don't redirect here — interceptor handles it on next API call
-      }, remaining);
+        // Re-check if token is actually expired (in case we used capped delay)
+        const currentToken = localStorage.getItem("token");
+        if (currentToken && isTokenExpired(currentToken)) {
+          logout();
+        }
+      }, delay);
 
       return () => clearTimeout(timeoutId);
     } catch {}

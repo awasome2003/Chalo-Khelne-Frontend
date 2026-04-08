@@ -141,7 +141,7 @@ const MNotification = () => {
 
         {/* Notification Slide Panel */}
         <div
-          className={`fixed top-0 right-0 h-full w-full sm:w-[90vw] md:w-[450px] bg-[#F2F4F6] shadow-lg z-50 transform ${
+          className={`fixed top-0 right-0 h-full w-full sm:w-[90vw] md:w-[450px] bg-[#F5F7FA] shadow-lg z-50 transform ${
             isPanelOpen ? "translate-x-0" : "translate-x-full"
           } transition-transform duration-300 ease-in-out`}
         >
@@ -152,7 +152,7 @@ const MNotification = () => {
               <button
                 className={`text-sm md:text-base font-medium ${
                   selectedTab === "all"
-                    ? "bg-white text-[#333] requestbtn"
+                    ? "bg-white text-gray-900 requestbtn"
                     : "text-gray-400 bg-transparent hover:bg-white"
                 }`}
                 onClick={() => setSelectedTab("all")}
@@ -163,7 +163,7 @@ const MNotification = () => {
                 className={`text-sm md:text-base font-medium ${
                   selectedTab === "request"
                     ? "border-b-2 border-black bg-white text-black"
-                    : "text-[#333] bg-transparent hover:bg-white"
+                    : "text-gray-900 bg-transparent hover:bg-white"
                 }`}
                 onClick={() => setSelectedTab("request")}
               >
@@ -189,7 +189,7 @@ const MNotification = () => {
                 {!isSelectionMode && "Select"}
               </span>
               <button
-                className="text-blue-500 text-sm hover:underline"
+                className="text-orange-500 text-sm hover:underline"
                 onClick={clearAllNotifications}
               >
                 Clear All
@@ -218,7 +218,7 @@ const MNotification = () => {
                           ? "bg-[#EEFBFD]"
                           : notification.type === "new"
                           ? ""
-                          : "bg-blue-100"
+                          : "bg-orange-100"
                       }`}
                     >
                       <div className="flex justify-between items-center gap-3">
@@ -287,10 +287,10 @@ const MNotification = () => {
                               Sent you a request for a post a video
                             </p>
                             <div className="flex gap-2 mt-2">
-                              <button className="bg-[#004E93] text-white px-4 py-1 rounded-md text-sm">
+                              <button className="bg-orange-500 text-white px-4 py-1 rounded-md text-sm">
                                 Confirm
                               </button>
-                              <button className="bg-[#DDDDDD] text-[#333] px-4 py-1 rounded-md text-sm hover:bg-gray-300">
+                              <button className="bg-[#E5E7EBDDD] text-gray-900 px-4 py-1 rounded-md text-sm hover:bg-gray-300">
                                 Delete
                               </button>
                             </div>

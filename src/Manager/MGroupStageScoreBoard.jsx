@@ -140,7 +140,6 @@ const MGroupStageScoreBoard = () => {
     const initializeMatch = async () => {
         try {
             setLoading(true);
-            console.log('Initializing match with ID:', matchId);
 
             // Get current live state from backend - ONLY auto-init when explicitly starting a match
             const response = await fetch(
@@ -166,9 +165,9 @@ const MGroupStageScoreBoard = () => {
                         gamesToWin: matchFormatFromDB.gamesToWin || Math.ceil((matchFormatFromDB.maxGames || matchFormatFromDB.totalGames || 5) / 2),
                         maxGames: matchFormatFromDB.maxGames || matchFormatFromDB.totalGames || 5,
 
-                        pointsToWinGame: matchFormatFromDB.pointsToWinGame || 11,
-                        marginToWin: matchFormatFromDB.marginToWin || 2,
-                        deuceRule: matchFormatFromDB.deuceRule !== undefined ? matchFormatFromDB.deuceRule : true,
+                        pointsToWinGame: matchFormatFromDB.pointsToWinGame || null,
+                        marginToWin: matchFormatFromDB.marginToWin ?? null,
+                        deuceRule: matchFormatFromDB.deuceRule !== undefined ? matchFormatFromDB.deuceRule : false,
                         maxPointsPerGame: matchFormatFromDB.maxPointsPerGame || null,
                         serviceRule: {
                             pointsPerService: matchFormatFromDB.serviceRule?.pointsPerService || 2,
@@ -214,7 +213,6 @@ const MGroupStageScoreBoard = () => {
                             // Calculate total games won across all sets (we'll update this after processing all sets)
                             setCurrentGameNumber((currentSet.games.filter(g => g.status === 'COMPLETED').length) + 1);
                         } else {
-                            console.log('⚠️ Current set not found or has no games');
                         }
 
                         // Calculate completed sets from sets data
@@ -292,18 +290,8 @@ const MGroupStageScoreBoard = () => {
                     // If match is completed, show winner
                     if (match.status === 'COMPLETED' && match.result && match.result.winner) {
                         setWinner(match.result.winner.playerName);
-                        console.log('Match completed, winner:', match.result.winner.playerName);
                     } else if (match.status === 'COMPLETED') {
-                        console.log('Match completed but no winner data available');
                     }
-
-                    console.log('Match data loaded successfully:', {
-                        status: match.status,
-                        currentSet: match.currentSet,
-                        playerASetWins,
-                        playerBSetWins,
-                        completedSets: completedSets.length
-                    });
                 }
             }
         } catch (error) {
@@ -324,7 +312,6 @@ const MGroupStageScoreBoard = () => {
 
         sets.forEach(set => {
             if (set && Array.isArray(set) && set.length === 2) {
-                console.log(`Set: ${set[0]} - ${set[1]}`);
                 if (set[0] > set[1]) {
                     playerAWins++;
                 } else if (set[1] > set[0]) {
@@ -358,7 +345,6 @@ const MGroupStageScoreBoard = () => {
             }
 
             const data = await response.json();
-            console.log("Live score updated:", data);
 
             // Check if game is completed (11 points with 2+ point lead)
             // Only check if autoCheck is true and we're not in view-only mode
@@ -395,7 +381,6 @@ const MGroupStageScoreBoard = () => {
     const checkGameCompletion = (playerA_points, playerB_points) => {
         // Safety check: Don't process if matchFormat hasn't loaded yet
         if (!matchFormat) {
-            console.log("⚠️ Match format not loaded yet, skipping game completion check");
             return;
         }
 
@@ -406,7 +391,6 @@ const MGroupStageScoreBoard = () => {
 
         // Check max points limit (if configured)
         if (maxPointsPerGame && maxPoints >= maxPointsPerGame) {
-            console.log(`Game completed: Max points limit (${maxPointsPerGame}) reached`);
             completeCurrentGame(playerA_points, playerB_points);
             return;
         }
@@ -416,12 +400,10 @@ const MGroupStageScoreBoard = () => {
             if (deuceRule) {
                 // With deuce rule: must win by margin
                 if (pointDiff >= marginToWin) {
-                    console.log(`Game completed: ${pointsToWinGame}+ points with ${marginToWin}+ margin (deuce rule)`);
                     completeCurrentGame(playerA_points, playerB_points);
                 }
             } else {
                 // Without deuce rule: first to pointsToWinGame wins
-                console.log(`Game completed: First to ${pointsToWinGame} points (no deuce rule)`);
                 completeCurrentGame(playerA_points, playerB_points);
             }
         }
@@ -444,7 +426,6 @@ const MGroupStageScoreBoard = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log("Game completion response:", data);
 
                 // Reset points for next game
                 setPlayerAPoints(0);
@@ -679,11 +660,9 @@ const MGroupStageScoreBoard = () => {
         try {
             // Skip sync for knockout matches (only sync group stage matches to points table)
             if (matchData?.round && ['pre-quarter', 'quarter-final', 'semi-final', 'final'].includes(matchData.round)) {
-                console.log('Skipping points table sync for knockout match');
                 return;
             }
 
-            console.log('Syncing match data to Score model for real-time points table updates...');
 
             // Use the endpoint from groupStageScoreboardController
             const response = await fetch(
@@ -696,23 +675,13 @@ const MGroupStageScoreBoard = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Match score synced successfully to Score model:', data);
 
                 // Additional verification - check if score was created/updated
                 if (data.success && data.score) {
-                    console.log('Score model updated with:', {
-                        gamesWonA: data.score.gamesWonA,
-                        gamesWonB: data.score.gamesWonB,
-                        totalScoreA: data.score.totalScoreA,
-                        totalScoreB: data.score.totalScoreB,
-                        setOne: data.score.setOne,
-                        setTwo: data.score.setTwo,
-                        setThree: data.score.setThree
-                    });
+                  // Score synced successfully
                 }
             } else {
                 const errorData = await response.json();
-                console.warn('⚠️ Failed to sync match score to Score model:', errorData);
             }
         } catch (error) {
             console.error('❌ Error syncing match score to Score model:', error);
@@ -764,13 +733,13 @@ const MGroupStageScoreBoard = () => {
                     {/* Quick Rules - Only show when matchFormat is loaded */}
                     {matchFormat && (
                         <div className="hidden md:flex items-center gap-4 text-sm text-gray-300">
-                            <span>Best of {matchFormat?.totalSets || 5}</span>
+                            <span>{matchFormat?.scoringType === "sets" ? `Best of ${matchFormat?.totalSets || 5}` : (matchFormat?.scoringType || "Match")}</span>
                             <span>•</span>
-                            <span>{matchFormat?.pointsToWinGame || 11} pts/game</span>
+                            <span>{matchFormat?.pointsToWinGame ? `${matchFormat.pointsToWinGame} pts/game` : ""}</span>
                             {matchFormat?.deuceRule && (
                                 <>
                                     <span>•</span>
-                                    <span>Win by {matchFormat?.marginToWin || 2}+</span>
+                                    <span>Win by {matchFormat?.marginToWin || "—"}+</span>
                                 </>
                             )}
                         </div>
@@ -795,7 +764,7 @@ const MGroupStageScoreBoard = () => {
                 <div className="flex flex-col md:flex-row h-screen pt-16 md:pt-18 relative">
                     {/* Player A Side */}
                     <div
-                        className={`w-full md:w-1/2 bg-blue-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black transition-colors ${tapCooldown ? "opacity-50 cursor-not-allowed" : "active:bg-blue-600"
+                        className={`w-full md:w-1/2 bg-orange-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black transition-colors ${tapCooldown ? "opacity-50 cursor-not-allowed" : "active:bg-orange-500"
                             }`}
                         onClick={() => !route?.params?.viewOnly && !tapCooldown && incrementPlayerA()}
                     >
@@ -871,7 +840,7 @@ const MGroupStageScoreBoard = () => {
                         <div className="bg-black/95 text-white rounded-lg p-4 text-center border-2 border-white/30 min-w-[200px] md:min-w-[280px]">
                             {/* Current Score */}
                             <div className="text-3xl md:text-4xl font-bold mb-3">
-                                <span className="text-blue-400">{playerAPoints}</span>
+                                <span className="text-orange-400">{playerAPoints}</span>
                                 <span className="text-white/60 mx-2">-</span>
                                 <span className="text-red-400">{playerBPoints}</span>
                             </div>
@@ -1010,7 +979,7 @@ const MGroupStageScoreBoard = () => {
                             {/* Left Column: Game Score Inputs */}
                             <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-semibold text-blue-400">Game Scores</h3>
+                                    <h3 className="text-lg font-semibold text-orange-400">Game Scores</h3>
                                     <span className="text-xs text-gray-400">Set {currentSetNumber}</span>
                                 </div>
 
@@ -1030,7 +999,7 @@ const MGroupStageScoreBoard = () => {
                                                     placeholder="Points"
                                                     value={game.a}
                                                     onChange={(e) => handleManualGameChange(index, 'a', e.target.value)}
-                                                    className="w-full bg-gray-800 text-white text-center px-2 py-2 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder:text-gray-600"
+                                                    className="w-full bg-gray-800 text-white text-center px-2 py-2 rounded border border-gray-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all placeholder:text-gray-600"
                                                     disabled={winner || isButtonDisabled}
                                                 />
                                             </div>
@@ -1051,7 +1020,7 @@ const MGroupStageScoreBoard = () => {
                                 <button
                                     onClick={submitBulkManualScores}
                                     disabled={isButtonDisabled || winner}
-                                    className="w-full mt-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 rounded-xl font-bold shadow-lg hover:from-blue-500 hover:to-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
+                                    className="w-full mt-6 bg-gradient-to-r from-orange-500 to-gray-800 text-white py-3 rounded-xl font-bold shadow-lg hover:from-orange-500 hover:to-orange-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
                                 >
                                     {isButtonDisabled ? (
                                         <>
@@ -1071,20 +1040,20 @@ const MGroupStageScoreBoard = () => {
                             <div className="space-y-6">
                                 {/* Player Info Card */}
                                 <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                                    <h3 className="text-lg font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                                    <h3 className="text-lg font-semibold text-emerald-400 mb-4 flex items-center gap-2">
                                         <Trophy className="w-5 h-5" />
                                         Match Status
                                     </h3>
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between bg-gray-900/50 p-4 rounded-lg">
                                             <div className="text-center flex-1">
-                                                <div className="text-sm text-gray-400 mb-1">Sets Won</div>
-                                                <div className="text-3xl font-bold text-blue-400">{playerASetWins}</div>
+                                                <div className="text-sm text-gray-400 mb-1">Score</div>
+                                                <div className="text-3xl font-bold text-orange-400">{playerASetWins}</div>
                                                 <div className="text-xs text-gray-500 mt-1 truncate">{playerAName}</div>
                                             </div>
                                             <div className="px-4 text-gray-600 font-bold text-xl">VS</div>
                                             <div className="text-center flex-1">
-                                                <div className="text-sm text-gray-400 mb-1">Sets Won</div>
+                                                <div className="text-sm text-gray-400 mb-1">Score</div>
                                                 <div className="text-3xl font-bold text-red-400">{playerBSetWins}</div>
                                                 <div className="text-xs text-gray-500 mt-1 truncate">{playerBName}</div>
                                             </div>
@@ -1093,7 +1062,7 @@ const MGroupStageScoreBoard = () => {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-gray-900/50 p-3 rounded-lg text-center">
                                                 <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Format</div>
-                                                <div className="text-white text-sm font-medium">Best of {matchFormat?.totalSets || 5}</div>
+                                                <div className="text-white text-sm font-medium">{matchFormat?.scoringType === "sets" ? `Best of ${matchFormat?.totalSets || 5}` : (matchFormat?.scoringType || "Match")}</div>
                                             </div>
                                             <div className="bg-gray-900/50 p-3 rounded-lg text-center">
                                                 <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Set Score</div>
@@ -1115,7 +1084,7 @@ const MGroupStageScoreBoard = () => {
                                                 <div key={index} className="bg-gray-900 px-4 py-3 rounded-lg border border-gray-700 text-center min-w-[70px]">
                                                     <div className="text-xs text-gray-500 mb-1">Set {index + 1}</div>
                                                     <div className="text-lg font-bold">
-                                                        <span className="text-blue-400">{set[0]}</span>
+                                                        <span className="text-orange-400">{set[0]}</span>
                                                         <span className="text-white/20 mx-1">-</span>
                                                         <span className="text-red-400">{set[1]}</span>
                                                     </div>
@@ -1150,7 +1119,7 @@ const MGroupStageScoreBoard = () => {
                         )}
 
                         {message && (
-                            <div className="mt-4 bg-blue-500/10 border border-blue-500/50 p-3 rounded-lg text-center text-blue-400 text-sm animate-pulse">
+                            <div className="mt-4 bg-orange-500/10 border border-orange-500/50 p-3 rounded-lg text-center text-orange-400 text-sm animate-pulse">
                                 {message}
                             </div>
                         )}
@@ -1167,7 +1136,7 @@ const MGroupStageScoreBoard = () => {
                         <p className="text-gray-700 mb-6">{modalMessage}</p>
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                            className="w-full bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-500"
                         >
                             OK
                         </button>

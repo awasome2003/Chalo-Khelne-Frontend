@@ -25,8 +25,8 @@ export default function ThreadDetail() {
   const formatText = (text) => {
     if (!text) return null;
     return text.split(/(@\w+|#\w+)/g).map((part, i) => {
-      if (part.startsWith("@")) return <span key={i} className="text-[#004E93] font-semibold">{part}</span>;
-      if (part.startsWith("#")) return <span key={i} className="text-[#FF6A00] font-semibold">{part}</span>;
+      if (part.startsWith("@")) return <span key={i} className="text-orange-500 font-semibold">{part}</span>;
+      if (part.startsWith("#")) return <span key={i} className="text-orange-500 font-semibold">{part}</span>;
       return <span key={i}>{part}</span>;
     });
   };
@@ -61,7 +61,7 @@ export default function ThreadDetail() {
     return (
       <div className="p-8 text-center">
         <p className="text-red-500 font-semibold">Thread not found</p>
-        <button onClick={() => navigate("/forum")} className="mt-4 text-[#004E93] underline w-auto">Back to Forum</button>
+        <button onClick={() => navigate("/forum")} className="mt-4 text-orange-500 underline w-auto">Back to Forum</button>
       </div>
     );
   }
@@ -83,13 +83,13 @@ export default function ThreadDetail() {
         <div className="p-6">
           {/* Author */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white font-bold text-sm">
               {thread.authorName?.charAt(0)?.toUpperCase()}
             </div>
             <div>
               <span className="font-bold text-gray-800 text-sm">{thread.authorName}</span>
               <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                <span className="font-medium text-[#004E93] bg-[#004E93]/10 px-1.5 py-0.5 rounded">{thread.authorRole}</span>
+                <span className="font-medium text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">{thread.authorRole}</span>
                 <Clock className="w-3 h-3" />
                 <span>{timeAgo(thread.createdAt)}</span>
               </div>
@@ -112,7 +112,7 @@ export default function ThreadDetail() {
           {thread.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {thread.tags.map((tag) => (
-                <span key={tag} className="text-[10px] font-bold text-[#FF6A00] bg-[#FF6A00]/10 px-2 py-0.5 rounded-full">
+                <span key={tag} className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
                   #{tag}
                 </span>
               ))}

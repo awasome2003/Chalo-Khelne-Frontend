@@ -299,8 +299,8 @@ const NotificationPage = () => {
           isBooking
             ? "bg-orange-50/30 border-orange-200 shadow-sm hover:shadow-md"
             : selected.includes(n._id)
-            ? "bg-blue-50/50 border-blue-200 shadow-md"
-            : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100"
+            ? "bg-orange-50/50 border-orange-200 shadow-md"
+            : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-orange-100"
         }`}
       >
         <div className="flex items-start gap-4 flex-1 w-full">
@@ -316,7 +316,7 @@ const NotificationPage = () => {
                 checked={selected.includes(n._id)}
                 disabled={tournamentStatusMap[n.tournamentId] !== "active"}
                 onChange={() => toggleSelect(n._id)}
-                className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 transition-colors"
+                className="w-5 h-5 rounded-md border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer disabled:opacity-40 transition-colors"
               />
             )}
           </div>
@@ -382,7 +382,7 @@ const NotificationPage = () => {
                 </>
               ) : (
                 <>
-                  <div className="flex items-center gap-1.5 group-hover:text-blue-500 transition-colors">
+                  <div className="flex items-center gap-1.5 group-hover:text-orange-500 transition-colors">
                     <FileText className="w-3.5 h-3.5" />
                     <span className="font-mono tracking-wide">{n.registrationId || "N/A"}</span>
                   </div>
@@ -475,14 +475,14 @@ const NotificationPage = () => {
           {/* New Premium Search Bar */}
           <div className="relative w-full md:w-96 group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              <Search className="h-5 w-5 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
             </div>
             <input
               type="text"
               placeholder="Search bookings..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border-none ring-1 ring-gray-200 rounded-2xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm transition-all shadow-sm hover:shadow-md focus:shadow-lg"
+              className="block w-full pl-10 pr-3 py-3 border-none ring-1 ring-gray-200 rounded-2xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 sm:text-sm transition-all shadow-sm hover:shadow-md focus:shadow-lg"
             />
             {searchQuery && (
               <button
@@ -512,7 +512,7 @@ const NotificationPage = () => {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   typeFilter === key
                     ? key === "tournament"
-                      ? "bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                      ? "bg-orange-100 text-orange-600 ring-1 ring-orange-200"
                       : key === "turf"
                       ? "bg-orange-100 text-orange-700 ring-1 ring-orange-200"
                       : "bg-gray-900 text-white"
@@ -622,7 +622,7 @@ const NotificationPage = () => {
                       key={method}
                       onClick={() => setTournamentPaymentFilter(prev => ({ ...prev, [activeTab]: method }))}
                       className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isSubActive
-                        ? "bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100"
+                        ? "bg-orange-50 text-orange-500 shadow-sm ring-1 ring-orange-100"
                         : "text-gray-500 hover:bg-gray-50"
                         }`}
                     >
@@ -652,7 +652,7 @@ const NotificationPage = () => {
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleSelectAll}
-                  className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 group-hover:border-blue-400 transition-colors"
+                  className="w-5 h-5 rounded-md border-gray-300 text-orange-500 focus:ring-orange-500 group-hover:border-orange-400 transition-colors"
                 />
                 <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                   Select All ({filtered.length})

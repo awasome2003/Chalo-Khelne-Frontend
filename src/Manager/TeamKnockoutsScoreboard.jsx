@@ -181,7 +181,6 @@ const TeamKnockoutsScoreboard = () => {
 
   useEffect(() => {
     // Ensure team names are consistent
-    console.log("Team names from props:", { teamAName, teamBName });
   }, [teamAName, teamBName]);
 
   useEffect(() => {
@@ -220,7 +219,6 @@ const TeamKnockoutsScoreboard = () => {
       }
 
       const data = await response.json();
-      console.log("Live state data:", data);
 
       if (data.success) {
         const matchData = data.match;
@@ -228,9 +226,9 @@ const TeamKnockoutsScoreboard = () => {
         // Load game rules from match (derived from tournament sportRules)
         if (matchData.gameRules) {
           setGameRules({
-            pointsToWinGame: matchData.gameRules.pointsToWinGame || 11,
-            marginToWin: matchData.gameRules.marginToWin || 2,
-            deuceRule: matchData.gameRules.deuceRule !== undefined ? matchData.gameRules.deuceRule : true,
+            pointsToWinGame: matchData.gameRules.pointsToWinGame || null,
+            marginToWin: matchData.gameRules.marginToWin ?? null,
+            deuceRule: matchData.gameRules.deuceRule !== undefined ? matchData.gameRules.deuceRule : false,
             maxPointsCap: matchData.gameRules.maxPointsCap || null,
           });
         }
@@ -563,7 +561,6 @@ const TeamKnockoutsScoreboard = () => {
       }
 
       const data = await response.json();
-      console.log("Live score updated:", data);
     } catch (error) {
       console.error("Error updating live score:", error);
       throw error;
@@ -753,7 +750,6 @@ const TeamKnockoutsScoreboard = () => {
       }
 
       const data = await response.json();
-      console.log("Game completion response:", data);
 
       if (data.success) {
         // Update local state based on backend response
@@ -848,7 +844,6 @@ const TeamKnockoutsScoreboard = () => {
   // NEW: Use proper backend API for player substitution
   const handleSubstitution = async (team, currentPlayer, substitute) => {
     try {
-      console.log("Making substitution:", { team, currentPlayer, substitute });
 
       // Get team ID based on team type
       const teamId = team === "team1" ? "home_team_id" : "away_team_id"; // You'll need actual team IDs
@@ -871,7 +866,6 @@ const TeamKnockoutsScoreboard = () => {
       }
 
       const data = await response.json();
-      console.log("Substitution successful:", data);
 
       // Refresh match data
       await initializeMatch();
@@ -1169,7 +1163,7 @@ const TeamKnockoutsScoreboard = () => {
                   value={selectedPlayer}
                   onChange={(e) => setSelectedPlayer(e.target.value)}
                   disabled={loading}
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">Select player to substitute</option>
                   {getCurrentPlayers().map((player) => (
@@ -1189,7 +1183,7 @@ const TeamKnockoutsScoreboard = () => {
                   value={selectedSubstitute}
                   onChange={(e) => setSelectedSubstitute(e.target.value)}
                   disabled={loading || !selectedPlayer}
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">Select substitute player</option>
                   {getAvailableSubstitutes().map((player) => (
@@ -1248,8 +1242,8 @@ const TeamKnockoutsScoreboard = () => {
               onClick={handleSubstitutionSubmit}
               disabled={loading || !selectedPlayer || !selectedSubstitute}
               className={`px-4 py-2 rounded-md text-white transition-colors ${loading || !selectedPlayer || !selectedSubstitute
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
+                ? "bg-orange-400 cursor-not-allowed"
+                : "bg-orange-500 hover:bg-orange-600"
                 }`}
             >
               {loading ? "Processing..." : "Confirm Substitution"}
@@ -1278,7 +1272,7 @@ const TeamKnockoutsScoreboard = () => {
     <div className="min-h-screen bg-black relative flex flex-col justify-center items-center">
       {/* Toggle Switch for Automated or Manual Mode */}
       {!showEditView && (
-        <div className="absolute right-0 top-16 transform rotate-60 bg-blue-900 p-2 rounded-2xl z-10 flex items-center gap-2 mr-40">
+        <div className="absolute right-0 top-16 transform rotate-60 bg-gray-900 p-2 rounded-2xl z-10 flex items-center gap-2 mr-40">
           <Switch
             checked={isEnabled}
             onChange={(event) => setIsEnabled(event.target.checked)}
@@ -1317,7 +1311,7 @@ const TeamKnockoutsScoreboard = () => {
                     className={`
                       w-full flex justify-between items-center p-4 rounded-lg mb-2
                       ${selectedGame === setIndex
-                        ? "bg-gray-700 border border-blue-500"
+                        ? "bg-gray-700 border border-orange-500"
                         : "bg-gray-800"
                       }
                     `}
@@ -1411,7 +1405,7 @@ const TeamKnockoutsScoreboard = () => {
                               className={`
                               w-full flex justify-between items-center p-3 rounded-lg
                               ${isSelected
-                                  ? "bg-gray-700 border border-blue-500"
+                                  ? "bg-gray-700 border border-orange-500"
                                   : "bg-gray-800"
                                 }
                             `}
@@ -1526,7 +1520,7 @@ const TeamKnockoutsScoreboard = () => {
 
           {/* Back to Scoreboard Button */}
           <button
-            className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="fixed top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
             onClick={() => {
               setShowEditView(false);
               setSelectedGame(null);
@@ -1544,9 +1538,9 @@ const TeamKnockoutsScoreboard = () => {
               <div className="flex flex-col md:flex-row h-screen">
                 {/* Team A Side */}
                 <div
-                  className={`w-full md:w-1/2 bg-blue-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black py-6 md:py-0 transition-colors ${tapCooldown
+                  className={`w-full md:w-1/2 bg-orange-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black py-6 md:py-0 transition-colors ${tapCooldown
                     ? "opacity-50 cursor-not-allowed"
-                    : "active:bg-blue-600"
+                    : "active:bg-orange-500"
                     }`}
                   onClick={() =>
                     !route?.params?.viewOnly && !tapCooldown && incrementTeamA()
@@ -1771,7 +1765,7 @@ const TeamKnockoutsScoreboard = () => {
                 {/* Left Column: Game Score Inputs */}
                 <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-blue-400">Game Scores</h3>
+                    <h3 className="text-lg font-semibold text-orange-400">Game Scores</h3>
                     <span className="text-xs text-gray-400">Set {currentSetNumber}</span>
                   </div>
 
@@ -1804,7 +1798,7 @@ const TeamKnockoutsScoreboard = () => {
                           <div className="flex justify-between items-center mb-2 px-1">
                             <span className="text-gray-500 font-bold bg-gray-800 px-2 py-0.5 rounded text-xs">G{index + 1}</span>
                             <div className="flex gap-4 text-[10px] text-gray-400">
-                              <span className="text-blue-300 truncate max-w-[100px]">{homePlayerName}</span>
+                              <span className="text-orange-300 truncate max-w-[100px]">{homePlayerName}</span>
                               <span>vs</span>
                               <span className="text-red-300 truncate max-w-[100px]">{awayPlayerName}</span>
                             </div>
@@ -1818,7 +1812,7 @@ const TeamKnockoutsScoreboard = () => {
                                 placeholder={homePlayerName}
                                 value={game.a}
                                 onChange={(e) => handleManualGameChange(index, "a", e.target.value)}
-                                className="w-full bg-gray-800 text-white text-center px-1 py-3 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder:text-gray-600 font-mono text-lg"
+                                className="w-full bg-gray-800 text-white text-center px-1 py-3 rounded border border-gray-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all placeholder:text-gray-600 font-mono text-lg"
                                 disabled={winner || isButtonDisabled}
                               />
                             </div>
@@ -1861,20 +1855,20 @@ const TeamKnockoutsScoreboard = () => {
                 <div className="space-y-6">
                   {/* Match Info Card */}
                   <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <h3 className="text-lg font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-emerald-400 mb-4 flex items-center gap-2">
                       <Trophy className="w-5 h-5" />
                       Match Status
                     </h3>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between bg-gray-900/50 p-4 rounded-lg">
                         <div className="text-center flex-1">
-                          <div className="text-sm text-gray-400 mb-1">Sets Won</div>
-                          <div className="text-3xl font-bold text-blue-400">{teamASetWins}</div>
+                          <div className="text-sm text-gray-400 mb-1">Score</div>
+                          <div className="text-3xl font-bold text-orange-400">{teamASetWins}</div>
                           <div className="text-xs text-gray-500 mt-1 truncate">{teamAName}</div>
                         </div>
                         <div className="px-4 text-gray-600 font-bold text-xl">VS</div>
                         <div className="text-center flex-1">
-                          <div className="text-sm text-gray-400 mb-1">Sets Won</div>
+                          <div className="text-sm text-gray-400 mb-1">Score</div>
                           <div className="text-3xl font-bold text-red-400">{teamBSetWins}</div>
                           <div className="text-xs text-gray-500 mt-1 truncate">{teamBName}</div>
                         </div>
@@ -1914,7 +1908,7 @@ const TeamKnockoutsScoreboard = () => {
                       {matchStatus === "COMPLETED" && winner && (
                         <button
                           onClick={() => setShowEditView(true)}
-                          className="w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-all font-bold"
+                          className="w-full bg-orange-500 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600 transition-all font-bold"
                         >
                           <Edit className="w-5 h-5" />
                           <span>Edit Final Scores</span>
@@ -1961,7 +1955,7 @@ const TeamKnockoutsScoreboard = () => {
             <div className="flex justify-end">
               <button
                 onClick={closeModal}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-auto"
+                className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 w-auto"
               >
                 OK
               </button>

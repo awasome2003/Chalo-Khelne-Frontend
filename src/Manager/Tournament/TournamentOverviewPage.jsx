@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Users, Grid3X3, Swords, Trophy, Calendar, MapPin, Award, ArrowRight } from "lucide-react";
+import { Users, Grid3X3, Swords, Trophy, Calendar, MapPin, Award, ArrowRight, Briefcase } from "lucide-react";
 import useTournament from "./useTournament";
 import Breadcrumbs from "./Breadcrumbs";
 import TournamentStepper from "./TournamentStepper";
@@ -49,6 +49,7 @@ export default function TournamentOverviewPage() {
     { label: "Registered Players", desc: `${stats.players} players`, icon: Users, path: "players", color: "blue" },
     { label: "Groups", desc: `${stats.groups} groups`, icon: Grid3X3, path: "groups", color: "emerald" },
     { label: "Knockout Bracket", desc: "View bracket", icon: Swords, path: "knockout", color: "purple" },
+    { label: "Staff Applications", desc: "Review applicants", icon: Briefcase, path: "staff", color: "orange" },
   ];
 
   return (
@@ -58,11 +59,11 @@ export default function TournamentOverviewPage() {
 
       {/* Tournament Header */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-[#004E93] to-[#1D6A8B] p-6 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-[#F97316] p-6 text-white">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold">{title}</h1>
-              <div className="flex items-center gap-4 mt-2 text-blue-200 text-sm">
+              <div className="flex items-center gap-4 mt-2 text-orange-200 text-sm">
                 <span className="flex items-center gap-1"><Award className="w-4 h-4" /> {sportsType}</span>
                 <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDate(tournament?.startDate)} - {formatDate(tournament?.endDate)}</span>
                 <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {Array.isArray(tournament?.eventLocation) ? tournament.eventLocation[0] : tournament?.eventLocation || "TBD"}</span>
@@ -77,7 +78,7 @@ export default function TournamentOverviewPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-4 divide-x divide-gray-100">
           {[
-            { label: "Players", value: stats.players, color: "text-blue-600" },
+            { label: "Players", value: stats.players, color: "text-orange-500" },
             { label: "Groups", value: stats.groups, color: "text-emerald-600" },
             { label: "Matches", value: stats.matches, color: "text-orange-600" },
             { label: "Completed", value: stats.completed, color: "text-green-600" },

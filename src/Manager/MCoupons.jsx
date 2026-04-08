@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
@@ -91,7 +92,7 @@ export default function MCoupons() {
         fetchAnalytics();
       }
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -100,7 +101,7 @@ export default function MCoupons() {
       await axios.put(`/api/coupons/toggle/${id}`);
       fetchCoupons();
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.info(err.response?.data?.message || err.message);
     }
   };
 
@@ -111,13 +112,13 @@ export default function MCoupons() {
       fetchCoupons();
       fetchAnalytics();
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.info(err.response?.data?.message || err.message);
     }
   };
 
   const copyCode = (code) => {
     navigator.clipboard.writeText(code);
-    alert(`Copied: ${code}`);
+    toast.info(`Copied: ${code}`);
   };
 
   const filtered = coupons.filter((c) =>
@@ -205,8 +206,8 @@ export default function MCoupons() {
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                      coupon.applicableTo === "facility" ? "bg-blue-100 text-blue-700" :
-                      coupon.applicableTo === "tournament" ? "bg-purple-100 text-purple-700" :
+                      coupon.applicableTo === "facility" ? "bg-orange-100 text-orange-600" :
+                      coupon.applicableTo === "tournament" ? "bg-emerald-100 text-emerald-700" :
                       "bg-gray-100 text-gray-700"
                     }`}>
                       {coupon.applicableTo}

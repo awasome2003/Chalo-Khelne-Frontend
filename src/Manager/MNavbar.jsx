@@ -53,7 +53,7 @@ const Navbar = ({ toggleSidebar }) => {
             className="flex items-center gap-2"
           >
             <img
-              src="/src/assets/sportapp_logo.svg"
+              src="/sportapp_logo.png"
               alt="Logo"
               className="h-10 w-auto object-contain"
             />
@@ -86,7 +86,7 @@ const Navbar = ({ toggleSidebar }) => {
           {/* Notifications */}
           <button
             onClick={() => { navigate("/notification"); markAllRead(); }}
-            className="relative p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+            className="relative p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
           >
             <Bell size={22} />
             {unreadCount > 0 && (

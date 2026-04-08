@@ -36,21 +36,26 @@ export default function useMatchScoring(matchId) {
 
       setMatch(m);
 
-      // Parse match format from DB
+      // Parse match format from DB — NO hardcoded TT defaults
       const fmt = m.matchFormat || {};
+      const scoringType = fmt.scoringType || null;
+      const isNonSet = scoringType === "time" || scoringType === "innings" || scoringType === "single";
       const parsed = {
-        totalSets: fmt.maxSets || fmt.totalSets || 5,
-        setsToWin: fmt.setsToWin || Math.ceil((fmt.maxSets || fmt.totalSets || 5) / 2),
-        totalGames: fmt.maxGames || fmt.totalGames || 5,
-        gamesToWin: fmt.gamesToWin || Math.ceil((fmt.maxGames || fmt.totalGames || 5) / 2),
-        pointsToWinGame: fmt.pointsToWinGame || 11,
-        marginToWin: fmt.marginToWin || 2,
-        deuceRule: fmt.deuceRule !== undefined ? fmt.deuceRule : true,
-        maxPointsPerGame: fmt.maxPointsPerGame || null,
-        serviceRule: {
-          pointsPerService: fmt.serviceRule?.pointsPerService || 2,
-          deuceServicePoints: fmt.serviceRule?.deuceServicePoints || 1,
-        },
+        scoringType,
+        totalSets: fmt.maxSets || fmt.totalSets || 1,
+        setsToWin: fmt.setsToWin || Math.ceil((fmt.maxSets || fmt.totalSets || 1) / 2),
+        totalGames: fmt.maxGames || fmt.totalGames || 1,
+        gamesToWin: fmt.gamesToWin || Math.ceil((fmt.maxGames || fmt.totalGames || 1) / 2),
+        pointsToWinGame: fmt.pointsToWinGame || fmt.pointsPerSet || null,
+        marginToWin: fmt.marginToWin ?? null,
+        deuceRule: fmt.deuceRule !== undefined ? fmt.deuceRule : !isNonSet,
+        maxPointsPerGame: fmt.maxPointsPerGame || fmt.maxPointsCap || null,
+        serviceRule: fmt.serviceRule || null,
+        // Sport-specific fields
+        oversCount: fmt.oversCount || null,
+        inningsCount: fmt.inningsCount || null,
+        halvesCount: fmt.halvesCount || null,
+        halvesDuration: fmt.halvesDuration || null,
       };
       setMatchFormat(parsed);
 

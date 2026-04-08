@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Flag, Table, RefreshCcw } from "lucide-react";
@@ -25,9 +26,9 @@ export default function GroupDetailPage() {
     mutationFn: (schedule) => axios.post("/api/tournaments/matches/generate", { tournamentId, groupId, ...schedule }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.groupMatches(tournamentId, groupId) });
-      alert("Matches generated!");
+      toast.success("Matches generated!");
     },
-    onError: (err) => alert("Failed: " + (err.response?.data?.message || err.message)),
+    onError: (err) => toast.error(err.response?.data?.message || err.message),
   });
 
   const handleGenerate = () => {
@@ -84,7 +85,7 @@ export default function GroupDetailPage() {
         <h3 className="font-bold text-gray-700 text-sm mb-2">Players</h3>
         <div className="flex flex-wrap gap-2">
           {group?.players?.map((p, i) => (
-            <span key={p._id || i} className="bg-blue-50 text-blue-700 text-sm px-3 py-1 rounded-full font-medium">
+            <span key={p._id || i} className="bg-orange-50 text-orange-600 text-sm px-3 py-1 rounded-full font-medium">
               {i + 1}. {p.userId?.name || p.userName || `Player ${i + 1}`}
             </span>
           ))}
@@ -94,7 +95,7 @@ export default function GroupDetailPage() {
       {/* Standings */}
       {showStandings && standings && (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5">
             <h3 className="text-white text-sm font-bold">{standings.groupName} — Standings</h3>
           </div>
           <table className="w-full text-sm">
@@ -119,7 +120,7 @@ export default function GroupDetailPage() {
                   <td className="px-3 py-2 text-center">{s.played}</td>
                   <td className="px-3 py-2 text-center text-green-600">{s.won}</td>
                   <td className="px-3 py-2 text-center text-red-500">{s.lost}</td>
-                  <td className="px-3 py-2 text-center font-bold text-blue-700">{s.totalPoints}</td>
+                  <td className="px-3 py-2 text-center font-bold text-orange-600">{s.totalPoints}</td>
                 </tr>
               ))}
             </tbody>
@@ -158,11 +159,11 @@ export default function GroupDetailPage() {
                     <span className="mx-2 text-gray-400 text-xs">vs</span>
                     <span className="font-semibold text-sm text-gray-800">{match.player2?.userName || "P2"}</span>
                   </div>
-                  {isComp && match.result?.finalScore && (
+                  {isComp && (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r?.completed ? (
                     <div className="text-center mt-1 text-xs text-green-700 font-bold">
-                      {match.result.finalScore.player1Sets}-{match.result.finalScore.player2Sets}
+                      {r.player1Score}-{r.player2Score}
                     </div>
-                  )}
+                  ) : null; })()}
                 </button>
               );
             })}

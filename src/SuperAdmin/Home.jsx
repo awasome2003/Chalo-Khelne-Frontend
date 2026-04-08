@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -61,7 +62,7 @@ export default function Home() {
       setSportName("");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to add sport");
+      toast.info(err.response?.data?.message || "Failed to add sport");
     }
   };
 
@@ -78,7 +79,7 @@ export default function Home() {
       setSuccess("Sport status updated");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 

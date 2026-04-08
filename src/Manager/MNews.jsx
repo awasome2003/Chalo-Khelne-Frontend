@@ -39,9 +39,9 @@ const STATUS_COLORS = {
 };
 
 const TYPE_COLORS = {
-  "Tournament Announcement": "bg-blue-50 text-blue-700 border-blue-200",
-  "Sports News": "bg-indigo-50 text-indigo-700 border-indigo-200",
-  "Club Updates": "bg-purple-50 text-purple-700 border-purple-200",
+  "Tournament Announcement": "bg-orange-50 text-orange-600 border-orange-200",
+  "Sports News": "bg-orange-50 text-orange-600 border-orange-200",
+  "Club Updates": "bg-emerald-50 text-emerald-700 border-emerald-200",
   "Training Announcement": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
@@ -201,7 +201,7 @@ export default function MNews() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/15 active:scale-95"
+          className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-all shadow-md shadow-orange-500/15 active:scale-95"
         >
           <Plus className="w-4 h-4" /> Create News
         </button>
@@ -227,7 +227,7 @@ export default function MNews() {
       {/* News List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+          <Loader2 className="w-7 h-7 text-orange-500 animate-spin" />
         </div>
       ) : newsList.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
@@ -235,7 +235,7 @@ export default function MNews() {
           <p className="text-gray-400 font-bold">No news articles yet</p>
           <button
             onClick={openCreate}
-            className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all"
+            className="mt-4 px-5 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-all"
           >
             Create First Article
           </button>
@@ -300,7 +300,7 @@ export default function MNews() {
                 <div className="flex sm:flex-col gap-2 shrink-0">
                   <button
                     onClick={() => openEdit(news)}
-                    className="px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all active:scale-95"
+                    className="px-3 py-2 rounded-lg text-xs font-bold bg-orange-50 text-orange-500 hover:bg-orange-100 border border-orange-200 transition-all active:scale-95"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
@@ -394,7 +394,7 @@ export default function MNews() {
                       setForm((p) => ({ ...p, title: e.target.value }))
                     }
                     placeholder="News headline..."
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all"
                     maxLength={200}
                   />
                 </div>
@@ -434,7 +434,7 @@ export default function MNews() {
                     }
                     placeholder="Write article content..."
                     rows={5}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all resize-none"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all resize-none"
                   />
                 </div>
 
@@ -451,8 +451,8 @@ export default function MNews() {
                         onClick={() => toggleSport(sport)}
                         className={`px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
                           form.sports.includes(sport)
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-blue-50 hover:text-blue-600"
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-orange-50 hover:text-orange-500"
                         }`}
                       >
                         {sport}
@@ -474,7 +474,7 @@ export default function MNews() {
                         setForm((p) => ({ ...p, region: e.target.value }))
                       }
                       placeholder="e.g. Maharashtra"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 transition-all"
                     />
                   </div>
                   <div className="space-y-1">
@@ -488,7 +488,7 @@ export default function MNews() {
                         setForm((p) => ({ ...p, area: e.target.value }))
                       }
                       placeholder="e.g. Pune"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 transition-all"
                     />
                   </div>
                 </div>
@@ -505,7 +505,7 @@ export default function MNews() {
                       setForm((p) => ({ ...p, thumbnail: e.target.value }))
                     }
                     placeholder="https://example.com/image.jpg"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 transition-all"
                   />
                 </div>
 
@@ -521,7 +521,7 @@ export default function MNews() {
                       onChange={(e) =>
                         setForm((p) => ({ ...p, publishDate: e.target.value }))
                       }
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 transition-all"
                     />
                   </div>
                   <div className="space-y-1">
@@ -534,7 +534,7 @@ export default function MNews() {
                       onChange={(e) =>
                         setForm((p) => ({ ...p, expiryDate: e.target.value }))
                       }
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-300 transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-orange-300 transition-all"
                     />
                   </div>
                 </div>
@@ -551,7 +551,7 @@ export default function MNews() {
                 <button
                   onClick={handleSave}
                   disabled={saving || !form.title.trim() || !form.body.trim()}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/15 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/15 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
                   {saving ? (
                     <>

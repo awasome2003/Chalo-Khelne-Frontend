@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import TrainerLayout from "./Trainer/TrainerLayout";
+import { AppLayout } from "./shared/layout";
 import TrainerDashboard from "./Trainer/TrainerDashboard";
 import TrainerHistory from "./Trainer/TrainerHistory";
 import TrainerCurrentSession from "./Trainer/TrainerCurrentSessions";
@@ -13,7 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const TrainerApp = () => {
   return (
     <Routes>
-      <Route element={<TrainerLayout />}>
+      <Route element={<AppLayout role="trainer" />}>
         <Route element={<ProtectedRoute role="trainer" />}>
           <Route path="/trainer-dashboard" element={<TrainerDashboard />} />
           <Route path="/trainer-history" element={<TrainerHistory />} />

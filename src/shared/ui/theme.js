@@ -1,36 +1,56 @@
 /**
  * Design tokens — single source of truth for the entire app.
  * Import where needed. No magic numbers in components.
+ *
+ * Palette derived from the CK logo:
+ *   Orange ring → PRIMARY
+ *   Green K     → SECONDARY
+ *   Cream lines → ACCENT (gold)
  */
 
-// Congress Blue palette
+// Primary — Orange (from CK logo ring)
 export const PRIMARY = {
-  50: "#eff7ff",
-  100: "#deeeff",
-  200: "#b6ddff",
-  300: "#76c2ff",
-  400: "#2da5ff",
-  500: "#028cf5",
-  600: "#0071d2",
-  700: "#0059aa",
-  800: "#004e93",
-  900: "#073e73",
-  950: "#04274d",
+  50: "#FFF7ED",
+  100: "#FFEDD5",
+  200: "#FED7AA",
+  300: "#FDBA74",
+  400: "#FB923C",
+  500: "#F97316",
+  600: "#EA580C",
+  700: "#C2410C",
+  800: "#9A3412",
+  900: "#7C2D12",
+  950: "#431407",
 };
 
-// Blaze Orange palette
+// Secondary — Teal/Green (from CK logo K)
+export const SECONDARY = {
+  50: "#EFFEFA",
+  100: "#C7FBE8",
+  200: "#90F5D3",
+  300: "#52E5B8",
+  400: "#21CC9A",
+  500: "#0EA572",
+  600: "#07875E",
+  700: "#066B4D",
+  800: "#08553F",
+  900: "#084636",
+  950: "#03281F",
+};
+
+// Accent — Warm Gold (from CK logo cream highlights)
 export const ACCENT = {
-  50: "#fff8ec",
-  100: "#ffefd3",
-  200: "#ffdca5",
-  300: "#ffc26d",
-  400: "#ff9d32",
-  500: "#ff800a",
-  600: "#ff6a00",
-  700: "#cc4c02",
-  800: "#a13c0b",
-  900: "#82330c",
-  950: "#461704",
+  50: "#FFFDF7",
+  100: "#FEF9E7",
+  200: "#FDF0C3",
+  300: "#FCE38A",
+  400: "#FAD352",
+  500: "#F5C31C",
+  600: "#DCA30F",
+  700: "#B77D0B",
+  800: "#946210",
+  900: "#7A5114",
+  950: "#462B07",
 };
 
 // Semantic colors
@@ -59,4 +79,4 @@ export const SHADOW = {
   dropdown: "shadow-[0_8px_30px_rgba(0,0,0,0.08)]",
 };
 
-export default { PRIMARY, ACCENT, STATUS, SPACING, SHADOW };
+export default { PRIMARY, SECONDARY, ACCENT, STATUS, SPACING, SHADOW };

@@ -9,6 +9,7 @@ import NotificationProvider from "./context/NotificationContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { initSocket } from "./features/realtime";
 import { setupAxiosInterceptors } from "./services/authInterceptor";
 
@@ -36,7 +37,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthProvider>
         <NotificationProvider>
           <BrowserRouter>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
             <ToastContainer />
           </BrowserRouter>
         </NotificationProvider>

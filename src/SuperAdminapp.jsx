@@ -8,14 +8,15 @@ import SportRuleBooks from "./SuperAdmin/SportRuleBooks";
 import NewsManagement from "./SuperAdmin/NewsManagement";
 import RbacManagement from "./SuperAdmin/RbacManagement";
 import VendorMarketplace from "./SuperAdmin/VendorMarketplace";
-import DashboardLayout from "./SuperAdmin/DashboardLayout";
+import { AppLayout } from "./shared/layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features/groupChat";
 
 const SuperAdminapp = () => {
   return (
-    <>
-      <Routes>
-        <Route element={<DashboardLayout />}>
+    <Routes>
+      <Route element={<AppLayout role="superadmin" />}>
+        <Route element={<ProtectedRoute />}>
           <Route path="/home" element={<Home />} />
           <Route path="/pending" element={<Pending />} />
           <Route path="/approved" element={<Approved />} />
@@ -28,8 +29,8 @@ const SuperAdminapp = () => {
           <Route path="/group-chat" element={<GroupChatList />} />
           <Route path="/group-chat/:chatId" element={<GroupChatPage />} />
         </Route>
-      </Routes>
-    </>
+      </Route>
+    </Routes>
   );
 };
 

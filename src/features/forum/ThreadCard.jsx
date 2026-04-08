@@ -20,13 +20,13 @@ export default function ThreadCard({ thread, userId, onLike, onClick }) {
       {/* Top row */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {thread.authorName?.charAt(0)?.toUpperCase() || "?"}
           </div>
           <div>
             <span className="text-sm font-bold text-gray-800">{thread.authorName}</span>
             <div className="flex items-center gap-2 text-[10px] text-gray-400">
-              <span className="font-medium text-[#004E93] bg-[#004E93]/10 px-1.5 py-0.5 rounded">{thread.authorRole}</span>
+              <span className="font-medium text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">{thread.authorRole}</span>
               <Clock className="w-3 h-3" />
               <span>{timeAgo(thread.createdAt)}</span>
             </div>
@@ -39,7 +39,7 @@ export default function ThreadCard({ thread, userId, onLike, onClick }) {
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-gray-900 text-base mb-1.5 group-hover:text-[#004E93] transition-colors leading-snug">
+      <h3 className="font-bold text-gray-900 text-base mb-1.5 group-hover:text-orange-500 transition-colors leading-snug">
         {thread.title}
       </h3>
 
@@ -52,7 +52,7 @@ export default function ThreadCard({ thread, userId, onLike, onClick }) {
       {thread.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {thread.tags.slice(0, 4).map((tag) => (
-            <span key={tag} className="text-[10px] font-bold text-[#FF6A00] bg-[#FF6A00]/10 px-2 py-0.5 rounded-full">
+            <span key={tag} className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
               #{tag}
             </span>
           ))}

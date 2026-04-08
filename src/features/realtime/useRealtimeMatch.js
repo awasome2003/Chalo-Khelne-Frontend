@@ -19,30 +19,26 @@ export default function useRealtimeMatch(matchId) {
 
     const handlers = {
       onScoreUpdate: (data) => {
-        // Update live match cache directly
+        // Update live match cache directly — sport-aware fields
+        const updatedFields = {
+          currentSet: data.currentSet,
+          currentGame: data.currentGame,
+          liveScore: data.liveScore,
+          sets: data.sets,
+          status: "IN_PROGRESS",
+          // Preserve sport metadata if received from enriched socket
+          ...(data.scoringType && { matchFormat: { ...(data.matchFormat || {}), scoringType: data.scoringType } }),
+          ...(data.sportName && { sportsType: data.sportName }),
+        };
+
         queryClient.setQueryData(["liveMatch", matchId], (old) => {
           if (!old) return old;
-          return {
-            ...old,
-            currentSet: data.currentSet,
-            currentGame: data.currentGame,
-            liveScore: data.liveScore,
-            sets: data.sets || old.sets,
-            status: "IN_PROGRESS",
-          };
+          return { ...old, ...updatedFields, sets: data.sets || old.sets };
         });
 
-        // Also update matchLiveState cache (used by useMatchScoring)
         queryClient.setQueryData(["matchLiveState", matchId], (old) => {
           if (!old) return old;
-          return {
-            ...old,
-            currentSet: data.currentSet,
-            currentGame: data.currentGame,
-            liveScore: data.liveScore,
-            sets: data.sets || old.sets,
-            status: "IN_PROGRESS",
-          };
+          return { ...old, ...updatedFields, sets: data.sets || old.sets };
         });
       },
 
@@ -61,14 +57,20 @@ export default function useRealtimeMatch(matchId) {
       },
 
       onMatchComplete: (data) => {
-        // Update cache with completion data
+        // Update cache with completion data + normalized result
+        const completionFields = {
+          status: "COMPLETED",
+          winner: data.winner,
+          result: data.result,
+          ...(data.matchResult && { _normalizedResult: data.matchResult }),
+        };
         queryClient.setQueryData(["liveMatch", matchId], (old) => {
           if (!old) return old;
-          return { ...old, status: "COMPLETED", winner: data.winner, result: data.result };
+          return { ...old, ...completionFields };
         });
         queryClient.setQueryData(["matchLiveState", matchId], (old) => {
           if (!old) return old;
-          return { ...old, status: "COMPLETED", winner: data.winner, result: data.result };
+          return { ...old, ...completionFields };
         });
 
         // Invalidate tournament-level caches

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
+import { AuthContext } from "./AuthContext";
 
 const NotificationContext = createContext(null);
 
@@ -12,10 +13,18 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const socketRef = useRef(null);
+  const { isAuthenticated } = useContext(AuthContext);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token || !isAuthenticated) {
+      // Disconnect existing socket on logout
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
 
     // Connect socket with manager's JWT
     const socket = io(SERVER_URL, {
@@ -27,7 +36,6 @@ export const NotificationProvider = ({ children }) => {
     });
 
     socket.on("connect", () => {
-      console.log("[MANAGER_SOCKET] Connected");
     });
 
     // Listen for turf booking notifications
@@ -76,15 +84,15 @@ export const NotificationProvider = ({ children }) => {
     });
 
     socket.on("connect_error", (err) => {
-      console.log("[MANAGER_SOCKET] Connection error:", err.message);
     });
 
     socketRef.current = socket;
 
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const markAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

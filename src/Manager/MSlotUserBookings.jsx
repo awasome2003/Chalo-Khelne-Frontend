@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -33,7 +34,7 @@ const UserBookings = () => {
             title: "Mark Payment as Paid",
             message: `Are you sure you want to mark the payment for ${booking?.userName} as paid?`,
             confirmText: "Mark as Paid",
-            confirmClass: "bg-blue-600 hover:bg-blue-700",
+            confirmClass: "bg-orange-500 hover:bg-orange-600",
           };
         case "mark_failed":
           return {
@@ -165,8 +166,8 @@ const UserBookings = () => {
           {/* Content */}
           <div className="p-6">
             <div className="flex items-center mb-4">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                <Icon name="payment" className="text-blue-600" />
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-orange-100">
+                <Icon name="payment" className="text-orange-500" />
               </div>
             </div>
             <div className="text-center">
@@ -177,8 +178,8 @@ const UserBookings = () => {
                 This will mark the payment for{" "}
                 <strong>{booking?.userName}</strong> as completed.
               </p>
-              <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                <p className="text-sm font-medium text-blue-900">
+              <div className="bg-orange-50 rounded-lg p-3 mb-4">
+                <p className="text-sm font-medium text-gray-900">
                   Amount: ₹{booking?.amount || 0}
                 </p>
               </div>
@@ -195,7 +196,7 @@ const UserBookings = () => {
             </button>
             <button
               onClick={onConfirm}
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600 transition-colors"
             >
               Yes, Mark as Paid
             </button>
@@ -323,7 +324,7 @@ const UserBookings = () => {
       setModalData({ booking: null, action: null });
     } catch (error) {
       console.error("Error updating payment status:", error);
-      alert("Failed to update payment status. Please try again.");
+      toast.error("Failed to update payment status. Please try again.");
     } finally {
       setUpdating(null);
     }
@@ -359,7 +360,7 @@ const UserBookings = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
           <p className="mt-4 text-slate-600 font-medium">Loading bookings...</p>
         </div>
       </div>
@@ -429,7 +430,7 @@ const UserBookings = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, date: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               />
             </div>
             <div>
@@ -441,7 +442,7 @@ const UserBookings = () => {
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value })
                 }
-                className="w-full px-3 py-2.5 mt-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2.5 mt-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               >
                 <option value="">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -514,8 +515,8 @@ const UserBookings = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-start">
                           <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                              <Icon name="person" className="text-blue-600" />
+                            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                              <Icon name="person" className="text-orange-500" />
                             </div>
                           </div>
                           <div className="ml-3">
@@ -587,8 +588,8 @@ const UserBookings = () => {
                       {/* Payment Status */}
                       <td className="px-6 py-4">
                         {updating === booking._id ? (
-                          <div className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border bg-blue-50 text-blue-800 border-blue-200">
-                            <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          <div className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border bg-orange-50 text-orange-700 border-orange-200">
+                            <div className="w-3 h-3 border border-orange-500 border-t-transparent rounded-full animate-spin mr-2"></div>
                             Updating...
                           </div>
                         ) : (

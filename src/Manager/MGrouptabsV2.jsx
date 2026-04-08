@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FiX } from "react-icons/fi";
@@ -52,7 +53,7 @@ function TournamentGroupTabs() {
     return (
       <div className="p-4 text-center text-red-500">
         <h2>Error: No Tournament Selected</h2>
-        <button onClick={() => navigate("/mtournament-management")} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+        <button onClick={() => navigate("/mtournament-management")} className="mt-4 bg-orange-500 text-white px-4 py-2 rounded">
           Back to Tournament Management
         </button>
       </div>
@@ -74,7 +75,7 @@ function TournamentGroupTabs() {
         matchInterval,
         startTime,
       });
-      alert("Matches generated successfully!");
+      toast.success("Matches generated successfully!");
       setIsGenerateModalOpen(false);
       if (activeTab === "Top Players") {
         fetchRound2Groups();
@@ -82,7 +83,7 @@ function TournamentGroupTabs() {
         fetchMatches(groupId);
       }
     } catch (err) {
-      alert("Failed to generate matches: " + (err.response?.data?.message || err.message));
+      toast.error("Failed to generate matches: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -95,13 +96,13 @@ function TournamentGroupTabs() {
 
   const openBulkScoreModal = (matchesArr, gId, title) => {
     const pending = matchesArr.filter((m) => m.status !== "completed" && m.status !== "COMPLETED");
-    if (pending.length === 0) { alert("No pending matches to score."); return; }
+    if (pending.length === 0) { toast.warn("No pending matches to score."); return; }
     setBulkScoreModal({ open: true, matches: pending, groupId: gId, title: title || "Bulk Score Upload" });
   };
 
   const handleEditGroup = (group) => {
     // Navigate to edit or open inline editor
-    alert(`Edit group: ${group.groupName} (implement edit modal)`);
+    toast.info(`Edit group: ${group.groupName} (implement edit modal)`);
   };
 
   const { maxSets, setsToWin } = getMatchFormat();
@@ -115,10 +116,10 @@ function TournamentGroupTabs() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-[24px] py-[8px] rounded-full text-sm font-[400] w-auto transition lg:text-[18px] ${
-              activeTab === tab ? "text-[#333]" : "text-[#333] hover:text-black"
+              activeTab === tab ? "text-gray-900" : "text-gray-900 hover:text-black"
             }`}
             style={{
-              border: activeTab === tab ? "1px solid #1D6A8B" : "1px solid #EDEAEB",
+              border: activeTab === tab ? "1px solid #F97316" : "1px solid #EDEAEB",
               backgroundColor: activeTab === tab ? "transparent" : "#EDEAEB",
             }}
           >
@@ -139,8 +140,8 @@ function TournamentGroupTabs() {
               onClick={() => setSelectedCategory(cat.name === selectedCategory ? "" : cat.name)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all w-auto ${
                 selectedCategory === cat.name
-                  ? "bg-[#004E93] text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-[#004E93] hover:text-[#004E93]"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-orange-500 hover:text-orange-500"
               }`}
             >
               {cat.name}
@@ -169,7 +170,7 @@ function TournamentGroupTabs() {
             openBulkScoreModal(round2MatchesData[activeRound2Group] || [], activeRound2Group, `Bulk Score Upload — ${currentRound2Group?.groupName || "Round 2 Group"}`)
           }
           onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
-          onOpenDirectKnockoutSchedule={() => alert("Open Direct Knockout Schedule (implement)")}
+          onOpenDirectKnockoutSchedule={() => toast.info("Open Direct Knockout Schedule (implement)")}
         />
       )}
 
@@ -204,7 +205,7 @@ function TournamentGroupTabs() {
                 <input type="time" className="w-full border p-2 mt-1 rounded" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
               </div>
               <button
-                className="w-full bg-[#004E93] text-white py-2 rounded-lg font-semibold mt-4 hover:bg-blue-800"
+                className="w-full bg-orange-500 text-white py-2 rounded-lg font-semibold mt-4 hover:bg-gray-800"
                 onClick={handleGenerateMatches}
               >
                 {activeTab === "Top Players" ? "Generate Round 2 Matches" : "Generate Matches"}

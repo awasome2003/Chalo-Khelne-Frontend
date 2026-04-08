@@ -36,7 +36,7 @@ html {
   background-color: #F3F4F6;
 }
 .nav-link.active {
-  background-color: #004E93;
+  background-color: var(--color-primary);
   color: #fff;
 }
 
@@ -47,14 +47,14 @@ html {
   border: 1px solid #E5E7EB;
 }
 .tournament-card.active {
-  border: 2px solid #004E93;
-  box-shadow: 0 4px 12px rgba(0, 78, 147, 0.1);
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.1);
 }
 
 .active-tab {
   background-color: transparent;
-  color: #004E93;
-  border-bottom: 2px solid #004E93;
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
 }
 .inactive-tab {
   background-color: transparent;
@@ -85,7 +85,7 @@ html {
 .createstournaments,
 .create-groups,
 .addpost {
-  background: #FF6A00;
+  background: var(--color-primary);
   color: white;
   border: none;
   border-radius: 12px;
@@ -110,13 +110,13 @@ html {
 .startmatch {
   border-radius: 12px;
   height: 48px;
-  background: #FF6A00;
+  background: var(--color-primary);
   color: white;
 }
 
 .addrefree {
-  border: 1px solid #FF6A00;
-  color: #FF6A00;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
   background-color: transparent;
   border-radius: 12px;
 }
@@ -128,7 +128,7 @@ html {
 }
 
 .requestbtn {
-  border-bottom: 2px solid #004E93;
+  border-bottom: 2px solid var(--color-primary);
   border-radius: 0px;
 }
 

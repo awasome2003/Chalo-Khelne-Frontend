@@ -28,7 +28,6 @@ export function initSocket() {
 
   socket.on("connect", () => {
     reconnectAttempts = 0;
-    console.log("[WS] Connected");
 
     // Re-join all active rooms on reconnect
     for (const [roomId] of subscriptions) {
@@ -41,16 +40,13 @@ export function initSocket() {
   socket.on("connect_error", (err) => {
     reconnectAttempts++;
     if (reconnectAttempts === 1) {
-      console.log("[WS] Connection failed — using polling fallback");
     }
     if (reconnectAttempts >= MAX_RECONNECT) {
-      console.warn("[WS] Max reconnect attempts reached, polling only");
       socket.disconnect(); // Stop trying
     }
   });
 
   socket.on("disconnect", (reason) => {
-    console.log("[WS] Disconnected:", reason);
   });
 
   return socket;

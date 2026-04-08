@@ -181,7 +181,7 @@ const TrainerNavbar = () => {
     <div className={`navbar ${darkMode ? "navbar-dark" : ""}`}>
       <div className="flex items-center w-full md:w-auto navbar1">
         <img
-          src="/src/assets/sportapp_logo.svg"
+          src="/sportapp_logo.png"
           alt="Logo"
           className="w-[45.811px] h-[35.481px]"
         />
@@ -211,8 +211,8 @@ const TrainerNavbar = () => {
       >
         <button
           onClick={() => navigate("/trainer-current")}
-          className="flex items-center gap-2 text-[#36B37E] font-semibold px-6 w-auto py-2 rounded-full transition bg-transparent hover:bg-transparent mt-0 createtournaments"
-          style={{ border: "1px solid #36B37E" }}
+          className="flex items-center gap-2 text-emerald-600 font-semibold px-6 w-auto py-2 rounded-full transition bg-transparent hover:bg-transparent mt-0 createtournaments"
+          style={{ border: "1px solid #0EA572" }}
         >
           <FiPlus />
           Start Session

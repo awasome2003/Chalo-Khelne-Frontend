@@ -63,7 +63,7 @@ export default function Breadcrumbs({ tournamentName, groupName }) {
             ) : (
               <Link
                 to={crumb.path}
-                className="text-blue-600 hover:text-blue-800 hover:underline transition"
+                className="text-orange-500 hover:text-orange-700 hover:underline transition"
               >
                 {crumb.label}
               </Link>

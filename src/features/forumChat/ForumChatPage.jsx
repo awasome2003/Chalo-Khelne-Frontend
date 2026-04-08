@@ -74,7 +74,7 @@ export default function ForumChatPage() {
     return (
       <div className="p-8 text-center">
         <p className="text-red-500 font-semibold">Forum not found</p>
-        <button onClick={() => navigate("/forum-chat")} className="mt-4 text-[#004E93] underline w-auto">Back</button>
+        <button onClick={() => navigate("/forum-chat")} className="mt-4 text-orange-500 underline w-auto">Back</button>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export default function ForumChatPage() {
             {isSuperAdmin && (
               <button
                 onClick={() => setShowAddMember(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-xl transition w-auto active:scale-[0.97]"
+                className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl transition w-auto active:scale-[0.97]"
               >
                 <UserPlus className="w-4 h-4" /> Add
               </button>
@@ -114,7 +114,7 @@ export default function ForumChatPage() {
             {/* Members Sidebar Toggle */}
             <button
               onClick={() => setShowMembers(!showMembers)}
-              className={`p-2 rounded-xl transition w-auto ${showMembers ? "bg-[#004E93] text-white" : "hover:bg-gray-100 text-gray-500"}`}
+              className={`p-2 rounded-xl transition w-auto ${showMembers ? "bg-orange-500 text-white" : "hover:bg-gray-100 text-gray-500"}`}
             >
               <Users className="w-5 h-5" />
             </button>
@@ -161,7 +161,7 @@ export default function ForumChatPage() {
             {(forum.members || []).map((member) => (
               <div key={member.userId} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition group">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {member.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="min-w-0">
@@ -194,7 +194,7 @@ export default function ForumChatPage() {
             <div className="p-3 border-t border-gray-100">
               <button
                 onClick={() => setShowAddMember(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-xl transition active:scale-[0.97]"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl transition active:scale-[0.97]"
               >
                 <UserPlus className="w-4 h-4" /> Add Member
               </button>
@@ -224,7 +224,7 @@ export default function ForumChatPage() {
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="Search by name..."
                   autoFocus
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
                 />
               </div>
 
@@ -243,7 +243,7 @@ export default function ForumChatPage() {
                 {searchResults.map((user) => (
                   <div key={user._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold">
                         {(user.name || user.userName || "?").charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -254,7 +254,7 @@ export default function ForumChatPage() {
                     <button
                       onClick={() => handleAddMember(user)}
                       disabled={addMemberMutation.isPending}
-                      className="px-3 py-1.5 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-lg transition w-auto disabled:opacity-50"
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg transition w-auto disabled:opacity-50"
                     >
                       Add
                     </button>

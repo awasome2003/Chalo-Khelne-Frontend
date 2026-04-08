@@ -14,33 +14,24 @@ import LTermsConditions from './Landing-Page/LTermsConditions';
 import LFAQs from './Landing-Page/LFAQs';
 import LHelpandSupport from './Landing-Page/LHelpandSupport';
 
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 
 const App = () => {
-  const { auth } = useContext(AuthContext);
-  const token = localStorage.getItem("token");
-  const isAuthenticated = !!token;
+  const { auth, isAuthenticated } = useContext(AuthContext);
   const role = auth?.role?.toLowerCase() || "player";
 
-  useEffect(() => {
-    console.log("Auth state:", {
-      auth,
-      token: !!token,
-      isAuthenticated,
-      role,
-    });
-  }, [auth, token, isAuthenticated, role]);
-
   return (
-    <Routes >
-      <Route path="/login" element={<Login />} />
+    <Routes>
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
 
       {/* Default route */}
       <Route
         path="/"
         element={
           isAuthenticated ? (
-            role === "manager" ? (
+            role === "superadmin" ? (
+              <Navigate to="/home" />
+            ) : role === "manager" ? (
               <Navigate to="/mdashboard" />
             ) : role === "clubadmin" ? (
               <Navigate to="/club-dashboard" />
@@ -79,7 +70,7 @@ const App = () => {
               ) : role === "trainer" ? (
                 <Navigate to="/trainer-dashboard" />
               ) : (
-                <Navigate to="/pdashboard" />
+                <Navigate to="/phome" />
               )
           ) : (
             <LandingApp />
@@ -111,7 +102,7 @@ const App = () => {
       )}
 
       {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/l/event" />} />
+      <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/l/home"} />} />
     </Routes>
   );
 };

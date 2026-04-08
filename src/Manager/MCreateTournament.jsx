@@ -39,11 +39,11 @@ import {
 
 // ─── Section Icons Map ───
 const SECTION_ICONS = {
-  format: <Type className="w-5 h-5 text-blue-500" />,
+  format: <Type className="w-5 h-5 text-orange-500" />,
   scoring: <Target className="w-5 h-5 text-emerald-500" />,
-  participant: <Users className="w-5 h-5 text-purple-500" />,
+  participant: <Users className="w-5 h-5 text-emerald-600" />,
   tieBreaker: <Zap className="w-5 h-5 text-amber-500" />,
-  tournamentRules: <Award className="w-5 h-5 text-indigo-500" />,
+  tournamentRules: <Award className="w-5 h-5 text-orange-500" />,
 };
 
 // ─── Sport-aware defaults for unranked (custom rules) tournaments ───
@@ -78,6 +78,26 @@ const SPORT_SCORING_TYPES = {
   "Chess": "single", "Carrom": "single",
 };
 
+// Sports that MUST play as teams — only Team Knockout format allowed
+const TEAM_SPORTS = new Set([
+  "Cricket", "Football", "Kabaddi", "Volleyball", "Basketball", "Hockey",
+]);
+
+// Sports that are strictly individual — no team format
+const INDIVIDUAL_SPORTS = new Set([
+  "Chess", "Carrom", "Snooker",
+]);
+
+function isTeamOnlySport(sportName) {
+  if (!sportName) return false;
+  return TEAM_SPORTS.has(sportName);
+}
+
+function isIndividualOnlySport(sportName) {
+  if (!sportName) return false;
+  return INDIVIDUAL_SPORTS.has(sportName);
+}
+
 function getUnrankedDefaults(sportName) {
   const type = SPORT_SCORING_TYPES[sportName] || "sets";
   return { ...(UNRANKED_DEFAULTS[type] || UNRANKED_DEFAULTS.sets) };
@@ -109,7 +129,7 @@ function mapTournamentToForm(t, defaults, auth) {
   const tType = (t.type || "").toLowerCase();
   const formats = [];
   if (tType.includes("group stage")) formats.push("group+knockout");
-  if (tType === "knockout" && (t.knockoutFormat === "Singles" || t.knockoutFormat === "Doubles")) formats.push("singles-knockout");
+  if (tType === "knockout" && (t.knockoutFormat?.includes("Singles") || t.knockoutFormat?.includes("Doubles"))) formats.push("singles-knockout");
   if (t.knockoutFormat === "Davis Cup" || t.knockoutFormat === "Teams Knockout") formats.push("davis-cup");
   if (formats.length === 0 && tType.includes("knockout")) formats.push("singles-knockout");
 
@@ -132,9 +152,7 @@ function mapTournamentToForm(t, defaults, auth) {
     knockoutFormat: t.knockoutFormat || "Singles",
     category: t.category || [{ name: "Open Category", fee: 0 }],
     selectedTime: t.selectedTime || { startTime: "10:00", endTime: "18:00" },
-    numTeams: t.numTeams || "",
-    playerNoValue: t.playerNoValue || "2",
-    tournamentFee: t.tournamentFee || "0",
+    registrationDeadline: t.registrationDeadline || "",
     qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
     managerId: t.managerId || [auth?._id || ""],
   };
@@ -169,12 +187,10 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     sportsType: "",
     tournamentLevel: "",
     description: "",
-    numTeams: "",
-    playerNoValue: "2",
+    registrationDeadline: "",
     organizerName: "",
     cancellationPolicy: "YES",
     eventLocation: "",
-    tournamentFee: "0",
     managerId: [auth?._id || ""],
     category: [{ name: "Open Category", fee: 0 }],
     selectedTime: { startTime: "10:00", endTime: "18:00" },
@@ -288,16 +304,16 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     };
     fetchLevels();
 
-    const sportObj = sportsList.find((s) => s.name === sport);
-    const isTeamSport = sportObj?.category === "Team";
+    const isSportTeam = isTeamOnlySport(sport);
     setFormData((prev) => ({
       ...prev,
       tournamentLevel: "",
-      playingFormats: [],
+      // Auto-select davis-cup for team sports, empty for individual
+      playingFormats: isSportTeam ? ["davis-cup"] : [],
       hasGroupStage: false,
-      hasKnockout: false,
-      groupStageFormat: isTeamSport ? "Teams" : "Singles",
-      knockoutFormat: isTeamSport ? "Teams Knockout" : "Singles",
+      hasKnockout: isSportTeam,
+      groupStageFormat: isSportTeam ? "Teams" : "Singles",
+      knockoutFormat: isSportTeam ? "Teams Knockout" : "Singles",
     }));
     setRuleBook(null);
     setRuleBookValues({});
@@ -534,9 +550,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
         tournamentFormData.append("drawSize", formData.drawSize);
       }
 
-      tournamentFormData.append("numTeams", formData.numTeams || "0");
-      tournamentFormData.append("playerNoValue", formData.playerNoValue || "2");
-      tournamentFormData.append("tournamentFee", formData.tournamentFee || "0");
+      if (formData.registrationDeadline) tournamentFormData.append("registrationDeadline", formData.registrationDeadline);
 
       if (formData.startDate) tournamentFormData.append("startDate", formData.startDate);
       if (formData.endDate) tournamentFormData.append("endDate", formData.endDate);
@@ -600,7 +614,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           <button
             type="button"
             onClick={() => handleRuleBookFieldChange(field.path, !val)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${val ? "bg-blue-500" : "bg-gray-300"}`}
+            className={`relative w-12 h-6 rounded-full transition-colors ${val ? "bg-orange-500" : "bg-gray-300"}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${val ? "translate-x-6" : ""}`} />
           </button>
@@ -616,7 +630,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
             <select
               value={val || ""}
               onChange={(e) => handleRuleBookFieldChange(field.path, e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer ${hasError ? "border-red-300 bg-red-50/50" : "border-gray-200"}`}
+              className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer ${hasError ? "border-red-300 bg-red-50/50" : "border-gray-200"}`}
             >
               <option value="">Select</option>
               {field.options?.map((opt) => (
@@ -645,7 +659,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                   onClick={() => handleMultiSelectToggle(field.path, opt)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                     isActive
-                      ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                      ? "bg-orange-50 border-orange-300 text-orange-600"
                       : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
@@ -666,7 +680,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
             type="text"
             value={val || ""}
             onChange={(e) => handleRuleBookFieldChange(field.path, e.target.value)}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
             placeholder={`Enter ${field.label.toLowerCase()}`}
           />
         </div>
@@ -689,7 +703,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           step={field.step || 1}
           value={val ?? ""}
           onChange={(e) => handleRuleBookFieldChange(field.path, e.target.value)}
-          className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all ${hasError ? "border-red-300 bg-red-50/50" : "border-gray-200"}`}
+          className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all ${hasError ? "border-red-300 bg-red-50/50" : "border-gray-200"}`}
           placeholder={field.min != null && field.max != null ? `${field.min}–${field.max}` : ""}
         />
         {hasError && <p className="text-xs text-red-500 mt-1">{ruleBookErrors[field.path]}</p>}
@@ -700,7 +714,8 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
   if (!showPopup) return null;
 
   const selectedSportObj = sportsList.find((s) => s.name === formData.sportsType);
-  const isTeamSport = selectedSportObj?.category === "Team";
+  const isTeamSport = isTeamOnlySport(formData.sportsType);
+  const isIndividualSport = isIndividualOnlySport(formData.sportsType);
   const activeStep = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
 
@@ -714,7 +729,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       <div className="lg:col-span-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-            <Trophy className="w-5 h-5 text-blue-500" /> Basic Information
+            <Trophy className="w-5 h-5 text-orange-500" /> Basic Information
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -725,7 +740,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all placeholder:text-gray-400"
                 placeholder="Ex: Summer Championship 2026"
               />
             </div>
@@ -740,7 +755,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                     handleInputChange(e);
                     setUserChangedSport(e.target.value); // Trigger format reset only on manual change
                   }}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="">Select Sport</option>
                   {sportsList.map((sport) => (
@@ -758,7 +773,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                   name="tournamentLevel"
                   value={formData.tournamentLevel}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="">
                     {!formData.sportsType ? "Select sport first" : availableLevels.length === 0 ? "No levels available" : "Select Level"}
@@ -779,7 +794,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                 name="organizerName"
                 value={formData.organizerName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                 placeholder="Organization or Person Name"
               />
             </div>
@@ -791,7 +806,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[100px] resize-y"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all min-h-[100px] resize-y"
               placeholder="Describe your tournament..."
             />
           </div>
@@ -804,7 +819,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-gray-500" /> Tournament Logo
           </h3>
-          <div className="w-full aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all relative flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
+          <div className="w-full aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all relative flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
             <input
               type="file"
               accept="image/*"
@@ -924,7 +939,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
           {loadingRules ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
               <span className="ml-3 text-sm text-gray-500">Loading rules...</span>
             </div>
           ) : ruleBook ? (
@@ -962,9 +977,9 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               )}
 
               {ruleBook.description && (
-                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                  <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-medium text-blue-800">{ruleBook.description}</p>
+                <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
+                  <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                  <p className="text-xs font-medium text-orange-700">{ruleBook.description}</p>
                 </div>
               )}
 
@@ -1021,9 +1036,9 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       )}
 
       {ruleBookSections.length > 0 && (
-        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
-          <Shield className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <p className="text-xs font-medium text-blue-800">
+        <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
+          <Shield className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+          <p className="text-xs font-medium text-orange-700">
             Pre-configured from <strong>{ruleBook?.sportName} — {ruleBook?.level}</strong> rule book. Adjust values as needed.
           </p>
         </div>
@@ -1042,30 +1057,39 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           <Type className="w-5 h-5 text-orange-500" /> Tournament Format
         </h3>
 
-        {/* Playing Format — multi-select cards */}
+        {/* Playing Format — sport-aware format options */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">Playing Format</label>
-          <p className="text-xs text-gray-400 mb-3">Select one or more formats for this tournament</p>
+          <p className="text-xs text-gray-400 mb-3">
+            {isTeamSport
+              ? "Team sports play as Team Knockout (Davis Cup format)"
+              : "Select one or more formats for this tournament"}
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { key: "group+knockout", label: "Group Stage + Knockout", desc: "Round-robin groups then elimination bracket", icon: Users, color: "blue",
-                onSelect: (p) => ({ ...p, hasGroupStage: true, hasKnockout: true, groupStageFormat: isTeamSport ? "Teams" : p.groupStageFormat || "Singles", knockoutFormat: isTeamSport ? "Teams Knockout" : p.knockoutFormat || "Singles" }),
+              // Group Stage + Knockout — individual sports only
+              !isTeamSport && { key: "group+knockout", label: "Group Stage + Knockout", desc: "Round-robin groups then elimination bracket", icon: Users, color: "blue",
+                onSelect: (p) => ({ ...p, hasGroupStage: true, hasKnockout: true, groupStageFormat: p.groupStageFormat || "Singles", knockoutFormat: p.knockoutFormat || "Singles" }),
                 onDeselect: (p) => ({ ...p, hasGroupStage: false }) },
-              { key: "singles-knockout", label: "Singles Knockout", desc: "Direct elimination — 16/32/64 draw", icon: Trophy, color: "orange",
+              // Singles Knockout — individual sports only
+              !isTeamSport && { key: "singles-knockout", label: "Singles Knockout", desc: "Direct elimination — 16/32/64 draw", icon: Trophy, color: "orange",
                 onSelect: (p) => ({ ...p, hasKnockout: true }),
                 onDeselect: (p) => ({ ...p }) },
-              { key: "davis-cup", label: "Davis Cup", desc: "Team knockout — singles + doubles format", icon: Shield, color: "purple",
-                onSelect: (p) => ({ ...p, hasKnockout: true }),
+              // Davis Cup / Team Knockout — team sports always, racquet sports optionally, NOT for individual-only sports
+              !isIndividualSport && { key: "davis-cup", label: isTeamSport ? "Team Knockout" : "Davis Cup (Team)", desc: isTeamSport ? "Teams compete in round-robin or knockout bracket" : "Team knockout — singles + doubles format", icon: Shield, color: "purple",
+                onSelect: (p) => ({ ...p, hasKnockout: true, knockoutFormat: "Teams Knockout" }),
                 onDeselect: (p) => ({ ...p }) },
-            ].map((fmt) => {
+            ].filter(Boolean).map((fmt) => {
               const isSelected = formData.playingFormats?.includes(fmt.key);
               const Icon = fmt.icon;
-              const colors = { blue: { border: "border-blue-500", bg: "bg-blue-50", icon: "bg-blue-500" }, orange: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, purple: { border: "border-purple-500", bg: "bg-purple-50", icon: "bg-purple-500" } };
+              const colors = { blue: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, orange: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, purple: { border: "border-emerald-500", bg: "bg-emerald-50", icon: "bg-emerald-500" } };
               const c = colors[fmt.color];
               return (
                 <div
                   key={fmt.key}
                   onClick={() => {
+                    // Team sports cannot deselect their only format (Team Knockout)
+                    if (isTeamSport && formData.playingFormats?.includes(fmt.key)) return;
                     setFormData((p) => {
                       const current = p.playingFormats || [];
                       let next, updated;
@@ -1076,7 +1100,6 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                         next = [...current, fmt.key];
                         updated = fmt.onSelect(p);
                       }
-                      // Recalculate hasGroupStage/hasKnockout from selected formats
                       const hasGS = next.includes("group+knockout");
                       const hasKO = next.length > 0;
                       return { ...updated, playingFormats: next, hasGroupStage: hasGS, hasKnockout: hasKO };
@@ -1108,73 +1131,115 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           )}
         </div>
 
-        {/* Sub-format for Group+Knockout */}
-        {formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Group Stage Format</label>
-              <select name="groupStageFormat" value={formData.groupStageFormat} onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer">
-                <option value="Singles">Singles</option>
-                <option value="Doubles">Doubles</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Knockout Format</label>
-              <select name="knockoutFormat" value={formData.knockoutFormat} onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer">
-                <option value="Singles">Singles</option>
-                <option value="Doubles">Doubles</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Draw Size — Only for standalone knockout (no group stage) */}
-        {formData.playingFormats?.includes("singles-knockout") && !formData.playingFormats?.includes("group+knockout") && (
+        {/* Sub-format for Singles Knockout only */}
+        {formData.playingFormats?.includes("singles-knockout") && !formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Draw Size</label>
-            <p className="text-xs text-gray-400 mb-1.5">Number of slots in the elimination bracket</p>
-            <div className="flex gap-2">
-              {[16, 32, 64].map((size) => {
-                const numPlayers = Number(formData.numTeams) || 0;
-                const tooSmall = numPlayers > size;
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Knockout Format</label>
+            <div className="flex gap-3">
+              {["Singles", "Doubles"].map((fmt) => {
+                const formats = (formData.knockoutFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
+                const isSelected = formats.includes(fmt);
                 return (
-                  <label
-                    key={size}
-                    className={`flex-1 flex flex-col items-center justify-center px-4 py-3 rounded-xl border-2 transition-all text-sm font-bold ${
-                      tooSmall
-                        ? "border-red-200 bg-red-50 text-red-300 cursor-not-allowed"
-                        : String(formData.drawSize) === String(size)
-                        ? "border-purple-500 bg-purple-50 text-purple-700 cursor-pointer"
-                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 cursor-pointer"
+                  <button key={fmt} type="button"
+                    onClick={() => {
+                      let next;
+                      if (isSelected && formats.length > 1) {
+                        next = formats.filter(f => f !== fmt).join(", ");
+                      } else if (!isSelected) {
+                        next = [...formats, fmt].join(", ");
+                      } else { return; }
+                      setFormData(p => ({ ...p, knockoutFormat: next }));
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
+                      isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="drawSize"
-                      value={size}
-                      checked={String(formData.drawSize) === String(size)}
-                      onChange={(e) => !tooSmall && setFormData((p) => ({ ...p, drawSize: Number(e.target.value) }))}
-                      disabled={tooSmall}
-                      className="sr-only"
-                    />
-                    {size} Draw
-                    {tooSmall && <span className="text-[9px] font-normal">Max {size} players</span>}
-                  </label>
+                    {fmt}
+                  </button>
                 );
               })}
             </div>
-            {Number(formData.numTeams) > Number(formData.drawSize) && (
-              <p className="text-xs text-red-500 mt-1">
-                {formData.numTeams} players won't fit in a {formData.drawSize}-draw. Increase draw size.
-              </p>
+            {(formData.knockoutFormat || "").includes(",") && (
+              <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both Singles & Doubles selected</p>
             )}
           </div>
         )}
 
-        {/* Davis Cup Format Selector */}
-        {formData.playingFormats?.includes("davis-cup") && (
+        {/* Sub-format for Group+Knockout */}
+        {formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Group Stage Format</label>
+              <div className="flex gap-3">
+                {["Singles", "Doubles"].map((fmt) => {
+                  const formats = (formData.groupStageFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
+                  const isSelected = formats.includes(fmt);
+                  return (
+                    <button key={fmt} type="button"
+                      onClick={() => {
+                        let next;
+                        if (isSelected && formats.length > 1) {
+                          next = formats.filter(f => f !== fmt).join(", ");
+                        } else if (!isSelected) {
+                          next = [...formats, fmt].join(", ");
+                        } else {
+                          return; // Can't deselect last one
+                        }
+                        setFormData(p => ({ ...p, groupStageFormat: next }));
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
+                        isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {fmt}
+                    </button>
+                  );
+                })}
+              </div>
+              {(formData.groupStageFormat || "").includes(",") && (
+                <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both formats selected</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Knockout Format</label>
+              <div className="flex gap-3">
+                {["Singles", "Doubles"].map((fmt) => {
+                  const formats = (formData.knockoutFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
+                  const isSelected = formats.includes(fmt);
+                  return (
+                    <button key={fmt} type="button"
+                      onClick={() => {
+                        let next;
+                        if (isSelected && formats.length > 1) {
+                          next = formats.filter(f => f !== fmt).join(", ");
+                        } else if (!isSelected) {
+                          next = [...formats, fmt].join(", ");
+                        } else {
+                          return;
+                        }
+                        setFormData(p => ({ ...p, knockoutFormat: next }));
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
+                        isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {fmt}
+                    </button>
+                  );
+                })}
+              </div>
+              {(formData.knockoutFormat || "").includes(",") && (
+                <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both formats selected</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Draw Size removed — selected later in the knockout flow based on actual participants */}
+
+        {/* Davis Cup Format Selector — only for racquet sports (TT, Badminton, Tennis etc.)
+            Team sports (Cricket, Football, Kabaddi, Volleyball) play straight Team vs Team — no sub-match formulas */}
+        {formData.playingFormats?.includes("davis-cup") && !isTeamSport && (
           <TeamKnockoutFormatSelector
             value={formData.davisCupFormatId || ""}
             onChange={(fmtId) => setFormData((p) => ({ ...p, davisCupFormatId: fmtId }))}
@@ -1190,7 +1255,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               name="qualifyPerGroup"
               value={formData.qualifyPerGroup}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
             >
               <option value="1">Top 1</option>
               <option value="2">Top 2</option>
@@ -1206,7 +1271,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
             name="cancellationPolicy"
             value={formData.cancellationPolicy}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
           >
             <option value="YES">Allow Cancellation</option>
             <option value="NO">No Cancellation</option>
@@ -1218,12 +1283,12 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
         <div className="flex justify-between items-center border-b border-gray-50 pb-3">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-500" /> Categories
+            <Users className="w-5 h-5 text-emerald-600" /> Categories
           </h3>
           <button
             type="button"
             onClick={addCategory}
-            className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 text-sm font-semibold text-orange-500 hover:text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" /> Add
           </button>
@@ -1237,7 +1302,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                   type="text"
                   value={cat.name}
                   onChange={(e) => handleCategoryChange(idx, "name", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                   placeholder="Category Name (e.g. Under 18)"
                 />
               </div>
@@ -1248,7 +1313,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                   min="0"
                   value={cat.fee}
                   onChange={(e) => handleCategoryChange(idx, "fee", e.target.value)}
-                  className="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
                   placeholder="Fee"
                 />
               </div>
@@ -1271,7 +1336,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
             name="termsAndConditions"
             value={formData.termsAndConditions}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all min-h-[80px] resize-y"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all min-h-[80px] resize-y"
             placeholder="Enter specific rules or terms..."
           />
         </div>
@@ -1356,53 +1421,17 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
           />
         </div>
 
+        {/* Registration Deadline */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tournament Fee</label>
-          <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="number"
-              name="tournamentFee"
-              min="0"
-              value={formData.tournamentFee}
-              onChange={handleInputChange}
-              className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-              placeholder="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Numbers */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-          <Users className="w-5 h-5 text-blue-500" /> Participants
-        </h3>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Number of Teams/Players</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Registration Deadline</label>
           <input
-            type="number"
-            name="numTeams"
-            min="2"
-            value={formData.numTeams}
+            type="datetime-local"
+            name="registrationDeadline"
+            value={formData.registrationDeadline}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-            placeholder="e.g. 16"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Players Per Team</label>
-          <input
-            type="number"
-            name="playerNoValue"
-            min="1"
-            value={formData.playerNoValue}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-            placeholder="e.g. 2"
-          />
+          <p className="text-xs text-gray-400 mt-1">Last date and time for players to register</p>
         </div>
       </div>
     </div>
@@ -1472,7 +1501,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                     onClick={() => goToStep(idx)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       isActive
-                        ? "bg-blue-500 text-white shadow-sm"
+                        ? "bg-orange-500 text-white shadow-sm"
                         : isDone
                         ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer"
                         : "bg-white text-gray-400 border border-gray-200"
@@ -1542,7 +1571,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               {/* Step dots (mobile) */}
               <div className="flex gap-1.5 sm:hidden">
                 {steps.map((_, idx) => (
-                  <div key={idx} className={`w-2 h-2 rounded-full transition-colors ${idx === currentStep ? "bg-blue-500" : idx < currentStep ? "bg-emerald-400" : "bg-gray-300"}`} />
+                  <div key={idx} className={`w-2 h-2 rounded-full transition-colors ${idx === currentStep ? "bg-orange-500" : idx < currentStep ? "bg-emerald-400" : "bg-gray-300"}`} />
                 ))}
               </div>
 
@@ -1559,7 +1588,7 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
                 <button
                   type="button"
                   onClick={goNext}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold shadow-sm transform active:scale-95 transition-all"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-orange-500 hover:bg-orange-500 text-white rounded-xl font-bold shadow-sm transform active:scale-95 transition-all"
                 >
                   Next <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1593,14 +1622,14 @@ function CustomRuleToggle({ label, field, value, onChange }) {
         checked={checked}
         onChange={() => onChange((prev) => ({ ...prev, [field]: !prev[field] }))}
         size="small"
-        sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: "#FF6A00" }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#FF6A00" } }}
+        sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: "#F97316" }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#F97316" } }}
       />
     </div>
   );
 }
 
 function FormatCheck({ color }) {
-  const colors = { blue: "bg-blue-500", orange: "bg-orange-500", purple: "bg-purple-500" };
+  const colors = { blue: "bg-orange-500", orange: "bg-orange-500", purple: "bg-emerald-500" };
   return (
     <div className={`absolute top-3 right-3 w-5 h-5 ${colors[color] || colors.blue} rounded-full flex items-center justify-center`}>
       <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

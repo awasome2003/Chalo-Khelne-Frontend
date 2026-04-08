@@ -157,9 +157,7 @@ const ViewTurf = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(
-        `/api/turfs/${id}/remove-manager/$
-          selectedManagerForRemoval._id
-        }`,
+        `/api/turfs/${id}/remove-manager/${selectedManagerForRemoval._id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -538,7 +536,7 @@ const ViewTurf = () => {
                   Available Sports
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {turf.sports.map((sport, index) => (
+                  {(turf.sports || []).map((sport, index) => (
                     <span
                       key={index}
                       className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
@@ -558,7 +556,10 @@ const ViewTurf = () => {
 
                 <div className="space-y-2">
                   {turf.facilities &&
-                    turf.facilities.map((facility) => (
+                    (Array.isArray(turf.facilities)
+                      ? turf.facilities
+                      : Object.entries(turf.facilities).filter(([, v]) => v).map(([k]) => k)
+                    ).map((facility) => (
                       <div key={facility} className="flex items-center text-sm">
                         <FiCheck className="text-green-500 mr-2" size={14} />
                         <span className="text-gray-700">

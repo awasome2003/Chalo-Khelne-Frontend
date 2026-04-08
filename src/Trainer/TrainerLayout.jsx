@@ -12,7 +12,7 @@ const TrainerLayout = () => {
   return (
     <div
       className="h-screen flex flex-col"
-      style={{ backgroundColor: "#F5F6FA" }}
+      style={{ backgroundColor: "#F5F7FA" }}
     >
       {/* Navbar */}
       <div className="fixed top-0 left-0 w-full z-10">
@@ -24,7 +24,7 @@ const TrainerLayout = () => {
         <div
           className={`w-${
             collapsed ? "16" : ""
-          } text-white h-screen fixed left-0 mt-3 top-16 bg-[#f4f5f6]`}
+          } text-white h-screen fixed left-0 mt-3 top-16 bg-[#F5F7FA]`}
         >
           <TrainerSidebar collapsed={collapsed} toggleSidebar={toggleSidebar} />
         </div>

@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 // TournamentList.js
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -196,7 +197,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       setTournaments(tournaments.filter((tournament) => tournament._id !== id));
     } catch (error) {
       console.error("Error deleting tournament:", error);
-      alert("Failed to delete tournament");
+      toast.error("Failed to delete tournament");
     }
   };
 
@@ -249,7 +250,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       setShowEditModal(true);
     } catch (error) {
       console.error("Error fetching tournament details:", error);
-      alert("Failed to load tournament details");
+      toast.error("Failed to load tournament details");
     }
   };
 
@@ -410,10 +411,10 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
     e.stopPropagation();
     const shareLink = `${window.location.origin}/tournament/${tournament._id}`;
     navigator.clipboard.writeText(shareLink)
-      .then(() => alert(`Tournament link copied to clipboard!\n\n${shareLink}`))
+      .then(() => toast.info(`Tournament link copied to clipboard!\n\n${shareLink}`))
       .catch(err => {
         console.error('Failed to copy: ', err);
-        alert(`Share this tournament link:\n\n${shareLink}`);
+        toast.info(`Share this tournament link:\n\n${shareLink}`);
       });
   };
 
@@ -454,7 +455,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === tab
-                ? "bg-gray-100 text-gray-900 shadow-sm"
+                ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/50"
                 }`}
             >
@@ -471,7 +472,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             <div
               key={tournament._id}
               className={`group relative p-4 rounded-xl border transition-all duration-200 cursor-pointer ${selectedTournament === tournament._id
-                ? "bg-blue-50/50 border-blue-200 shadow-md ring-1 ring-blue-100"
+                ? "bg-orange-50/50 border-orange-200 shadow-md ring-1 ring-orange-100"
                 : "bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md"
                 }`}
               onClick={() => {
@@ -498,7 +499,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             >
               <div className="flex justify-between items-start mb-2">
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedTournament === tournament._id
-                  ? "bg-blue-100 text-blue-700"
+                  ? "bg-orange-100 text-orange-600"
                   : "bg-gray-100 text-gray-500"
                   }`}>
                   {tournament.type === "knockout + group stage" ? "Group + Knockout" : tournament.type}
@@ -520,13 +521,21 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   )}
                   <button
                     onClick={(e) => handleEditClick(tournament._id, e)}
-                    className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-500 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
+                    onClick={(e) => handleQRCodeClick(tournament, e)}
+                    className="p-1.5 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                    title="QR Code"
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={(e) => handleShareClick(tournament, e)}
-                    className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-500 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                    title="Share Link"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
@@ -544,16 +553,40 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 </div>
               </div>
 
-              <h3 className={`text-base font-bold mb-1 truncate ${selectedTournament === tournament._id
-                ? "text-blue-900"
+              <h3 className={`text-base font-bold mb-2 truncate ${selectedTournament === tournament._id
+                ? "text-gray-900"
                 : "text-gray-800"
                 }`}>
                 {tournament.title}
               </h3>
 
-              <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-blue-900/80" : "text-gray-500"}`}>
-                <Trophy className="w-3.5 h-3.5" />
-                <span>{tournament.sportsType}</span>
+              <div className="space-y-1.5">
+                <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-gray-900/80" : "text-gray-500"}`}>
+                  <Trophy className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{tournament.sportsType || "Sport"}</span>
+                </div>
+                {tournament.eventLocation && (
+                  <div className="text-xs flex items-center gap-2 text-gray-400">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{typeof tournament.eventLocation === "string" ? tournament.eventLocation : Array.isArray(tournament.eventLocation) ? tournament.eventLocation[0] : ""}</span>
+                  </div>
+                )}
+                {tournament.startDate && (
+                  <div className="text-xs flex items-center gap-2 text-gray-400">
+                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>
+                      {new Date(tournament.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      {tournament.endDate && tournament.endDate !== tournament.startDate && ` – ${new Date(tournament.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                    </span>
+                    {tournament.participants?.length > 0 && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{tournament.participants.length} players</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Current Stage Badge */}
@@ -561,7 +594,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 <div className="mt-2">
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide ${
                     tournament.currentStage === "group_stage"
-                      ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                      ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
                       : tournament.currentStage === "group_completed"
                       ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                       : tournament.currentStage === "knockout"
@@ -581,9 +614,12 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-48 text-center text-gray-600">
-            <Trophy className="w-12 h-12 mb-3 opacity-20" />
-            <p className="text-sm font-medium">No tournaments found</p>
+          <div className="flex flex-col items-center justify-center h-48 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
+              <Trophy className="w-7 h-7 text-orange-300" />
+            </div>
+            <p className="text-sm font-bold text-gray-700">No {activeTab.toLowerCase()} tournaments</p>
+            <p className="text-xs text-gray-400 mt-1">{activeTab === "Live" ? "No tournaments are currently active" : activeTab === "Upcoming" ? "Create a tournament to see it here" : "Past tournaments will appear here"}</p>
           </div>
         )}
       </div>
@@ -621,7 +657,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
             <button
               onClick={downloadQRCode}
-              className="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition flex items-center justify-center gap-2"
             >
               <Share2 className="w-4 h-4" /> Download QR Code
             </button>
@@ -651,14 +687,14 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   setShowFlowChooser(false);
                   navigate(`/tournament-management/group-stage?tournamentId=${flowChooserTournamentId}`);
                 }}
-                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100 hover:border-blue-400 transition-all group"
+                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-orange-200 bg-orange-50/50 hover:bg-orange-100 hover:border-orange-400 transition-all group"
               >
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-6 h-6 text-orange-500" />
                 </div>
                 <div className="text-left">
-                  <p className="text-base font-bold text-blue-900">Group Stage</p>
-                  <p className="text-xs text-blue-600/70">Manage groups, matches & player progression</p>
+                  <p className="text-base font-bold text-gray-900">Group Stage</p>
+                  <p className="text-xs text-orange-500/70">Manage groups, matches & player progression</p>
                 </div>
               </button>
               <button
@@ -681,14 +717,14 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   setShowFlowChooser(false);
                   navigate(`/tournament-management/direct-knockout?tournamentId=${flowChooserTournamentId}`);
                 }}
-                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-400 transition-all group"
+                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
               >
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Target className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Target className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div className="text-left">
-                  <p className="text-base font-bold text-purple-900">Singles Knockout</p>
-                  <p className="text-xs text-purple-600/70">Direct elimination bracket (16/32/64 draw)</p>
+                  <p className="text-base font-bold text-emerald-900">Singles Knockout</p>
+                  <p className="text-xs text-emerald-600/70">Direct elimination bracket (16/32/64 draw)</p>
                 </div>
               </button>
             </div>

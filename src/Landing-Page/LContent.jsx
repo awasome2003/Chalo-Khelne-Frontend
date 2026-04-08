@@ -14,7 +14,7 @@ const Content = () => {
     { name: "History", active: false },
   ];
   return (
-    <div className="bg-[#F2F4F6] content-box">
+    <div className="bg-[#F5F7FA] content-box">
       <div className="div">
         <Carousel />
       </div>
@@ -27,7 +27,7 @@ const Content = () => {
                 className={`text-[#333] border-0 font-roboto p-[10px] w-[65px] bg-transparent hover:bg-transparent cursor-pointer text-[16px] font-normal leading-normal 
         ${
           TopactiveTab === tab
-            ? "content-tabbing border-b-2 border-[#FF6A00] text-[#FF6A00]"
+            ? "content-tabbing border-b-2 border-orange-500 text-orange-500"
             : ""
         }`}
               >

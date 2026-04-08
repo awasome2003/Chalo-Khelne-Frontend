@@ -16,7 +16,7 @@ const SPORT_UI = {
   "Table Tennis": {
     scoringType: "sets",
     icon: "🏓",
-    color: "#FF6A00",
+    color: "#F97316",
     labels: {
       set: "Set",
       game: "Game",
@@ -269,21 +269,103 @@ const SPORT_UI = {
       periodDuration: 20,
     },
   },
+
+  "Hockey": {
+    scoringType: "time",
+    icon: "🏑",
+    color: "#2196F3",
+    labels: {
+      period: "Half",
+      score: "Goal",
+      matchResult: "Goals",
+    },
+    scoring: {
+      inputType: "event",
+      periods: 2,
+      periodDuration: 35,
+      extraTime: true,
+      penalties: true,
+    },
+    defaults: {
+      periods: 2,
+      periodDuration: 35,
+    },
+  },
+
+  "Snooker": {
+    scoringType: "single",
+    icon: "���",
+    color: "#607D8B",
+    labels: {
+      set: "Frame",
+      score: "Point",
+      matchResult: "Frames",
+    },
+    scoring: {
+      inputType: "manual",
+      showBreakScore: true,
+    },
+    defaults: {
+      totalSets: 5,
+      setsToWin: 3,
+    },
+  },
+
+  "Turf Games": {
+    scoringType: "single",
+    icon: "🏟️",
+    color: "#009688",
+    labels: {
+      set: "Round",
+      score: "Point",
+      matchResult: "Points",
+    },
+    scoring: {
+      inputType: "manual",
+    },
+    defaults: {},
+  },
+
+  "Cricket Nets": {
+    scoringType: "single",
+    icon: "🏏",
+    color: "#8BC34A",
+    labels: {
+      set: "Session",
+      score: "Score",
+      matchResult: "Score",
+    },
+    scoring: {
+      inputType: "manual",
+    },
+    defaults: {},
+  },
 };
 
 /**
- * Get sport config. Falls back to generic sets-based config.
+ * Get sport config. Throws if sport is not recognized (no silent fallback).
+ * Use `getSportConfigSafe` if you need graceful degradation for legacy data.
  */
 export function getSportConfig(sportName) {
-  return SPORT_UI[sportName] || {
-    scoringType: "sets",
-    icon: "🏅",
-    color: "#6B7280",
-    labels: { set: "Set", game: "Game", point: "Point", matchResult: "Sets" },
-    scoring: { inputType: "manual", showDeuce: false, showService: false, showGameScore: true },
-    defaults: { totalSets: 3, setsToWin: 2, gamesPerSet: 3, gamesToWin: 2, pointsToWin: 11, marginToWin: 2 },
-  };
+  if (!sportName) {
+    console.error("[sportUIConfig] getSportConfig called with no sportName — using generic fallback");
+    return FALLBACK_CONFIG;
+  }
+  const config = SPORT_UI[sportName];
+  if (!config) {
+    return FALLBACK_CONFIG;
+  }
+  return config;
 }
+
+const FALLBACK_CONFIG = {
+  scoringType: "single",
+  icon: "🏅",
+  color: "#6B7280",
+  labels: { set: "Round", game: "Game", score: "Score", point: "Point", matchResult: "Score" },
+  scoring: { inputType: "manual", showDeuce: false, showService: false, showGameScore: false },
+  defaults: {},
+};
 
 /**
  * Get the scoring renderer component name for a sport.

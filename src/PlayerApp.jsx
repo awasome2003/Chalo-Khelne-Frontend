@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import Layout from "./Player/PLayout";
+import { AppLayout } from "./shared/layout";
 import PTournamentManagement from "./Player/PTournamentManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PHome from "./Player/PHome";
@@ -13,7 +13,7 @@ import PProfile from "./Player/PProfile";
 const PlayerApp = () => {
   return (
     <Routes>
-      <Route element={<Layout />}>
+      <Route element={<AppLayout role="player" />}>
         <Route element={<ProtectedRoute />}>
         <Route 
             path="/phome" 

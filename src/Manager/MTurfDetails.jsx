@@ -12,7 +12,6 @@ const MTurfDetails = () => {
       try {
         const response = await fetch(`/api/turfs/${id}`);
         const data = await response.json();
-        console.log(data)
         setTurf(data);
       } catch (error) {
         console.error("Error fetching turf details:", error);
@@ -26,7 +25,6 @@ const MTurfDetails = () => {
         const response = await fetch(`/api/players/turf-bookings/turf/${id}`);
         const data = await response.json();
         setBookings(data.bookings);
-        console.log('turf bookings details', data)
       } catch (error) {
         console.error("Error fetching bookings:", error);
       }
@@ -172,7 +170,7 @@ const MTurfDetails = () => {
                           booking.status === "confirmed" ? "bg-green-100 text-green-700" :
                           booking.status === "pending" ? "bg-yellow-100 text-yellow-700" :
                           booking.status === "cancelled" ? "bg-red-100 text-red-700" :
-                          booking.status === "completed" ? "bg-blue-100 text-blue-700" :
+                          booking.status === "completed" ? "bg-orange-100 text-orange-600" :
                           "bg-gray-100 text-gray-700"
                         }`}>
                           {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
@@ -201,7 +199,7 @@ const MTurfDetails = () => {
                           <>
                             <button
                               onClick={() => handleStatusUpdate(booking._id, "completed")}
-                              className="bg-blue-500 text-white px-3 py-1 rounded mr-2 text-sm"
+                              className="bg-orange-500 text-white px-3 py-1 rounded mr-2 text-sm"
                             >
                               Complete
                             </button>

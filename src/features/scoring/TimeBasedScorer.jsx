@@ -77,7 +77,7 @@ export default function TimeBasedScorer({
             key={p}
             onClick={() => setCurrentPeriod(p)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition w-auto ${
-              currentPeriod === p ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              currentPeriod === p ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
             {labels.period} {p}
@@ -176,7 +176,7 @@ export default function TimeBasedScorer({
         <button
           onClick={handleSubmit}
           disabled={submitting || (player1Score === 0 && player2Score === 0)}
-          className="flex-1 bg-[#004E93] text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
             <><RefreshCcw className="w-4 h-4 animate-spin" /> Saving...</>

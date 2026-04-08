@@ -85,7 +85,7 @@ export default function SocialFeed({
       {canCreate && !readOnly && (
         <button
           onClick={() => setShowCreate(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-[#004E93] hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-40"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-40"
         >
           <Plus className="w-6 h-6" />
         </button>

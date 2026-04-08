@@ -66,7 +66,7 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
                 onClick={() => setActiveRound2Group(group._id)}
                 className={`px-4 py-2 text-sm w-auto font-semibold rounded-lg transition-all whitespace-nowrap ${
                   activeRound2Group === group._id
-                    ? "bg-[#1D6A8B] text-white shadow-sm"
+                    ? "bg-[#F97316] text-white shadow-sm"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -77,7 +77,7 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
 
           {currentRound2Group && (
             <div className="w-full p-4 bg-white rounded-2xl">
-              <h2 className="text-[18px] font-[500] text-[#004E93] mb-0">
+              <h2 className="text-[18px] font-[500] text-orange-500 mb-0">
                 {currentRound2Group.groupName || `Round 2 Group ${round2Groups.indexOf(currentRound2Group) + 1}`}
               </h2>
 
@@ -100,8 +100,8 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
                 </button>
 
                 <button
-                  className="w-full py-2 rounded-full text-[16px] font-[400] flex items-center justify-center gap-3 text-[#004E93] bg-white hover:bg-transparent"
-                  style={{ border: "1px solid #004E93" }}
+                  className="w-full py-2 rounded-full text-[16px] font-[400] flex items-center justify-center gap-3 text-orange-500 bg-white hover:bg-transparent"
+                  style={{ border: "1px solid #F97316" }}
                   onClick={() =>
                     navigate(`/tournament-management/group-stage/${tournamentId}/${activeRound2Group}/points-table`, {
                       state: { tournamentId, groupId: activeRound2Group, round: 2 },
@@ -114,7 +114,7 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
                 {round2MatchesData[activeRound2Group]?.length > 0 &&
                   round2MatchesData[activeRound2Group].some((m) => m.status !== "completed" && m.status !== "COMPLETED") && (
                     <button
-                      className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-md"
+                      className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
                       onClick={onOpenBulkScore}
                     >
                       <FiCheck /> Bulk Score Upload
@@ -125,7 +125,7 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
               {/* Matches */}
               {round2MatchesData[activeRound2Group]?.length > 0 && (
                 <div className="mt-6">
-                  <h5 className="mb-3 text-lg font-semibold text-[#004E93]">
+                  <h5 className="mb-3 text-lg font-semibold text-orange-500">
                     Matches — {currentRound2Group.groupName}
                   </h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -183,13 +183,13 @@ function Round2MatchCard({ match, onClick, formatDate, formatTime }) {
     <div
       className={`shadow-md rounded-lg p-4 cursor-pointer ${
         isCompleted ? "bg-green-50 border-l-4 border-green-500" :
-        isInProgress ? "bg-yellow-50 border-l-4 border-yellow-500" : "bg-[#F2F4F6]"
+        isInProgress ? "bg-yellow-50 border-l-4 border-yellow-500" : "bg-[#F5F7FA]"
       }`}
       onClick={onClick}
     >
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
-          <span className="bg-purple-100 text-purple-700 rounded-full text-[12px] font-[500] px-2 py-1">
+          <span className="bg-emerald-100 text-emerald-700 rounded-full text-[12px] font-[500] px-2 py-1">
             R2 - M{match.matchNumber}
           </span>
           {isCompleted && <span className="bg-green-500 text-white text-[12px] px-2 py-1 rounded-full">Completed</span>}
@@ -197,14 +197,14 @@ function Round2MatchCard({ match, onClick, formatDate, formatTime }) {
         </div>
       </div>
 
-      <p className="text-center text-[16px] text-[#333] mb-2">
+      <p className="text-center text-[16px] text-gray-900 mb-2">
         {formatDate(match.startTime)} {formatTime(match.startTime) && `• ${formatTime(match.startTime)}`}
       </p>
 
       <div className="flex flex-col items-center">
-        <span className="font-[500] text-[14px] text-[#004E93]">{match.player1?.userName || "Player 1"}</span>
-        <span className="text-[14px] text-[#333] my-1">VS</span>
-        <span className="font-[500] text-[14px] text-[#004E93]">{match.player2?.userName || "Player 2"}</span>
+        <span className="font-[500] text-[14px] text-orange-500">{match.player1?.userName || "Player 1"}</span>
+        <span className="text-[14px] text-gray-900 my-1">VS</span>
+        <span className="font-[500] text-[14px] text-orange-500">{match.player2?.userName || "Player 2"}</span>
       </div>
 
       {isCompleted && match.result?.finalScore && (
@@ -218,25 +218,25 @@ function Round2MatchCard({ match, onClick, formatDate, formatTime }) {
 
 function DirectKnockoutSelector({ availablePlayers, selectedPlayers, setSelectedPlayers, validationStatus, validatePlayers, groups, selectedCategory, onCreateKnockout }) {
   return (
-    <div className="mt-8 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+    <div className="mt-8 bg-gradient-to-r from-orange-50 to-orange-50 border border-emerald-200 rounded-xl p-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
           <FaMedal className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-purple-900">Direct Knockout Mode</h3>
-          <p className="text-sm text-purple-700">Skip Round 2 groups — Go straight to knockout bracket!</p>
+          <h3 className="text-xl font-bold text-emerald-900">Direct Knockout Mode</h3>
+          <p className="text-sm text-emerald-700">Skip Round 2 groups — Go straight to knockout bracket!</p>
         </div>
       </div>
 
-      <h4 className="text-lg font-semibold text-purple-800 mb-3">
+      <h4 className="text-lg font-semibold text-emerald-800 mb-3">
         Select Players ({selectedPlayers.length} selected)
       </h4>
 
       {/* Validation */}
       <div className={`p-4 rounded-lg mb-4 border-2 ${
         validationStatus.isValid ? "bg-green-50 border-green-300 text-green-800" :
-        selectedPlayers.length === 0 ? "bg-blue-50 border-blue-200 text-blue-700" :
+        selectedPlayers.length === 0 ? "bg-orange-50 border-orange-200 text-orange-600" :
         "bg-red-50 border-red-300 text-red-800"
       }`}>
         <div className="text-sm font-semibold">{validationStatus.message}</div>
@@ -264,12 +264,12 @@ function DirectKnockoutSelector({ availablePlayers, selectedPlayers, setSelected
                   validatePlayers(next);
                 }}
                 className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                  isSelected ? "border-purple-500 bg-purple-100" : "border-gray-200 bg-white hover:border-purple-300"
+                  isSelected ? "border-emerald-500 bg-emerald-100" : "border-gray-200 bg-white hover:border-emerald-300"
                 }`}
               >
                 <div className="text-sm font-medium">{player.userName}</div>
                 <div className="text-xs text-gray-500">{player.sourceGroup}</div>
-                {isSelected && <div className="text-xs text-purple-600 font-medium mt-1">Selected</div>}
+                {isSelected && <div className="text-xs text-emerald-600 font-medium mt-1">Selected</div>}
               </div>
             );
           })}
@@ -289,7 +289,7 @@ function DirectKnockoutSelector({ availablePlayers, selectedPlayers, setSelected
             }}
             disabled={availablePlayers.length < count}
             className={`px-3 py-2 rounded-lg text-sm font-medium ${
-              availablePlayers.length >= count ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-gray-200 text-gray-500 cursor-not-allowed"
+              availablePlayers.length >= count ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-gray-200 text-gray-500 cursor-not-allowed"
             }`}
           >
             Select {count}
@@ -307,7 +307,7 @@ function DirectKnockoutSelector({ availablePlayers, selectedPlayers, setSelected
         onClick={onCreateKnockout}
         disabled={!validationStatus.isValid}
         className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-3 ${
-          validationStatus.isValid ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          validationStatus.isValid ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-gray-300 text-gray-500 cursor-not-allowed"
         }`}
       >
         <FaMedal className="w-5 h-5" /> Create Direct Knockout

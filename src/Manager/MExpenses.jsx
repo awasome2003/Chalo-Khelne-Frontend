@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -140,7 +141,7 @@ export default function MExpenses() {
   const handleSaveExpense = async () => {
     try {
       if (!expenseForm.title || !expenseForm.amount || !expenseForm.category || !expenseForm.expenseDate) {
-        alert("Please fill title, amount, category, and date");
+        toast.warn("Please fill title, amount, category, and date");
         return;
       }
 
@@ -157,7 +158,7 @@ export default function MExpenses() {
       fetchExpenses();
       fetchAnalytics();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -168,7 +169,7 @@ export default function MExpenses() {
       fetchExpenses();
       fetchAnalytics();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -200,13 +201,13 @@ export default function MExpenses() {
 
   const handleSaveCategory = async () => {
     try {
-      if (!categoryForm.name) { alert("Category name is required"); return; }
+      if (!categoryForm.name) { toast.warn("Category name is required"); return; }
       await axios.post("/api/expenses/categories/create", categoryForm, { headers });
       setShowCategoryModal(false);
       setCategoryForm({ name: "", description: "" });
       fetchCategories();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -216,7 +217,7 @@ export default function MExpenses() {
       await axios.delete(`/api/expenses/categories/${id}`, { headers });
       fetchCategories();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -237,7 +238,7 @@ export default function MExpenses() {
   const handleRecordPayment = async () => {
     try {
       if (!paymentForm.amount || !paymentForm.paymentMode) {
-        alert("Amount and payment mode are required");
+        toast.warn("Amount and payment mode are required");
         return;
       }
       await axios.post("/api/expenses/payment", {
@@ -248,7 +249,7 @@ export default function MExpenses() {
       fetchExpenses();
       fetchAnalytics();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -259,7 +260,7 @@ export default function MExpenses() {
       setExpensePayments(res.data.payments || []);
       setShowPaymentHistory(true);
     } catch (err) {
-      alert("Error fetching payments");
+      toast.error("Error fetching payments");
     }
   };
 
@@ -285,7 +286,7 @@ export default function MExpenses() {
           </button>
           <button
             onClick={() => { resetExpenseForm(); setShowExpenseModal(true); }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 w-auto"
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-2 w-auto"
           >
             <Plus size={16} /> Add Expense
           </button>
@@ -297,8 +298,8 @@ export default function MExpenses() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Receipt size={20} className="text-blue-600" />
+              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Receipt size={20} className="text-orange-500" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Total Expenses</p>
@@ -333,8 +334,8 @@ export default function MExpenses() {
           </div>
           <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <BarChart3 size={20} className="text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <BarChart3 size={20} className="text-emerald-600" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Categories</p>
@@ -355,7 +356,7 @@ export default function MExpenses() {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all w-auto ${
-              activeTab === tab.key ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              activeTab === tab.key ? "bg-white text-orange-500 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
             {tab.icon} {tab.label}
@@ -377,7 +378,7 @@ export default function MExpenses() {
                     placeholder="Search expenses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                   />
                 </div>
               </form>
@@ -449,7 +450,7 @@ export default function MExpenses() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                          <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full text-xs font-medium">
                             <Tag size={12} /> {expense.category?.name || "—"}
                           </span>
                         </td>
@@ -487,7 +488,7 @@ export default function MExpenses() {
                             <button
                               onClick={() => viewPaymentHistory(expense)}
                               title="Payment History"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors w-auto"
+                              className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors w-auto"
                             >
                               <DollarSign size={16} />
                             </button>
@@ -548,7 +549,7 @@ export default function MExpenses() {
           {/* By Category */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <Tag size={20} className="text-blue-600" /> Expenses by Category
+              <Tag size={20} className="text-orange-500" /> Expenses by Category
             </h3>
             {analytics.byCategory?.length > 0 ? (
               <div className="space-y-3">
@@ -559,7 +560,7 @@ export default function MExpenses() {
                       <div className="w-32 text-sm font-medium text-gray-700 truncate">{cat._id}</div>
                       <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
                         <div
-                          className="h-full bg-blue-500 rounded-full flex items-center justify-end pr-2"
+                          className="h-full bg-orange-500 rounded-full flex items-center justify-end pr-2"
                           style={{ width: `${Math.max(pct, 5)}%` }}
                         >
                           <span className="text-[10px] font-bold text-white">{pct.toFixed(1)}%</span>
@@ -579,7 +580,7 @@ export default function MExpenses() {
           {/* By Event Type */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <TrendingUp size={20} className="text-purple-600" /> Expenses by Event Type
+              <TrendingUp size={20} className="text-emerald-600" /> Expenses by Event Type
             </h3>
             {analytics.byEventType?.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -636,7 +637,7 @@ export default function MExpenses() {
                   type="text"
                   value={expenseForm.title}
                   onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   placeholder="e.g., Shuttle cocks for tournament"
                 />
               </div>
@@ -648,7 +649,7 @@ export default function MExpenses() {
                     min="0"
                     value={expenseForm.amount}
                     onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                     placeholder="0"
                   />
                 </div>
@@ -658,7 +659,7 @@ export default function MExpenses() {
                     type="date"
                     value={expenseForm.expenseDate}
                     onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
               </div>
@@ -668,7 +669,7 @@ export default function MExpenses() {
                   <select
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   >
                     <option value="">Select category</option>
                     {categories.map((c) => (
@@ -681,7 +682,7 @@ export default function MExpenses() {
                   <select
                     value={expenseForm.eventType}
                     onChange={(e) => setExpenseForm({ ...expenseForm, eventType: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   >
                     {EVENT_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -695,7 +696,7 @@ export default function MExpenses() {
                   type="text"
                   value={expenseForm.eventName}
                   onChange={(e) => setExpenseForm({ ...expenseForm, eventName: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   placeholder="e.g., State Badminton Championship 2026"
                 />
               </div>
@@ -705,7 +706,7 @@ export default function MExpenses() {
                   type="text"
                   value={expenseForm.vendor}
                   onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   placeholder="e.g., Decathlon, Local Sports Shop"
                 />
               </div>
@@ -715,7 +716,7 @@ export default function MExpenses() {
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                   rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 resize-none"
                   placeholder="Optional notes..."
                 />
               </div>
@@ -724,7 +725,7 @@ export default function MExpenses() {
               <button onClick={() => { setShowExpenseModal(false); resetExpenseForm(); }} className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-auto">
                 Cancel
               </button>
-              <button onClick={handleSaveExpense} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 w-auto">
+              <button onClick={handleSaveExpense} className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 w-auto">
                 {editingExpense ? "Update" : "Add Expense"}
               </button>
             </div>
@@ -750,9 +751,9 @@ export default function MExpenses() {
                   value={categoryForm.name}
                   onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
                   placeholder="New category name..."
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                 />
-                <button onClick={handleSaveCategory} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 w-auto">
+                <button onClick={handleSaveCategory} className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 w-auto">
                   Add
                 </button>
               </div>
@@ -797,7 +798,7 @@ export default function MExpenses() {
                   min="0"
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                 />
               </div>
               <div>
@@ -805,7 +806,7 @@ export default function MExpenses() {
                 <select
                   value={paymentForm.paymentMode}
                   onChange={(e) => setPaymentForm({ ...paymentForm, paymentMode: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                 >
                   {PAYMENT_MODES.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -818,7 +819,7 @@ export default function MExpenses() {
                   type="date"
                   value={paymentForm.paymentDate}
                   onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                 />
               </div>
               <div>
@@ -827,7 +828,7 @@ export default function MExpenses() {
                   type="text"
                   value={paymentForm.transactionId}
                   onChange={(e) => setPaymentForm({ ...paymentForm, transactionId: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   placeholder="Optional"
                 />
               </div>
@@ -837,7 +838,7 @@ export default function MExpenses() {
                   type="text"
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400"
                   placeholder="Optional"
                 />
               </div>

@@ -1,4 +1,5 @@
 import { Radio, Trophy, Clock } from "lucide-react";
+import { readMatchResult } from "../../shared/utils/matchResultUtils";
 
 export default function MatchCard({ match, onClick, dark = false }) {
   const p1 = match.player1?.userName || match.player1?.playerName || "TBD";
@@ -7,12 +8,15 @@ export default function MatchCard({ match, onClick, dark = false }) {
   const isLive = status === "IN_PROGRESS";
   const isComp = status === "COMPLETED";
 
-  const winner = match.winner
-    ? typeof match.winner === "object" ? (match.winner.playerName || match.winner.userName) : match.winner
+  // Sport-aware result reading
+  const matchResult = readMatchResult(match);
+
+  const winner = matchResult?.winner
+    ? typeof matchResult.winner === "object" ? (matchResult.winner.playerName || matchResult.winner.userName) : matchResult.winner
     : null;
 
-  const score = match.result?.finalScore
-    ? `${match.result.finalScore.player1Sets}-${match.result.finalScore.player2Sets}`
+  const score = matchResult?.completed
+    ? `${matchResult.player1Score}-${matchResult.player2Score}`
     : null;
 
   const timeStr = match.startTime
@@ -51,7 +55,7 @@ export default function MatchCard({ match, onClick, dark = false }) {
           )}
           {match.groupName && (
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-              dark ? "bg-[#004E93]/20 text-blue-400" : "bg-blue-50 text-blue-600"
+              dark ? "bg-orange-500/20 text-blue-400" : "bg-blue-50 text-blue-600"
             }`}>
               {match.groupName}
             </span>
@@ -97,7 +101,7 @@ export default function MatchCard({ match, onClick, dark = false }) {
           {score ? (
             <span className={`px-3 py-1.5 rounded-xl font-mono text-sm font-black tracking-wider ${
               dark
-                ? "bg-gradient-to-r from-[#FF6A00] to-[#FF9D32] text-white shadow-lg shadow-orange-500/20"
+                ? "bg-gradient-to-r from-orange-500 to-[#FF9D32] text-white shadow-lg shadow-orange-500/20"
                 : "bg-gray-900 text-white"
             }`}>
               {score}

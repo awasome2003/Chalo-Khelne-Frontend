@@ -85,7 +85,7 @@ export default function ChatPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-gray-800 text-sm truncate">{chat.name}</h2>
-              {isOwner && <Crown className="w-3.5 h-3.5 text-[#FF6A00]" />}
+              {isOwner && <Crown className="w-3.5 h-3.5 text-orange-500" />}
             </div>
             <p className="text-xs text-gray-400">{chat.members?.length || 0} members {isOwner && "· You own this chat"}</p>
           </div>
@@ -94,7 +94,7 @@ export default function ChatPage() {
             {isOwner && (
               <>
                 <button onClick={() => setShowAddMember(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-xl transition w-auto">
+                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl transition w-auto">
                   <UserPlus className="w-4 h-4" /> Add
                 </button>
                 <button onClick={() => setShowDeleteConfirm(true)}
@@ -104,7 +104,7 @@ export default function ChatPage() {
               </>
             )}
             <button onClick={() => setShowMembers(!showMembers)}
-              className={`p-2 rounded-xl transition w-auto ${showMembers ? "bg-[#004E93] text-white" : "hover:bg-gray-100 text-gray-500"}`}>
+              className={`p-2 rounded-xl transition w-auto ${showMembers ? "bg-orange-500 text-white" : "hover:bg-gray-100 text-gray-500"}`}>
               <Users className="w-5 h-5" />
             </button>
           </div>
@@ -143,13 +143,13 @@ export default function ChatPage() {
             {(chat.members || []).map((member) => (
               <div key={member.userId} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 transition group">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {member.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{member.name}</p>
-                      {member.userId === chat.createdBy && <Crown className="w-3 h-3 text-[#FF6A00] flex-shrink-0" />}
+                      {member.userId === chat.createdBy && <Crown className="w-3 h-3 text-orange-500 flex-shrink-0" />}
                     </div>
                     <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded capitalize">{member.role}</span>
                   </div>
@@ -166,7 +166,7 @@ export default function ChatPage() {
           {isOwner && (
             <div className="p-3 border-t border-gray-100">
               <button onClick={() => setShowAddMember(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-xl transition">
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl transition">
                 <UserPlus className="w-4 h-4" /> Add Member
               </button>
             </div>
@@ -188,7 +188,7 @@ export default function ChatPage() {
               <div className="relative mb-4">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type="text" value={searchQuery} onChange={(e) => handleSearch(e.target.value)} placeholder="Search by name..." autoFocus
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
               </div>
               <div className="max-h-64 overflow-y-auto space-y-1">
                 {searching && <div className="text-center py-4"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></div>}
@@ -196,7 +196,7 @@ export default function ChatPage() {
                 {searchResults.map((user) => (
                   <div key={user._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-xs font-bold">
                         {(user.name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -205,7 +205,7 @@ export default function ChatPage() {
                       </div>
                     </div>
                     <button onClick={() => handleAddMember(user)} disabled={addMemberMutation.isPending}
-                      className="px-3 py-1.5 bg-[#004E93] hover:bg-[#073E73] text-white text-xs font-semibold rounded-lg transition w-auto disabled:opacity-50">
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg transition w-auto disabled:opacity-50">
                       Add
                     </button>
                   </div>

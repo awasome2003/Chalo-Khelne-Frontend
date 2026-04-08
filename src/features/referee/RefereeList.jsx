@@ -49,7 +49,7 @@ export default function RefereeList({ canManage = false, className = "" }) {
         {canManage && (
           <button
             onClick={() => setShowCreate(true)}
-            className="bg-[#004E93] text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-blue-800 transition w-auto"
+            className="bg-orange-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-blue-800 transition w-auto"
           >
             <Plus className="w-4 h-4" /> Create Request
           </button>
@@ -76,7 +76,7 @@ export default function RefereeList({ canManage = false, className = "" }) {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition w-auto flex items-center gap-2 ${
-                activeTab === tab.key ? "bg-[#004E93] text-white" : "text-gray-600 hover:bg-gray-100"
+                activeTab === tab.key ? "bg-orange-500 text-white" : "text-gray-600 hover:bg-gray-100"
               }`}
             >
               {tab.label}

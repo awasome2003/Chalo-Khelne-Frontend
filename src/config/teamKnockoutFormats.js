@@ -198,6 +198,36 @@ const TEAM_KNOCKOUT_FORMATS = [
     ],
   },
   {
+    id: "doubles_3p_bo5_v2",
+    name: "3-Player Mixed — Best of 5 (Classic)",
+    shortName: "3P Classic BO5",
+    description: "A vs X, B vs Y, doubles pick (AB or BC), cross A vs Y, then C vs Z decider.",
+    totalSets: 5,
+    setsToWin: 3,
+    hasDoubles: true,
+    minPlayers: 3,
+    sets: [
+      { setNumber: 1, type: "singles", label: "Singles A vs X", home: ["A"], away: ["X"], isDecider: false },
+      { setNumber: 2, type: "singles", label: "Singles B vs Y", home: ["B"], away: ["Y"], isDecider: false },
+      {
+        setNumber: 3,
+        type: "doubles",
+        label: "Doubles (Captain's Choice)",
+        isDecider: false,
+        requiresSelection: true,
+        options: [
+          { id: "ab_xz", label: "A+B vs X+Z", home: ["A", "B"], away: ["X", "Z"] },
+          { id: "bc_yx", label: "B+C vs Y+X", home: ["B", "C"], away: ["Y", "X"] },
+          { id: "ac_xy", label: "A+C vs X+Y", home: ["A", "C"], away: ["X", "Y"] },
+        ],
+        home: ["A", "B"],
+        away: ["X", "Z"],
+      },
+      { setNumber: 4, type: "singles", label: "Singles A vs Y", home: ["A"], away: ["Y"], isDecider: false },
+      { setNumber: 5, type: "singles", label: "Singles C vs Z", home: ["C"], away: ["Z"], isDecider: true },
+    ],
+  },
+  {
     id: "doubles_3p_bo7",
     name: "3-Player Mixed — Best of 7",
     shortName: "3P Mixed BO7",
@@ -299,6 +329,7 @@ export function formatIdToLegacy(formatId) {
     singles_3p_bo3: "Singles - 3 Sets",
     singles_3p_bo5: "Singles - 5 Sets",
     doubles_3p_bo5: "Doubles - 5 Sets",
+    doubles_3p_bo5_v2: "Doubles - 5 Sets",
     doubles_3p_bo7: "Doubles - 5 Sets",
   };
   return map[formatId] || "Singles - 3 Sets";

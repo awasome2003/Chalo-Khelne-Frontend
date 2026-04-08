@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Menu, Loader2, Send, ArrowRight, Trophy, MapPin, Zap, Newspaper, Dumbbell } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import Login from "../components/Login";
-import Logo from "../assets/sportapp_logo.svg";
+import { AuthPopup as Login } from "../components/Login";
 
 const tabIcons = {
   home: Zap,
@@ -89,27 +88,27 @@ const Navbar = () => {
         <div className="px-3 sm:px-5 lg:px-8">
           <div className={`relative flex items-center justify-between px-4 sm:px-6 py-2.5 rounded-2xl transition-all duration-500 ${
             scrolled
-              ? "bg-brand-950/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/[0.06]"
-              : "bg-brand-950/80 backdrop-blur-lg border border-white/[0.03]"
+              ? "bg-gray-950/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/[0.06]"
+              : "bg-gray-950/80 backdrop-blur-lg border border-white/[0.03]"
           }`}>
 
             {/* Accent line at top */}
-            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-accent-500/40 to-transparent rounded-full" />
+            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-orange-500/40 to-transparent rounded-full" />
 
             {/* Left: Logo */}
             <Link to="/l/home" className="flex items-center gap-3 group shrink-0">
               <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center p-2 shadow-lg shadow-accent-500/30 group-hover:shadow-accent-500/50 group-hover:scale-105 transition-all duration-300">
-                  <img src={Logo} alt="Logo" className="w-full h-full invert brightness-0" />
+                <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 group-hover:scale-105 transition-all duration-300">
+                  <img src="/sportapp_logo.png" alt="CK" className="w-full h-full object-contain" />
                 </div>
                 {/* Live dot */}
-                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-brand-950" />
+                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-gray-950" />
               </div>
               <div className="hidden sm:flex flex-col">
                 <span className="text-[15px] font-extrabold text-white tracking-tight leading-none">
-                  Chalo<span className="text-accent-400">Khelne</span>
+                  Chalo<span className="text-orange-400">Khelne</span>
                 </span>
-                <span className="text-[9px] font-semibold text-brand-400/60 uppercase tracking-[0.15em] mt-0.5">
+                <span className="text-[9px] font-semibold text-gray-400/60 uppercase tracking-[0.15em] mt-0.5">
                   Sports Platform
                 </span>
               </div>
@@ -126,18 +125,18 @@ const Navbar = () => {
                       key={tab.key}
                       onClick={() => navigate(tab.path)}
                       className={`relative px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-300 flex items-center gap-2 ${
-                        isActive ? "text-white" : "text-brand-300/60 hover:text-white"
+                        isActive ? "text-white" : "text-gray-300/60 hover:text-white"
                       }`}
                     >
                       {isActive && (
                         <motion.div
                           layoutId="navActive"
-                          className="absolute inset-0 bg-gradient-to-r from-brand-800/80 to-brand-700/50 rounded-lg border border-brand-600/20"
+                          className="absolute inset-0 bg-orange-500/15 rounded-lg border border-orange-500/20"
                           transition={{ type: "spring", stiffness: 400, damping: 30 }}
                         />
                       )}
                       <span className="relative z-10 flex items-center gap-1.5">
-                        {Icon && <Icon className={`w-3.5 h-3.5 ${isActive ? "text-accent-400" : ""}`} />}
+                        {Icon && <Icon className={`w-3.5 h-3.5 ${isActive ? "text-orange-400" : ""}`} />}
                         {tab.label}
                       </span>
                     </button>
@@ -153,8 +152,8 @@ const Navbar = () => {
                 onClick={() => setSearchOpen(!searchOpen)}
                 className={`hidden md:flex w-9 h-9 items-center justify-center rounded-xl transition-all duration-300 ${
                   searchOpen
-                    ? "bg-brand-600/20 text-brand-300 ring-1 ring-brand-500/20"
-                    : "bg-white/[0.03] text-brand-300/50 hover:text-white hover:bg-white/[0.06]"
+                    ? "bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/20"
+                    : "bg-white/[0.03] text-gray-300/50 hover:text-white hover:bg-white/[0.06]"
                 }`}
               >
                 {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
@@ -163,7 +162,7 @@ const Navbar = () => {
               {/* Contact */}
               <button
                 onClick={() => setShowInquiry(true)}
-                className="hidden md:flex px-3.5 py-2 text-[13px] font-medium text-brand-300/60 hover:text-white rounded-xl hover:bg-white/[0.04] transition-all"
+                className="hidden md:flex px-3.5 py-2 text-[13px] font-medium text-gray-300/60 hover:text-white rounded-xl hover:bg-white/[0.04] transition-all"
               >
                 Contact
               </button>
@@ -174,23 +173,14 @@ const Navbar = () => {
               {/* Login */}
               <button
                 onClick={() => setShowLogin(true)}
-                className="px-4 py-2 text-[13px] font-semibold text-brand-200 bg-white/[0.04] hover:bg-white/[0.08] rounded-xl border border-white/[0.06] hover:border-white/[0.1] transition-all"
+                className="px-5 py-2 text-[13px] font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm shadow-orange-500/20 hover:shadow-orange-500/30 transition-all active:scale-[0.97] w-auto"
               >
-                Log in
-              </button>
-
-              {/* CTA */}
-              <button
-                onClick={() => navigate("/register")}
-                className="hidden sm:flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold text-white bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 rounded-xl shadow-lg shadow-accent-600/25 hover:shadow-accent-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
-              >
-                Get Started
-                <ArrowRight className="w-3.5 h-3.5" />
+                Sign In
               </button>
 
               {/* Mobile hamburger */}
               <button
-                className="lg:hidden flex w-9 h-9 items-center justify-center rounded-xl bg-white/[0.04] text-brand-300/60 hover:text-white hover:bg-white/[0.08] transition-all"
+                className="lg:hidden flex w-9 h-9 items-center justify-center rounded-xl bg-white/[0.04] text-gray-300/60 hover:text-white hover:bg-white/[0.08] transition-all"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 <AnimatePresence mode="wait">
@@ -228,20 +218,20 @@ const Navbar = () => {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed top-20 left-1/2 -translate-x-1/2 z-[99] w-full max-w-lg px-4"
             >
-              <div className="bg-brand-950 border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+              <div className="bg-gray-950 border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
                 {/* Search input */}
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.04]">
-                  <Search className="w-5 h-5 text-brand-400 shrink-0" />
+                  <Search className="w-5 h-5 text-gray-400 shrink-0" />
                   <input
                     type="text"
                     autoFocus
                     placeholder="Search tournaments, venues, players..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="flex-1 bg-transparent text-sm text-white placeholder:text-brand-300/40 outline-none"
+                    className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-300/40 outline-none"
                   />
                   {query && (
-                    <button onClick={() => { setQuery(""); setSuggestions(null); }} className="text-brand-300/40 hover:text-white transition-colors">
+                    <button onClick={() => { setQuery(""); setSuggestions(null); }} className="text-gray-300/40 hover:text-white transition-colors">
                       <X className="w-4 h-4" />
                     </button>
                   )}
@@ -252,15 +242,15 @@ const Navbar = () => {
                   <div className="max-h-80 overflow-y-auto">
                     {Object.values(suggestions).every((a) => a.length === 0) ? (
                       <div className="px-5 py-10 text-center">
-                        <Search className="w-8 h-8 text-brand-300/20 mx-auto mb-2" />
-                        <p className="text-sm text-brand-300/40">No results found</p>
+                        <Search className="w-8 h-8 text-gray-300/20 mx-auto mb-2" />
+                        <p className="text-sm text-gray-300/40">No results found</p>
                       </div>
                     ) : (
                       <div className="py-2">
                         {["tournaments", "turfs", "users"].map((key) =>
                           (suggestions[key] || []).length > 0 && (
                             <div key={key}>
-                              <div className="px-5 py-1.5 text-[10px] font-bold text-brand-400/40 uppercase tracking-wider">
+                              <div className="px-5 py-1.5 text-[10px] font-bold text-gray-400/40 uppercase tracking-wider">
                                 {key}
                               </div>
                               {suggestions[key].map((item) => (
@@ -271,9 +261,13 @@ const Navbar = () => {
                                 >
                                   <div className="min-w-0">
                                     <div className="text-sm font-medium text-white truncate">{item.name || item.title}</div>
-                                    {item.eventLocation && <div className="text-[11px] text-brand-300/30 mt-0.5 truncate">{item.eventLocation}</div>}
+                                    {(item.eventLocation || item.address) && (
+                                      <div className="text-[11px] text-gray-300/30 mt-0.5 truncate">
+                                        {item.eventLocation || (typeof item.address === "string" ? item.address : item.address?.fullAddress || item.address?.area || "")}
+                                      </div>
+                                    )}
                                   </div>
-                                  <ArrowRight className="w-3.5 h-3.5 text-brand-300/10 group-hover:text-accent-400 transition-colors shrink-0 ml-3" />
+                                  <ArrowRight className="w-3.5 h-3.5 text-gray-300/10 group-hover:text-orange-400 transition-colors shrink-0 ml-3" />
                                 </button>
                               ))}
                             </div>
@@ -287,7 +281,7 @@ const Navbar = () => {
                 {/* Shortcut hint */}
                 {!suggestions && !query && (
                   <div className="px-5 py-6 text-center">
-                    <p className="text-xs text-brand-300/30">Type to search across tournaments, venues, and players</p>
+                    <p className="text-xs text-gray-300/30">Type to search across tournaments, venues, and players</p>
                   </div>
                 )}
               </div>
@@ -312,21 +306,21 @@ const Navbar = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -16, scale: 0.97 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed top-[72px] left-3 right-3 z-[95] bg-brand-950 border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/50 lg:hidden overflow-hidden"
+              className="fixed top-[72px] left-3 right-3 z-[95] bg-gray-950 border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/50 lg:hidden overflow-hidden"
             >
               {/* Top accent */}
-              <div className="h-[2px] bg-gradient-to-r from-transparent via-accent-500/50 to-transparent" />
+              <div className="h-[2px] bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
 
               <div className="p-4">
                 {/* Mobile search */}
                 <div className="flex items-center bg-white/[0.03] rounded-xl px-4 py-3 mb-4 border border-white/[0.04]">
-                  <Search className="w-4 h-4 text-brand-300/40 mr-3" />
+                  <Search className="w-4 h-4 text-gray-300/40 mr-3" />
                   <input
                     type="text"
                     placeholder="Search..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="bg-transparent text-sm text-white placeholder:text-brand-300/30 outline-none w-full"
+                    className="bg-transparent text-sm text-white placeholder:text-gray-300/30 outline-none w-full"
                   />
                 </div>
 
@@ -341,13 +335,13 @@ const Navbar = () => {
                         onClick={() => { navigate(tab.path); setMenuOpen(false); }}
                         className={`w-full text-left px-4 py-3.5 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${
                           isActive
-                            ? "text-white bg-gradient-to-r from-brand-800/60 to-brand-800/20 border border-brand-600/15"
-                            : "text-brand-300/60 hover:bg-white/[0.03] hover:text-white"
+                            ? "text-white bg-orange-500/15 border border-orange-500/20"
+                            : "text-gray-300/60 hover:bg-white/[0.03] hover:text-white"
                         }`}
                       >
-                        {Icon && <Icon className={`w-4 h-4 ${isActive ? "text-accent-400" : "text-brand-300/30"}`} />}
+                        {Icon && <Icon className={`w-4 h-4 ${isActive ? "text-orange-400" : "text-gray-300/30"}`} />}
                         {tab.label}
-                        {isActive && <div className="ml-auto w-1.5 h-1.5 bg-accent-400 rounded-full" />}
+                        {isActive && <div className="ml-auto w-1.5 h-1.5 bg-orange-400 rounded-full" />}
                       </button>
                     );
                   })}
@@ -360,16 +354,16 @@ const Navbar = () => {
                 <div className="space-y-2">
                   <button
                     onClick={() => { setShowInquiry(true); setMenuOpen(false); }}
-                    className="w-full px-4 py-3 rounded-xl text-sm font-medium text-brand-300/60 hover:bg-white/[0.03] hover:text-white transition-all text-left flex items-center gap-3"
+                    className="w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-300/60 hover:bg-white/[0.03] hover:text-white transition-all text-left flex items-center gap-3"
                   >
-                    <Send className="w-4 h-4 text-brand-300/30" />
+                    <Send className="w-4 h-4 text-gray-300/30" />
                     Contact Us
                   </button>
                   <button
-                    onClick={() => { navigate("/register"); setMenuOpen(false); }}
-                    className="w-full py-3.5 bg-gradient-to-r from-accent-600 to-accent-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accent-600/20"
+                    onClick={() => { setShowLogin(true); setMenuOpen(false); }}
+                    className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all"
                   >
-                    Get Started <ArrowRight className="w-4 h-4" />
+                    Sign In
                   </button>
                 </div>
               </div>
@@ -394,18 +388,18 @@ const Navbar = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.25 }}
-              className="relative w-full max-w-md bg-brand-950 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-gray-950 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Accent line */}
-              <div className="h-[2px] bg-gradient-to-r from-accent-500 via-accent-400 to-brand-400" />
+              <div className="h-[2px] bg-gradient-to-r from-orange-500 via-orange-400 to-gray-400" />
 
               <div className="flex items-center justify-between px-6 pt-6 pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-white">Get In Touch</h2>
-                  <p className="text-xs text-brand-300/40 mt-0.5">We'll respond within 24 hours</p>
+                  <p className="text-xs text-gray-300/40 mt-0.5">We'll respond within 24 hours</p>
                 </div>
-                <button onClick={() => setShowInquiry(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] text-brand-300/40 hover:text-white hover:bg-white/[0.08] transition-colors">
+                <button onClick={() => setShowInquiry(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] text-gray-300/40 hover:text-white hover:bg-white/[0.08] transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -417,7 +411,7 @@ const Navbar = () => {
                       <Send className="w-7 h-7 text-green-400" />
                     </div>
                     <p className="text-lg font-bold text-white">Message Sent!</p>
-                    <p className="text-sm text-brand-300/40 mt-1.5">Our team will get back to you soon.</p>
+                    <p className="text-sm text-gray-300/40 mt-1.5">Our team will get back to you soon.</p>
                   </div>
                 ) : (
                   <form onSubmit={submitInquiry} className="space-y-3">
@@ -426,34 +420,34 @@ const Navbar = () => {
                         type="text" name="name" required placeholder="Full Name"
                         value={inquiryForm.name}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, name: e.target.value })}
-                        className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-brand-300/30 outline-none focus:border-brand-500/30 focus:bg-white/[0.05] transition-all"
+                        className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all"
                       />
                       <input
                         type="email" name="email" required placeholder="Email"
                         value={inquiryForm.email}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })}
-                        className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-brand-300/30 outline-none focus:border-brand-500/30 focus:bg-white/[0.05] transition-all"
+                        className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all"
                       />
                     </div>
                     <select
                       value={inquiryForm.inquiryType}
                       onChange={(e) => setInquiryForm({ ...inquiryForm, inquiryType: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white outline-none focus:border-brand-500/30 transition-all appearance-none"
+                      className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white outline-none focus:border-orange-500/30 transition-all appearance-none"
                     >
-                      <option value="Product" className="bg-brand-950">General Inquiry</option>
-                      <option value="Service" className="bg-brand-950">Booking Support</option>
-                      <option value="Partnership" className="bg-brand-950">Partnership</option>
-                      <option value="Other" className="bg-brand-950">Other</option>
+                      <option value="Product" className="bg-gray-950">General Inquiry</option>
+                      <option value="Service" className="bg-gray-950">Booking Support</option>
+                      <option value="Partnership" className="bg-gray-950">Partnership</option>
+                      <option value="Other" className="bg-gray-950">Other</option>
                     </select>
                     <textarea
                       name="message" rows="3" placeholder="How can we help?"
                       value={inquiryForm.message}
                       onChange={(e) => setInquiryForm({ ...inquiryForm, message: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-brand-300/30 outline-none focus:border-brand-500/30 focus:bg-white/[0.05] transition-all resize-none"
+                      className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all resize-none"
                     />
                     <button
                       type="submit" disabled={isSubmitting}
-                      className="w-full py-3.5 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-accent-600/20"
+                      className="w-full py-3.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20"
                     >
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Message</>}
                     </button>
@@ -483,40 +477,42 @@ const Navbar = () => {
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              className="relative w-full max-w-sm bg-brand-950 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-sm bg-gray-950 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
             >
               {/* Accent */}
-              <div className="h-[2px] bg-gradient-to-r from-brand-500 to-accent-500" />
+              <div className="h-[2px] bg-gradient-to-r from-orange-500 to-amber-400" />
 
               <div className="p-6">
                 <div className="flex justify-between items-start mb-5">
                   <h3 className="text-lg font-bold text-white pr-4 leading-snug">{selectedResult.name || selectedResult.title}</h3>
-                  <button onClick={() => setShowPopup(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] text-brand-300/40 hover:text-white shrink-0">
+                  <button onClick={() => setShowPopup(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] text-gray-300/40 hover:text-white shrink-0">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="space-y-2 text-sm">
                   {selectedResult.email && (
                     <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.02] rounded-xl border border-white/[0.04]">
-                      <Send className="w-3.5 h-3.5 text-brand-300/30" />
-                      <span className="text-brand-200">{selectedResult.email}</span>
+                      <Send className="w-3.5 h-3.5 text-gray-300/30" />
+                      <span className="text-gray-200">{selectedResult.email}</span>
                     </div>
                   )}
                   {selectedResult.description && (
-                    <div className="px-4 py-3 bg-white/[0.02] rounded-xl border border-white/[0.04] text-brand-300/70 leading-relaxed">
+                    <div className="px-4 py-3 bg-white/[0.02] rounded-xl border border-white/[0.04] text-gray-300/70 leading-relaxed">
                       {selectedResult.description}
                     </div>
                   )}
                   {(selectedResult.address || selectedResult.eventLocation) && (
                     <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.02] rounded-xl border border-white/[0.04]">
-                      <MapPin className="w-3.5 h-3.5 text-brand-300/30" />
-                      <span className="text-brand-200">{selectedResult.address || selectedResult.eventLocation}</span>
+                      <MapPin className="w-3.5 h-3.5 text-gray-300/30" />
+                      <span className="text-gray-200">
+                        {selectedResult.eventLocation || (typeof selectedResult.address === "string" ? selectedResult.address : selectedResult.address?.fullAddress || [selectedResult.address?.area, selectedResult.address?.city].filter(Boolean).join(", ") || "")}
+                      </span>
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => setShowPopup(false)}
-                  className="mt-5 w-full py-2.5 bg-white/[0.04] hover:bg-white/[0.08] text-brand-200 text-sm font-medium rounded-xl transition-colors border border-white/[0.04]"
+                  className="mt-5 w-full py-2.5 bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 text-sm font-medium rounded-xl transition-colors border border-white/[0.04]"
                 >
                   Close
                 </button>

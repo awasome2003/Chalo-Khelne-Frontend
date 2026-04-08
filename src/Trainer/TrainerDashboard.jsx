@@ -15,16 +15,16 @@ import {
 } from "react-icons/fa";
 
 const colors = {
-  background: "#F5F6FA",
+  background: "#F5F7FA",
   white: "#FFFFFF",
-  primary: "#36B37E", // Green primary
-  primaryLight: "#E3FCEF", // Light green for backgrounds
-  primaryDark: "#00875A", // Darker green for hover states
-  text: "#172B4D", // Dark blue-gray for text
+  primary: "#0EA572", // Green primary
+  primaryLight: "#C7FBE8", // Light green for backgrounds
+  primaryDark: "#07875E", // Darker green for hover states
+  text: "#111827", // Dark blue-gray for text
   textLight: "#6B778C", // Lighter text color
   border: "#DFE1E6",
-  success: "#36B37E",
-  danger: "#FF5630",
+  success: "#0EA572",
+  danger: "#EF4444",
 };
 
 const TrainerDashboard = () => {
@@ -42,8 +42,6 @@ const TrainerDashboard = () => {
           throw new Error("User not authenticated");
         }
 
-        console.log("User object:", auth);
-        console.log("User ID:", auth.id);
 
         // Fetch trainer profile
         const profileRes = await axios.get(

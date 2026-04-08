@@ -41,7 +41,7 @@ export default function TournamentStepper({ currentStage }) {
               onClick={() => navigate(`${basePath}${step.path}`)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all w-auto text-sm font-medium ${
                 status === "active"
-                  ? "bg-[#004E93] text-white shadow-sm"
+                  ? "bg-orange-500 text-white shadow-sm"
                   : status === "completed"
                   ? "text-green-700 hover:bg-green-50"
                   : "text-gray-400 hover:bg-gray-50"

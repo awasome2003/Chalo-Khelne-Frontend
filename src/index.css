@@ -12,6 +12,39 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ─── Brand Palette (from CK logo) ─── */
+  /* Primary — Orange */
+  --color-primary-50: #FFF7ED;
+  --color-primary-100: #FFEDD5;
+  --color-primary-200: #FED7AA;
+  --color-primary-300: #FDBA74;
+  --color-primary-400: #FB923C;
+  --color-primary: #F97316;
+  --color-primary-600: #EA580C;
+  --color-primary-700: #C2410C;
+  --color-primary-800: #9A3412;
+  --color-primary-900: #7C2D12;
+
+  /* Secondary — Teal/Green */
+  --color-secondary-50: #EFFEFA;
+  --color-secondary-100: #C7FBE8;
+  --color-secondary-200: #90F5D3;
+  --color-secondary-300: #52E5B8;
+  --color-secondary-400: #21CC9A;
+  --color-secondary: #0EA572;
+  --color-secondary-600: #07875E;
+  --color-secondary-700: #066B4D;
+  --color-secondary-800: #08553F;
+  --color-secondary-900: #084636;
+
+  /* Accent — Warm Gold */
+  --color-accent-50: #FFFDF7;
+  --color-accent-100: #FEF9E7;
+  --color-accent-200: #FDF0C3;
+  --color-accent: #F5C31C;
+  --color-accent-600: #DCA30F;
+  --color-accent-700: #B77D0B;
 }
 
 body {
@@ -38,7 +71,7 @@ button {
 }
 
 button:focus-visible {
-  outline: 2px solid #004E93;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 

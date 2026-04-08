@@ -71,7 +71,7 @@ function PlayerRow({ name, sets, playerKey, playerName, totalWon }) {
     <tr className="border-b border-gray-50">
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-[#004E93] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {name?.charAt(0)}
           </div>
           <span className="font-semibold text-gray-800 text-sm truncate">{name}</span>
@@ -96,7 +96,7 @@ function PlayerRow({ name, sets, playerKey, playerName, totalWon }) {
           </td>
         );
       })}
-      <td className="text-center py-3 px-4 font-black text-lg text-[#004E93] bg-gray-50">
+      <td className="text-center py-3 px-4 font-black text-lg text-orange-500 bg-gray-50">
         {totalWon}
       </td>
     </tr>

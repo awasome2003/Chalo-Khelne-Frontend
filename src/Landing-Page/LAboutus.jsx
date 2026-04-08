@@ -49,7 +49,7 @@ const LAboutUs = () => {
         {/* Back Button placed here */}
         <button
           onClick={handleBackToHome}
-          className="mt-6 px-5 py-2 bg-[#FF6A00] hover:bg-blue-600 transition text-white rounded-md"
+          className="mt-6 px-5 py-2 bg-orange-500 hover:bg-orange-500 transition text-white rounded-md"
         >
           Back to Home Page
         </button>

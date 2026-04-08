@@ -127,7 +127,6 @@ const TeamKnockouts = () => {
   const handleSelectFavorite = (booking) => {
     // Check if the booking is in an enabled state
     if (!booking.team) {
-      console.log("Booking is not in an enabled state");
       return;
     }
 
@@ -136,7 +135,6 @@ const TeamKnockouts = () => {
       (selectedTeam) => selectedTeam._id === booking._id
     );
     if (!isTeamSelected) {
-      console.log("Team is not selected. Cannot assign bye.");
       return;
     }
 
@@ -144,15 +142,12 @@ const TeamKnockouts = () => {
     setByeTeams((prevByeTeams) => {
       const isCurrentlyBye = prevByeTeams.some((b) => b._id === booking._id);
 
-      console.log("Current bye teams before update:", prevByeTeams);
-      console.log("Is currently bye:", isCurrentlyBye);
 
       if (isCurrentlyBye) {
         // Remove from bye teams
         const updatedByeTeams = prevByeTeams.filter(
           (b) => b._id !== booking._id
         );
-        console.log("Removing from bye teams:", updatedByeTeams);
         return updatedByeTeams;
       } else {
         // Add to bye teams
@@ -162,7 +157,6 @@ const TeamKnockouts = () => {
           team: booking.team,
           createdAt: booking.createdAt,
         };
-        console.log("Adding to bye teams:", byeBooking);
         return [...prevByeTeams, byeBooking];
       }
     });
@@ -204,21 +198,16 @@ const TeamKnockouts = () => {
   };
 
   const fetchTournamentDetails = async () => {
-    console.log('fetch tournament details run',)
     try {
-      console.log('inside the try block',)
       const response = await fetch(
         `/api/tournaments/${tournamentId}`
       );
       const data = await response.json();
-      console.log('Fetch tournament details', data)
       if (data.success) {
-        console.log(data.tournament.setFormat)
         // Convert "Single player" to "Single" and extract number from "3 sets" to 3
         // const type = data.tournament.playerNoValue.includes("Single")
         //   ? "Single"
         //   : "Double";
-        // console.log('setNum', setsNum)
         // setTournamentType(type);
         const setsNum = parseInt(data.tournament.setFormat);
         setSetCount(setsNum);
@@ -243,14 +232,9 @@ const TeamKnockouts = () => {
 
   const fetchRegisteredTeams = async () => {
     try {
-      console.log(
-        "Starting to fetch registered teams for tournament:",
-        tournamentId
-      );
       setLoading(true);
 
       const url = `/api/players/bookings/tournament-teams/${tournamentId}`;
-      console.log("Fetching from URL:", url);
 
       const response = await fetch(url, {
         method: "GET",
@@ -260,7 +244,6 @@ const TeamKnockouts = () => {
         },
       });
 
-      console.log("Response status:", response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -269,8 +252,6 @@ const TeamKnockouts = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log("Successfully loaded teams. Count:", data.bookings.length);
-        console.log("Team data sample:", data.bookings.slice(0, 2));
         setTeams(data.bookings);
       } else {
         console.error("API returned success: false", data.message);
@@ -288,7 +269,6 @@ const TeamKnockouts = () => {
         "Failed to load teams. Please check your connection and try again."
       );
     } finally {
-      console.log("Fetch operation completed, setting loading to false");
       setLoading(false);
     }
   };
@@ -341,32 +321,25 @@ const TeamKnockouts = () => {
     );
     const byesNeeded = nextPowerOf2 - selectedTeams.length;
 
-    console.log("Next Power of 2:", nextPowerOf2);
-    console.log("Byes Needed:", byesNeeded);
 
     if (byeTeams.length !== byesNeeded) {
       setShowStructureAlert(true); // Show modal instead of toast
       return;
     }
 
-    console.log("Correct number of byes assigned. Proceeding...");
     const rounds = calculateTotalRounds(selectedTeams.length);
-    console.log("Total Rounds:", rounds);
 
     // Update these states with useEffect to ensure they're processed in order
     setTotalRounds(rounds);
     setCurrentSchedulingRound(1);
 
     // Add a console.log before setting modal visibility
-    console.log("Opening modal...");
     setShowSchedulingModal(true);
-    console.log("Modal state should be true now");
   };
 
   const handleGenerateMatches = async () => {
     try {
       const currentRound = currentSchedulingRound;
-      console.log(`Generating matches for Round: ${currentRound}`);
 
       if (!roundSchedules[currentRound]?.matchDateTime) {
         toast.warning("Please set match date and time");
@@ -397,21 +370,6 @@ const TeamKnockouts = () => {
           tournamentType: tournamentType === "Single" ? "Singles" : "Doubles",
           setCount,
         };
-
-        console.log("Cleaned team data being sent:", {
-          selectedTeams: cleanedSelectedTeams.map((t) => ({
-            name: t.team.name,
-            captain: t.team.captain,
-            players: t.team.players,
-            substitutes: t.team.substitutes,
-          })),
-          byeTeams: cleanedByeTeams.map((t) => ({
-            name: t.team.name,
-            substitutes: t.team.substitutes,
-          })),
-        });
-
-        console.log("Creating tournament with request:", requestBody);
 
         const response = await fetch(
           `/api/tournaments/team-knockout/create`,
@@ -484,11 +442,6 @@ const TeamKnockouts = () => {
         .map((match) => match.winnerId || match.winner)
         .filter((winner) => winner !== null && winner !== undefined);
 
-      console.log("Winners for Next Round:", {
-        currentRound,
-        winners: winners.length,
-      });
-
       const shuffleArray = (array) => {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -541,11 +494,6 @@ const TeamKnockouts = () => {
         setActiveSection("matches");
         setShowSchedulingModal(false);
 
-        console.log("Successfully generated matches for round:", {
-          round: currentRound,
-          matchCount: nextRoundData.matches.length,
-        });
-
         // NEW: Check for doubles matches to configure
         const doublesMatches = nextRoundData.matches.filter(m =>
           m.status !== "BYE" &&
@@ -597,7 +545,7 @@ const TeamKnockouts = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-xl overflow-y-auto w-[450px] flex p-[52px] flex-col items-start gap-[20px] rounded-[24px] bg-[#F2F4F6]">
+        <div className="bg-white rounded-2xl shadow-xl overflow-y-auto w-[450px] flex p-[52px] flex-col items-start gap-[20px] rounded-[24px] bg-[#F5F7FA]">
           {/* Header */}
           <div className="flex w-full justify-end">
             <button
@@ -618,7 +566,7 @@ const TeamKnockouts = () => {
 
             {/* Match Date and Time */}
             <div className="space-y-2 first-popup">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Match Start Date and Time
               </label>
               <LocalizationProvider
@@ -655,7 +603,7 @@ const TeamKnockouts = () => {
 
             {/* Match Interval */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Match Interval (minutes)
               </label>
               <input
@@ -674,14 +622,14 @@ const TeamKnockouts = () => {
                 }}
                 min="0"
                 placeholder="Enter interval in minutes"
-                className="w-full h-[50px] text-[#666] px-4 py-2 self-stretch rounded-lg bg-white border-none"
+                className="w-full h-[50px] text-gray-500 px-4 py-2 self-stretch rounded-lg bg-white border-none"
                 required
               />
             </div>
 
             {/* Court Number */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Starting Court Number
               </label>
               <input
@@ -700,7 +648,7 @@ const TeamKnockouts = () => {
                 }}
                 min="1"
                 placeholder="Enter starting court number"
-                className="w-full text-[#666] h-[50px] px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-none"
+                className="w-full text-gray-500 h-[50px] px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 border-none"
                 required
               />
             </div>
@@ -903,8 +851,8 @@ const TeamKnockouts = () => {
             <p className="text-gray-500 text-sm mt-1">Match {configuringIndex + 1} of {matchesToConfigure.length}</p>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-center gap-4">
-            <span className="font-bold text-blue-800">{team1Name}</span>
+          <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-center justify-center gap-4">
+            <span className="font-bold text-orange-700">{team1Name}</span>
             <span className="text-sm font-bold text-gray-400">VS</span>
             <span className="font-bold text-red-800">{team2Name}</span>
           </div>
@@ -920,7 +868,7 @@ const TeamKnockouts = () => {
                   type="text"
                   value={nominationData.homePlayerB}
                   onChange={(e) => setNominationData(prev => ({ ...prev, homePlayerB: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
                   placeholder="Enter partner name"
                 />
               </div>
@@ -936,7 +884,7 @@ const TeamKnockouts = () => {
                   type="text"
                   value={nominationData.awayPlayerZ}
                   onChange={(e) => setNominationData(prev => ({ ...prev, awayPlayerZ: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                   placeholder="Enter partner name"
                 />
               </div>
@@ -967,7 +915,7 @@ const TeamKnockouts = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
         <p className="mt-4 text-gray-600 font-medium">Loading teams...</p>
       </div>
     );
@@ -984,7 +932,7 @@ const TeamKnockouts = () => {
               onClick={() => setSelectedTab(tab)}
               className={`flex h-[50px] px-6 py-2 justify-center w-auto items-center gap-[10px] rounded-[25px] 
       ${selectedTab === tab
-                  ? "bg-[#004E93] text-white"
+                  ? "bg-orange-500 text-white"
                   : "bg-gray-200 text-black hover:bg-gray-300"
                 }`}
             >
@@ -1008,7 +956,7 @@ const TeamKnockouts = () => {
                     className={`flex h-[42px] px-4 mt-0 py-2 justify-center items-center gap-2 rounded-[25px] 
                     transition-colors duration-200 ease-in-out 
                     ${activeTab === tab
-                        ? "bg-[#004E93] text-white" // Active tab styles
+                        ? "bg-orange-500 text-white" // Active tab styles
                         : "bg-transparent text-black" // Non-active tab styles
                       }`}
                   >
@@ -1034,7 +982,7 @@ const TeamKnockouts = () => {
                         }
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all w-auto
-                        bg-[#004E93] text-white hover:bg-[#003D75]"
+                        bg-orange-500 text-white hover:bg-[#003D75]"
                     >
                       <input
                         type="checkbox"
@@ -1055,7 +1003,7 @@ const TeamKnockouts = () => {
                       key={booking._id}
                       className={`flex h-16 p-2 w-auto items-center justify-between gap-3 w-80 bg-white rounded-2xl shadow-md border cursor-pointer
                       ${selectedTournament?._id === booking._id
-                          ? "border-[#004E93] border-2"
+                          ? "border-orange-500 border-2"
                           : "border-gray-200"
                         }`}
                       onClick={() => {
@@ -1136,7 +1084,7 @@ const TeamKnockouts = () => {
                   </div>
 
                   {/* Team Name */}
-                  <div className="flex items-center bg-gray-100 px-4 py-2 rounded-lg w-max text-blue-600 font-medium">
+                  <div className="flex items-center bg-gray-100 px-4 py-2 rounded-lg w-max text-orange-500 font-medium">
                     <FaUsers className="mr-2" />
                     <span>{selectedTournament.team.name}</span>
                   </div>
@@ -1145,7 +1093,7 @@ const TeamKnockouts = () => {
                   <div className="flex gap-6 mt-6">
                     {/* Captain & Players */}
                     <div className="bg-gray-100 rounded-lg p-4 flex-1">
-                      <h3 className="font-semibold text-blue-600 items-center">
+                      <h3 className="font-semibold text-orange-500 items-center">
                         Captain:
                       </h3>
                       <p className="flex items-center mt-1">
@@ -1153,7 +1101,7 @@ const TeamKnockouts = () => {
                         {selectedTournament.team.captain}
                       </p>
 
-                      <h3 className="font-semibold text-blue-600 mt-4">
+                      <h3 className="font-semibold text-orange-500 mt-4">
                         Players:
                       </h3>
                       {selectedTournament.team.players.map((player, index) => {
@@ -1168,7 +1116,7 @@ const TeamKnockouts = () => {
 
                     {/* Substitutes */}
                     <div className="bg-gray-100 rounded-lg p-4 flex-1">
-                      <h3 className="font-semibold text-blue-600">
+                      <h3 className="font-semibold text-orange-500">
                         Substitutes:
                       </h3>
                       {selectedTournament.team.substitutes.map(
@@ -1194,8 +1142,8 @@ const TeamKnockouts = () => {
               // Generate Round Robin Form
               <div className="bg-white rounded-2xl p-8 shadow-sm">
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Trophy className="w-8 h-8 text-[#004E93]" />
+                  <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-orange-500" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">Generate Round Robin Matches</h3>
                   <p className="text-gray-500 text-sm mt-1">
@@ -1210,7 +1158,7 @@ const TeamKnockouts = () => {
                       type="datetime-local"
                       value={rrSchedule.matchStartTime}
                       onChange={(e) => setRrSchedule({ ...rrSchedule, matchStartTime: e.target.value })}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-500"
                     />
                   </div>
                   <div>
@@ -1219,7 +1167,7 @@ const TeamKnockouts = () => {
                       type="number"
                       value={rrSchedule.matchInterval}
                       onChange={(e) => setRrSchedule({ ...rrSchedule, matchInterval: e.target.value })}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-500"
                       placeholder="30"
                     />
                   </div>
@@ -1229,7 +1177,7 @@ const TeamKnockouts = () => {
                       type="text"
                       value={rrSchedule.courtNumber}
                       onChange={(e) => setRrSchedule({ ...rrSchedule, courtNumber: e.target.value })}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#004E93]"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-500"
                       placeholder="1"
                     />
                   </div>
@@ -1238,7 +1186,7 @@ const TeamKnockouts = () => {
                 <button
                   onClick={handleGenerateRoundRobin}
                   disabled={rrLoading || teams.length < 2}
-                  className="w-full py-3 bg-[#004E93] hover:bg-[#003d75] text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-orange-500 hover:bg-[#003d75] text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {rrLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trophy className="w-5 h-5" />}
                   {rrLoading ? "Generating..." : "Generate Round Robin Matches"}
@@ -1312,7 +1260,7 @@ const TeamKnockouts = () => {
                             <td className="text-center px-3 py-3 text-gray-600">{team.setsLost}</td>
                             <td className="text-center px-3 py-3 text-gray-600">{team.gamesWon}</td>
                             <td className="text-center px-3 py-3 text-gray-600">{team.gamesLost}</td>
-                            <td className="text-center px-3 py-3 font-black text-[#004E93] text-base">{team.points}</td>
+                            <td className="text-center px-3 py-3 font-black text-orange-500 text-base">{team.points}</td>
                           </tr>
                         ))}
                       </tbody>

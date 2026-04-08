@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { toast } from "react-toastify";
+import { useState, useEffect } from "react";
 import { FiX, FiCheck } from "react-icons/fi";
 import axios from "axios";
 
@@ -35,20 +36,24 @@ export default function BulkScoreUploadModal({
 }) {
   const setsToWin = propSetsToWin || Math.ceil(maxSets / 2);
 
-  const [bulkScores, setBulkScores] = useState(() => {
-    const initial = {};
-    matches.forEach((match) => {
-      initial[match._id] = {
-        sets: Array.from({ length: maxSets }, () => ({
-          player1Score: "",
-          player2Score: "",
-        })),
-      };
-    });
-    return initial;
-  });
-
+  const [bulkScores, setBulkScores] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Re-initialize scores when matches change or modal opens
+  useEffect(() => {
+    if (isOpen && matches.length > 0) {
+      const initial = {};
+      matches.forEach((match) => {
+        initial[match._id] = {
+          sets: Array.from({ length: maxSets }, () => ({
+            player1Score: "",
+            player2Score: "",
+          })),
+        };
+      });
+      setBulkScores(initial);
+    }
+  }, [isOpen, matches, maxSets]);
 
   if (!isOpen || matches.length === 0) return null;
 
@@ -91,7 +96,7 @@ export default function BulkScoreUploadModal({
       // Validate: no ties
       const tiedSet = filledSets.find((s) => s.player1Score === s.player2Score);
       if (tiedSet) {
-        alert("Invalid score: Set scores cannot be tied. Each set must have a winner.");
+        toast.warn("Invalid score: Set scores cannot be tied. Each set must have a winner.");
         return;
       }
 
@@ -105,7 +110,7 @@ export default function BulkScoreUploadModal({
 
       if (p1Wins < setsToWin && p2Wins < setsToWin) {
         const match = matches.find((m) => m._id === matchId);
-        alert(
+        toast.info(
           `Match ${getName(match, 1)} vs ${getName(match, 2)}: Not enough sets filled. Need ${setsToWin} set wins to determine a winner.`
         );
         return;
@@ -115,7 +120,7 @@ export default function BulkScoreUploadModal({
     }
 
     if (scoresToSubmit.length === 0) {
-      alert("No scores to submit. Please fill in set scores for at least one match.");
+      toast.warn("No scores to submit. Please fill in set scores for at least one match.");
       return;
     }
 
@@ -141,15 +146,15 @@ export default function BulkScoreUploadModal({
           })
           .join("\n");
 
-        alert(`${response.data.message}\n\n${resultText}`);
+        toast.info(`${response.data.message}\n\n${resultText}`);
         onSuccess?.();
         onClose();
       } else {
-        alert("Error: " + response.data.message);
+        toast.error(response.data.message);
       }
     } catch (err) {
       console.error("Bulk score upload error:", err);
-      alert("Failed to upload scores: " + (err.response?.data?.message || err.message));
+      toast.error("Failed to upload scores: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -159,18 +164,18 @@ export default function BulkScoreUploadModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex justify-between items-center">
           <div>
             <h3 className="text-white text-lg font-bold">
               {title || "Bulk Score Upload"}
             </h3>
-            <p className="text-purple-200 text-sm">
+            <p className="text-emerald-200 text-sm">
               Enter set scores for {matches.length} pending match{matches.length !== 1 ? "es" : ""}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-purple-200 bg-transparent w-auto"
+            className="text-white hover:text-emerald-200 bg-transparent w-auto"
           >
             <FiX size={24} />
           </button>
@@ -192,7 +197,7 @@ export default function BulkScoreUploadModal({
               >
                 {/* Match Header */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="bg-blue-100 text-blue-700 rounded-full text-xs font-medium px-2.5 py-1">
+                  <span className="bg-orange-100 text-orange-600 rounded-full text-xs font-medium px-2.5 py-1">
                     {match.matchNumber ? `M${match.matchNumber}` : `Match`}
                   </span>
                   <span className="text-xs text-gray-500">
@@ -202,11 +207,11 @@ export default function BulkScoreUploadModal({
 
                 {/* Player/Team Names */}
                 <div className="flex items-center justify-center gap-4 mb-4">
-                  <span className="font-semibold text-[#004E93] text-sm text-right flex-1">
+                  <span className="font-semibold text-orange-500 text-sm text-right flex-1">
                     {name1}
                   </span>
                   <span className="text-gray-400 text-xs font-medium">VS</span>
-                  <span className="font-semibold text-[#004E93] text-sm text-left flex-1">
+                  <span className="font-semibold text-orange-500 text-sm text-left flex-1">
                     {name2}
                   </span>
                 </div>
@@ -247,7 +252,7 @@ export default function BulkScoreUploadModal({
                           onChange={(e) =>
                             handleChange(match._id, setIdx, "player1Score", e.target.value)
                           }
-                          className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm font-medium focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+                          className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                         />
                         <span className="text-gray-400 text-xs">-</span>
                         <input
@@ -258,7 +263,7 @@ export default function BulkScoreUploadModal({
                           onChange={(e) =>
                             handleChange(match._id, setIdx, "player2Score", e.target.value)
                           }
-                          className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm font-medium focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+                          className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                         />
                       </div>
                     );
@@ -318,7 +323,7 @@ export default function BulkScoreUploadModal({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-semibold hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-auto flex items-center gap-2"
+            className="px-6 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed w-auto flex items-center gap-2"
           >
             {loading ? (
               <>

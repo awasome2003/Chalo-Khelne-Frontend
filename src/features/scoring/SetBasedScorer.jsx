@@ -29,7 +29,7 @@ export default function SetBasedScorer({
 }) {
   const labels = config.labels;
   const gamesPerSet = matchFormat?.totalGames || matchFormat?.gamesToWin * 2 - 1 || 5;
-  const pointsToWin = matchFormat?.pointsToWinGame || 11;
+  const pointsToWin = matchFormat?.pointsToWinGame || null;
 
   const [manualGames, setManualGames] = useState(
     Array(gamesPerSet).fill(null).map(() => ({ a: "", b: "" }))
@@ -102,7 +102,7 @@ export default function SetBasedScorer({
       {/* Deuce hint */}
       {config.scoring.showDeuce && (
         <p className="text-[10px] text-gray-400 text-center mt-2">
-          Deuce: if tied at {pointsToWin - 1}-{pointsToWin - 1}, win by {matchFormat?.marginToWin || 2}
+          Deuce: if tied at {pointsToWin ? pointsToWin - 1 : "?"}-{pointsToWin ? pointsToWin - 1 : "?"}, win by {matchFormat?.marginToWin || "—"}
         </p>
       )}
 
@@ -111,7 +111,7 @@ export default function SetBasedScorer({
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="flex-1 bg-[#004E93] text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
             <><RefreshCcw className="w-4 h-4 animate-spin" /> Submitting...</>

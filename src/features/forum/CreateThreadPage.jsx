@@ -59,7 +59,7 @@ export default function CreateThreadPage() {
                 key={cat._id}
                 onClick={() => setCategoryId(cat._id)}
                 className={`px-3 py-2 rounded-xl text-xs font-semibold transition w-auto flex items-center gap-1.5 ${
-                  categoryId === cat._id ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  categoryId === cat._id ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 <span>{cat.icon}</span> {cat.name}
@@ -78,7 +78,7 @@ export default function CreateThreadPage() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What do you want to discuss?"
             maxLength={200}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
           />
           <p className="text-[10px] text-gray-400 mt-1 text-right">{title.length}/200</p>
         </div>
@@ -92,7 +92,7 @@ export default function CreateThreadPage() {
             placeholder="Share your thoughts... Use @mentions and #hashtags"
             rows={8}
             maxLength={10000}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition resize-none"
           />
         </div>
 
@@ -108,7 +108,7 @@ export default function CreateThreadPage() {
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
                 placeholder="Add tag and press Enter"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
               />
             </div>
             <button onClick={addTag} disabled={!tagInput.trim()} className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition disabled:opacity-50 w-auto">
@@ -118,9 +118,9 @@ export default function CreateThreadPage() {
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
-                <span key={tag} className="text-xs font-bold text-[#FF6A00] bg-[#FF6A00]/10 px-2 py-1 rounded-full flex items-center gap-1">
+                <span key={tag} className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded-full flex items-center gap-1">
                   #{tag}
-                  <button onClick={() => setTags(tags.filter((t) => t !== tag))} className="text-[#FF6A00]/60 hover:text-[#FF6A00] w-auto">×</button>
+                  <button onClick={() => setTags(tags.filter((t) => t !== tag))} className="text-orange-500/60 hover:text-orange-500 w-auto">×</button>
                 </span>
               ))}
             </div>
@@ -135,7 +135,7 @@ export default function CreateThreadPage() {
           <button
             onClick={handleSubmit}
             disabled={!title.trim() || !content.trim() || !categoryId || createMutation.isPending}
-            className="px-6 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-2 w-auto active:scale-[0.97]"
+            className="px-6 py-2.5 bg-orange-500 hover:bg-orange-700 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-2 w-auto active:scale-[0.97]"
           >
             {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Post Thread

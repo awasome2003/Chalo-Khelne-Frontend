@@ -18,7 +18,7 @@ export default function TournamentDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <RefreshCcw className="w-8 h-8 text-[#004e93] animate-spin" />
+        <RefreshCcw className="w-8 h-8 text-orange-500 animate-spin" />
       </div>
     );
   }
@@ -115,7 +115,7 @@ export default function TournamentDashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#eff7ff] flex items-center justify-center">
-                  <a.icon className="w-5 h-5 text-[#004e93]" />
+                  <a.icon className="w-5 h-5 text-orange-500" />
                 </div>
                 <div>
                   <div className="font-bold text-gray-800 text-sm">{a.label}</div>

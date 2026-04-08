@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 import { FaStar, FaRegStar, FaMedal, FaTrophy } from "react-icons/fa";
 import { ChevronDown, Check } from 'lucide-react';
@@ -41,6 +42,7 @@ const GroupStageManagement = () => {
 
   // Knockout tournament states
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
+  const [knockoutGenerated, setKnockoutGenerated] = useState(false);
   const [knockoutSettings, setKnockoutSettings] = useState({
     courtNumber: 1,
     matchStartTime: '',
@@ -105,7 +107,7 @@ const GroupStageManagement = () => {
         <p>Please select a tournament to view its details.</p>
         <button
           onClick={() => navigate('/mtournament-management')}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+          className="mt-4 bg-orange-500 text-white px-4 py-2 rounded"
         >
           Back to Tournament Management
         </button>
@@ -121,6 +123,11 @@ const GroupStageManagement = () => {
         .then((response) => {
           if (response.data.success && response.data.tournament) {
             setTournament(response.data.tournament);
+            // Check if knockout was already generated
+            const stage = response.data.tournament.currentStage;
+            if (stage === "knockout" || stage === "completed") {
+              setKnockoutGenerated(true);
+            }
             // Set default category to first category if available
             if (response.data.tournament.category && response.data.tournament.category.length > 0) {
               // Default to 'all' to show all players initially
@@ -205,17 +212,17 @@ const GroupStageManagement = () => {
 
       // Validate settings
       if (!knockoutSettings.matchStartTime) {
-        alert("Please select a match start time");
+        toast.warn("Please select a match start time");
         return;
       }
 
       if (!knockoutSettings.courtNumber || knockoutSettings.courtNumber < 1) {
-        alert("Please enter a valid court number");
+        toast.warn("Please enter a valid court number");
         return;
       }
 
       if (!knockoutSettings.intervalMinutes || knockoutSettings.intervalMinutes < 5) {
-        alert("Please enter a valid interval (minimum 5 minutes)");
+        toast.warn("Please enter a valid interval (minimum 5 minutes)");
         return;
       }
 
@@ -230,7 +237,7 @@ const GroupStageManagement = () => {
       );
 
       if (response.data.success) {
-        alert(
+        toast.info(
           `🏆 Knockout Tournament Generated!\n\n` +
           `${response.data.message}\n` +
           `Bracket: ${response.data.bracket.totalPlayers} players, ${response.data.bracket.totalRounds} rounds\n\n` +
@@ -240,6 +247,7 @@ const GroupStageManagement = () => {
         );
 
         setShowKnockoutModal(false);
+        setKnockoutGenerated(true);
 
         // Navigate to knockout view
         // navigate(`/tournament-management/group-stage/${tournamentId}/knockout`, {
@@ -250,11 +258,11 @@ const GroupStageManagement = () => {
         //   }
         // });
       } else {
-        alert("Failed to generate knockout matches");
+        toast.error("Failed to generate knockout matches");
       }
     } catch (error) {
       console.error("Error generating knockout matches:", error);
-      alert(`Failed to generate knockout matches: ${error.response?.data?.message || error.message}`);
+      toast.info(`Failed to generate knockout matches: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -339,7 +347,6 @@ const GroupStageManagement = () => {
           }
         })
         .catch((error) => {
-          console.log("No existing groups found or error:", error);
         });
 
       // Fetch top players and super players
@@ -462,7 +469,7 @@ const GroupStageManagement = () => {
     const inNameGroup = nameGroups && nameGroups[selectedRegisterPlayerCategory];
 
     if (inUserGroup || inNameGroup) {
-      alert("Cannot seed players who are already assigned to groups in this category.");
+      toast.warn("Cannot seed players who are already assigned to groups in this category.");
       return;
     }
 
@@ -511,7 +518,6 @@ const GroupStageManagement = () => {
             // Refresh top players list
             fetchTopPlayers();
           } else {
-            console.log("Player is already a Super Player, skipping Top Players addition");
           }
         } catch (error) {
           console.error("Error saving to Top Players:", error);
@@ -523,7 +529,7 @@ const GroupStageManagement = () => {
       setPlayerToSeed(null);
     } catch (error) {
       console.error("Error seeding player:", error);
-      alert("Failed to seed player. Please try again.");
+      toast.error("Failed to seed player. Please try again.");
     }
   };
 
@@ -554,16 +560,16 @@ const GroupStageManagement = () => {
         // Clear the mapping
         setPlayerGroups({});
 
-        alert(`Successfully deleted ${response.data.data.length} groups. Players are now available for new group creation.`);
+        toast.info(`Successfully deleted ${response.data.data.length} groups. Players are now available for new group creation.`);
 
         // Refresh the page to update UI
         window.location.reload();
       } else {
-        alert("No groups found to delete");
+        toast.warn("No groups found to delete");
       }
     } catch (error) {
       console.error("Error deleting groups:", error);
-      alert("Failed to delete groups. Please try again.");
+      toast.error("Failed to delete groups. Please try again.");
     }
   };
 
@@ -596,7 +602,6 @@ const GroupStageManagement = () => {
         }
       }
     } catch (error) {
-      console.log("No Round 2 progress found or error:", error);
     }
   };
 
@@ -617,14 +622,18 @@ const GroupStageManagement = () => {
   // Initiate Round 2 progression
   const initiateRound2 = () => {
     if (topPlayers.length < 2) {
-      alert("Need at least 2 Top Players to proceed to Round 2");
+      toast.warn("Need at least 2 Top Players to proceed to Round 2");
       return;
     }
     setShowRound2Modal(true);
   };
 
   // Reset Round 2 progress
-  const resetRound2Progress = async () => {
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const confirmResetRound2 = async () => {
+    setResetting(true);
     try {
       const response = await axios.post(
         `/api/tournaments/round2/reset`,
@@ -636,29 +645,33 @@ const GroupStageManagement = () => {
         setIsRound2Mode(false);
         setSelectedRound2Players([]);
         setRound2Option(null);
-        alert("Round 2 progress has been reset. You can now try again.");
+        setShowResetModal(false);
+
+        const d = response.data.deleted || {};
+        toast.info(`Round 2 has been reset.\n\nDeleted:\n• ${d.groups || 0} groups\n• ${d.matches || 0} group matches\n• ${d.knockoutMatches || 0} knockout matches`);
       }
     } catch (error) {
       console.error("Error resetting Round 2:", error);
-      alert("Failed to reset Round 2 progress.");
+      toast.error("Failed to reset Round 2 progress.");
+    } finally {
+      setResetting(false);
     }
   };
 
   // Handle Round 2 option selection
   // 🔥 HANDLE DIRECT KNOCKOUT PLAYER SELECTION
   const handleDirectKnockoutPlayerSelection = () => {
-    if (selectedDirectKnockoutPlayers.length === 0) {
-      alert("Please select at least 4 players");
+    const count = selectedDirectKnockoutPlayers.length;
+    const validSizes = [16, 32, 64];
+
+    if (count < 16) {
+      toast.warn(`Minimum 16 players required for knockout. Currently selected: ${count}`);
       return;
     }
 
-    // Check if power of 2
-    const count = selectedDirectKnockoutPlayers.length;
-    const isPowerOf2 = count > 0 && (count & (count - 1)) === 0;
-    const validSizes = [4, 8, 16, 32];
-
-    if (!isPowerOf2 || !validSizes.includes(count)) {
-      alert(`Player count must be a power of 2. Valid sizes: ${validSizes.join(", ")}\nCurrent count: ${count}`);
+    if (!validSizes.includes(count)) {
+      const nearest = validSizes.find(d => d >= count) || 64;
+      toast.warn(`Knockout draw must be exactly 16, 32, or 64 players. Currently: ${count}. ${count < nearest ? `Need ${nearest - count} more.` : `Remove ${count - 64} players.`}`);
       return;
     }
 
@@ -671,7 +684,7 @@ const GroupStageManagement = () => {
   const handleDirectKnockoutCreation = async () => {
     try {
       if (!knockoutSchedule.startDate || !knockoutSchedule.startTime) {
-        alert("Please fill in start date and time");
+        toast.warn("Please fill in start date and time");
         return;
       }
 
@@ -702,7 +715,7 @@ const GroupStageManagement = () => {
       );
 
       if (!validationResponse.data.success) {
-        alert(validationResponse.data.message);
+        toast.info(validationResponse.data.message);
         return;
       }
 
@@ -731,16 +744,16 @@ const GroupStageManagement = () => {
       if (matchResponse.data.success) {
         setShowDirectKnockoutScheduleModal(false);
         setRound2Progress({ option: 'knockout', status: 'matches_created' });
-        alert(`Direct Knockout matches created successfully! ${matchResponse.data.bracket.totalMatches} matches scheduled.`);
+        toast.info(`Direct Knockout matches created successfully! ${matchResponse.data.bracket.totalMatches} matches scheduled.`);
 
         // Switch to Groups tab to see the matches in Knockout sub-tab
         setSelectedTab("Groups");
       } else {
-        alert("Failed to create knockout matches");
+        toast.error("Failed to create knockout matches");
       }
     } catch (error) {
       console.error("Error creating Direct Knockout matches:", error);
-      alert(`Failed to create matches: ${error.response?.data?.message || error.message}`);
+      toast.info(`Failed to create matches: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -777,7 +790,7 @@ const GroupStageManagement = () => {
       }
     } catch (error) {
       console.error("Error initiating Round 2:", error);
-      alert("Failed to initiate Round 2. Please try again.");
+      toast.error("Failed to initiate Round 2. Please try again.");
     }
   };
 
@@ -785,23 +798,23 @@ const GroupStageManagement = () => {
   // Group creation handlers
   const handleCreateGroupClick = () => {
     if (!tournamentId) {
-      alert("No tournament selected");
+      toast.warn("No tournament selected");
       return;
     }
 
     // Check selection based on mode
     if (isRound2Mode) {
       if (selectedRound2Players.length === 0) {
-        alert("Please select Top Players first for Round 2");
+        toast.warn("Please select Top Players first for Round 2");
         return;
       }
     } else {
       if (selectedRegisterPlayerCategory === 'all') {
-        alert("Please select a specific category (e.g., Open, Under 12) from the dropdown before creating groups. You cannot create groups under 'All Categories'.");
+        toast.warn("Please select a specific category (e.g., Open, Under 12) from the dropdown before creating groups. You cannot create groups under 'All Categories'.");
         return;
       }
       if (selectedPlayers.length === 0) {
-        alert("Please select players first");
+        toast.warn("Please select players first");
         return;
       }
       // Warn if user tries to create group with players from mixed categories without explicit intent?
@@ -831,12 +844,12 @@ const GroupStageManagement = () => {
       );
 
       if (!allFilled) {
-        alert("Please fill in the number of players for each group.");
+        toast.warn("Please fill in the number of players for each group.");
         return;
       }
       const expectedTotal = isRound2Mode ? selectedRound2Players.length : selectedPlayers.length;
       if (totalPlayers !== expectedTotal) {
-        alert(
+        toast.info(
           `Total players in groups (${totalPlayers}) must equal selected players (${expectedTotal}).`
         );
         return;
@@ -909,7 +922,7 @@ const GroupStageManagement = () => {
 
     } catch (error) {
       console.error("Error creating groups:", error);
-      alert("Failed to create groups. Please try again.");
+      toast.error("Failed to create groups. Please try again.");
     }
   };
 
@@ -929,76 +942,47 @@ const GroupStageManagement = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/mtournament-management')}
-            className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 transition w-auto"
           >
-            ← Back
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <h1 className="text-2xl font-bold">Group Stage Tournament Management</h1>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{tournament?.title || "Tournament Management"}</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Group Stage · {tournament?.sportsType || "Sport"}</p>
+          </div>
         </div>
       </div>
 
-      {/* External Tabs - Registered Players | Groups */}
-      <div className="bg-white shadow-md rounded-[16px] p-4">
-        <div className="flex space-x-3 mb-[20px] gap-[24px]">
-          {["Registered Players", "Groups"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setSelectedTab(tab);
-                if (tab === "Registered Players") {
-                  setSelectedSubTab("Registered Players");
-                } else {
-                  setSelectedSubTab("");
-                }
-              }}
-              className={`px-[24px] py-[8px] rounded-full text-sm font-[400] w-auto transition lg:text-[18px] sm:text-[16px] ${selectedTab === tab
-                ? "text-[#333]"
-                : "text-[#333] hover:text-black"
+      {/* Navigation Tabs */}
+      <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4">
+        <div className="flex flex-wrap gap-2 mb-5">
+          {[
+            { key: "Players", tab: "Registered Players", sub: "Registered Players", label: "All Players" },
+            { key: "Top", tab: "Registered Players", sub: "Top Players", label: "Round 2 Qualifiers" },
+            { key: "Super", tab: "Registered Players", sub: "Super Players", label: "Super Players" },
+            { key: "Groups", tab: "Groups", sub: "", label: "Groups" },
+          ].map((item) => {
+            const isActive = (selectedTab === item.tab && selectedSubTab === item.sub) || (item.tab === "Groups" && selectedTab === "Groups");
+            return (
+              <button
+                key={item.key}
+                onClick={() => { setSelectedTab(item.tab); setSelectedSubTab(item.sub); }}
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all w-auto ${
+                  isActive
+                    ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
-              style={{
-                border:
-                  selectedTab === tab
-                    ? "1px solid #1D6A8B"
-                    : "1px solid #EDEAEB",
-                backgroundColor:
-                  selectedTab === tab ? "transparent" : "#EDEAEB",
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Registered Players Tab Content */}
+        {/* Players Tab Content */}
         {selectedTab === "Registered Players" && (
           <>
-            <div className="bg-white shadow-md selectedregisterplayer rounded-[16px]">
-              <div className="flex space-x-3 playersgroups">
-                {["Registered Players", "Top Players", "Super Players"].map(
-                  (subTab) => (
-                    <button
-                      key={subTab}
-                      onClick={() => setSelectedSubTab(subTab)}
-                      className={`px-[24px] py-[8px] rounded-full text-sm font-[400] w-auto transition lg:text-[18px] sm:text-[16px] ${selectedSubTab === subTab
-                        ? "text-[#333]"
-                        : "text-[#333] hover:text-black"
-                        }`}
-                      style={{
-                        border:
-                          selectedSubTab === subTab
-                            ? "1px solid #1D6A8B"
-                            : "1px solid #EDEAEB",
-                        backgroundColor:
-                          selectedSubTab === subTab
-                            ? "transparent"
-                            : "#EDEAEB",
-                      }}
-                    >
-                      {subTab}
-                    </button>
-                  )
-                )}
-              </div>
+            <div>
 
               {/* Sub-tab Content */}
               {selectedSubTab === "Registered Players" && (
@@ -1034,7 +1018,7 @@ const GroupStageManagement = () => {
                           placeholder={isRound2Mode ? "Search Top Players..." : "Search players by name..."}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                         />
                       </div>
 
@@ -1043,7 +1027,7 @@ const GroupStageManagement = () => {
                         <div className="relative">
                           <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
+                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
                           >
                             <span className="block truncate">
                               {categories.find(cat => cat.value === selectedRegisterPlayerCategory)?.label || 'Select Category'}
@@ -1063,11 +1047,11 @@ const GroupStageManagement = () => {
                                         setSelectedRegisterPlayerCategory(category.value);
                                         setIsOpen(false);
                                       }}
-                                      className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center justify-between transition-colors duration-150"
+                                      className="w-full px-4 py-2 text-left hover:bg-orange-50 flex items-center justify-between transition-colors duration-150"
                                     >
                                       <span>{category.label}</span>
                                       {selectedRegisterPlayerCategory === category.value && (
-                                        <Check className="h-4 w-4 text-blue-600" />
+                                        <Check className="h-4 w-4 text-orange-500" />
                                       )}
                                     </button>
                                   </li>
@@ -1198,7 +1182,7 @@ const GroupStageManagement = () => {
                                         {player.points || 0} points
                                       </td>
                                       <td className="px-4 py-3">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                                           <FaStar className="mr-1" /> Top Player
                                         </span>
                                       </td>
@@ -1368,7 +1352,7 @@ const GroupStageManagement = () => {
                         <div className="relative">
                           <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-400"
+                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
                           >
                             <span className="block truncate">
                               {categories.find(cat => cat.value === selectedTopPlayerCategory.toLowerCase())?.label || 'Select Category'}
@@ -1388,11 +1372,11 @@ const GroupStageManagement = () => {
                                         setSelectedTopPlayerCategory(category.label);
                                         setIsOpen(false);
                                       }}
-                                      className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center justify-between transition-colors duration-150"
+                                      className="w-full px-4 py-2 text-left hover:bg-orange-50 flex items-center justify-between transition-colors duration-150"
                                     >
                                       <span>{category.label}</span>
                                       {selectedTopPlayerCategory === category.label && (
-                                        <Check className="h-4 w-4 text-blue-600" />
+                                        <Check className="h-4 w-4 text-orange-500" />
                                       )}
                                     </button>
                                   </li>
@@ -1410,7 +1394,7 @@ const GroupStageManagement = () => {
                         Total Top Players: {topPlayers.length}
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="text-sm text-blue-600">
+                        <div className="text-sm text-orange-500">
                           <FiInfo className="inline mr-1" />
                           Includes seeded players and round 1 qualifiers
                         </div>
@@ -1428,7 +1412,7 @@ const GroupStageManagement = () => {
                               Round 2 {round2Progress.option === 'knockout' ? 'Knockout' : 'Group Stage'} - {round2Progress.status}
                             </div>
                             <button
-                              onClick={resetRound2Progress}
+                              onClick={() => setShowResetModal(true)}
                               className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200"
                               title="Reset Round 2 Progress"
                             >
@@ -1473,7 +1457,7 @@ const GroupStageManagement = () => {
                                   {player.category || 'Open'}
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                                     <FaStar className="mr-1" /> Top Player
                                   </span>
                                 </td>
@@ -1507,28 +1491,57 @@ const GroupStageManagement = () => {
                 <div className="p-4">
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Super Players - Final Knockout Phase</h3>
-                      <button
-                        onClick={() => setShowKnockoutModal(true)}
-                        className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-semibold"
-                      >
-                        <MdFlashOn className="w-4 h-4" /> Start Knockout
-                      </button>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Super Players</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{superPlayers.length} players qualified for knockout</p>
+                      </div>
+                      {!knockoutGenerated && superPlayers.length > 0 && (
+                        <button
+                          onClick={() => {
+                            const count = superPlayers.length;
+                            const validDraws = [16, 32, 64];
+                            if (count < 16) {
+                              toast.warn(`Minimum 16 Super Players required for knockout. Currently: ${count}`);
+                              return;
+                            }
+                            if (!validDraws.includes(count)) {
+                              const nearest = validDraws.find(d => d >= count) || 64;
+                              toast.warn(`Knockout requires exactly 16, 32, or 64 players. Currently: ${count}. ${count < nearest ? `Need ${nearest - count} more players for a ${nearest}-draw.` : `Remove ${count - validDraws[validDraws.length - 1]} players or select fewer.`}`);
+                              return;
+                            }
+                            setShowKnockoutModal(true);
+                          }}
+                          className="bg-orange-500 text-white px-6 py-2.5 rounded-xl hover:bg-orange-600 transition-colors flex items-center gap-2 font-bold text-sm active:scale-[0.97] w-auto"
+                        >
+                          <MdFlashOn className="w-4 h-4" /> Start Knockout
+                        </button>
+                      )}
                     </div>
 
-                    <div className="bg-gradient-to-r from-purple-50 to-red-50 border-l-4 border-purple-500 rounded-lg p-4 mb-6">
-                      <h4 className="text-purple-700 font-semibold mb-2 flex items-center gap-2">
-                        <FaTrophy className="w-4 h-4" /> Tournament Final Phase
-                      </h4>
-                      <p className="text-sm text-purple-600 mb-2">
-                        Super Players have been identified from Round 2. They are now ready for the final knockout phase.
-                      </p>
-                      <ul className="text-xs text-purple-600 list-disc list-inside">
-                        <li>Single elimination format</li>
-                        <li>Winner takes the championship</li>
-                        <li>Bracket-style matches until final</li>
-                      </ul>
-                    </div>
+                    {knockoutGenerated ? (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
+                        <h4 className="text-emerald-700 font-bold mb-1 flex items-center gap-2">
+                          <FaTrophy className="w-4 h-4" /> Knockout Generated
+                        </h4>
+                        <p className="text-sm text-emerald-600">
+                          The knockout bracket has been created. Go to the tournament knockout view to manage matches.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+                        <h4 className="text-orange-700 font-bold mb-1 flex items-center gap-2">
+                          <FaTrophy className="w-4 h-4" /> Final Phase
+                        </h4>
+                        <p className="text-sm text-orange-600 mb-2">
+                          Super Players from Round 2 are ready for the final knockout. Requires exactly 16, 32, or 64 players.
+                        </p>
+                        <ul className="text-xs text-orange-500 list-disc list-inside">
+                          <li>Single elimination format</li>
+                          <li>Winner takes the championship</li>
+                          <li>Bracket-style matches until final</li>
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Super Players Table */}
@@ -1536,24 +1549,24 @@ const GroupStageManagement = () => {
                     {superPlayers.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full bg-white border border-gray-300 rounded-lg">
-                          <thead className="bg-gradient-to-r from-purple-50 to-red-50">
+                          <thead className="bg-gradient-to-r from-orange-50 to-red-50">
                             <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Avatar</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Player Name</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Points</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Record</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Status</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-purple-700">Selection</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Avatar</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Player Name</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Points</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Record</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Status</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-emerald-700">Selection</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {superPlayers.map((player, index) => (
-                              <tr key={player._id || index} className="hover:bg-purple-50">
+                              <tr key={player._id || index} className="hover:bg-emerald-50">
                                 <td className="px-4 py-3">
                                   <img
                                     src={player.profileImage || player.playerId?.profileImage || `https://i.pravatar.cc/50?img=${Math.floor(Math.random() * 70)}`}
                                     alt={player.userName || player.playerName || player.playerId?.name || 'Player Avatar'}
-                                    className="w-10 h-10 rounded-full border-2 border-purple-200"
+                                    className="w-10 h-10 rounded-full border-2 border-emerald-200"
                                   />
                                 </td>
                                 <td className="px-4 py-3">
@@ -1561,7 +1574,7 @@ const GroupStageManagement = () => {
                                     {player.userName || player.playerName || player.playerId?.name || 'Unknown Player'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-sm font-semibold text-purple-600">
+                                <td className="px-4 py-3 text-sm font-semibold text-emerald-600">
                                   {player.points || 0} pts
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-600">
@@ -1571,7 +1584,7 @@ const GroupStageManagement = () => {
                                   </div>
                                 </td>
                                 <td className="px-4 py-3">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-red-100 text-purple-800">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-emerald-100 to-red-100 text-emerald-800">
                                     <GiLaurelCrown className="mr-1 w-3 h-3" /> Super Player
                                   </span>
                                 </td>
@@ -1588,7 +1601,7 @@ const GroupStageManagement = () => {
                     ) : (
                       <div className="text-center py-8 bg-white border border-gray-300 rounded-lg">
                         <div className="text-gray-500">
-                          <div className="text-purple-500 text-6xl mb-4 flex justify-center">
+                          <div className="text-emerald-600 text-6xl mb-4 flex justify-center">
                             <GiLaurelCrown className="w-16 h-16" />
                           </div>
                           <p className="text-lg font-medium text-gray-700 mb-2">No Super Players Yet</p>
@@ -1789,7 +1802,7 @@ const GroupStageManagement = () => {
             >
               <FiX />
             </button>
-            <h2 className="md:text-[18px] text-[#333] font-[600] text-center mb-4">
+            <h2 className="md:text-[18px] text-gray-900 font-[600] text-center mb-4">
               Confirm Group Creation
             </h2>
 
@@ -1947,12 +1960,12 @@ const GroupStageManagement = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                    <p className="text-blue-700">
+                  <div className="bg-orange-50 border border-orange-200 rounded p-3">
+                    <p className="text-orange-600">
                       <FiInfo className="inline mr-2" />
                       This player will be marked as seeded and will:
                     </p>
-                    <ul className="list-disc list-inside mt-2 text-blue-600 text-sm">
+                    <ul className="list-disc list-inside mt-2 text-orange-500 text-sm">
                       <li>Skip group stage matches</li>
                       <li>Advance directly to Round 2/Knockouts</li>
                       <li>Appear in the Top Players list</li>
@@ -1987,6 +2000,79 @@ const GroupStageManagement = () => {
         </div>
       )}
 
+      {/* Reset Round 2 Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-white rounded-2xl max-w-md mx-4 overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-red-500 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-bold">Reset Round 2</h3>
+                  <p className="text-red-100 text-sm">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5">
+              <p className="text-gray-700 text-sm leading-relaxed mb-4">
+                Are you sure you want to reset Round 2? This will permanently delete:
+              </p>
+              <div className="bg-red-50 rounded-xl p-4 space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-sm text-red-700">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  All Round 2 <strong>groups</strong> and their player assignments
+                </div>
+                <div className="flex items-center gap-2 text-sm text-red-700">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  All Round 2 <strong>matches</strong> and their scores
+                </div>
+                <div className="flex items-center gap-2 text-sm text-red-700">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  All <strong>knockout bracket</strong> matches (if any)
+                </div>
+              </div>
+              <p className="text-gray-500 text-xs">
+                You will be able to create new Round 2 groups and matches from scratch after resetting.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-5 flex gap-3">
+              <button
+                onClick={() => setShowResetModal(false)}
+                disabled={resetting}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmResetRound2}
+                disabled={resetting}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {resetting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Reset Round 2
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Round 2 Option Selection Modal */}
       {showRound2Modal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
@@ -2016,12 +2102,12 @@ const GroupStageManagement = () => {
                 {/* Group Stage Option */}
                 <div
                   className={`group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${round2Option === 'group_stage'
-                    ? 'border-blue-500 bg-blue-50/50 shadow-lg scale-[1.02]'
-                    : 'border-gray-300 hover:border-blue-300 hover:shadow-md'
+                    ? 'border-orange-500 bg-orange-50/50 shadow-lg scale-[1.02]'
+                    : 'border-gray-300 hover:border-orange-300 hover:shadow-md'
                     }`}
                   onClick={() => setRound2Option('group_stage')}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-500 group-hover:bg-blue-500 group-hover:text-white'
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-500 group-hover:bg-orange-500 group-hover:text-white'
                     }`}>
                     <GiTrophyCup className="w-7 h-7" />
                   </div>
@@ -2030,11 +2116,11 @@ const GroupStageManagement = () => {
                     Create new groups with Top Players for another round of league matches.
                   </p>
                   <ul className="text-sm text-gray-500 text-left space-y-2 bg-white/50 p-3 rounded-lg">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>Round-robin format</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>Multiple matches per player</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>Round-robin format</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>Multiple matches per player</li>
                   </ul>
                   {round2Option === 'group_stage' && (
-                    <div className="absolute top-4 right-4 text-blue-500 bg-white rounded-full p-1 shadow-sm">
+                    <div className="absolute top-4 right-4 text-orange-500 bg-white rounded-full p-1 shadow-sm">
                       <FiCheck className="w-4 h-4" />
                     </div>
                   )}
@@ -2158,10 +2244,10 @@ const GroupStageManagement = () => {
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <div className="text-blue-500 mt-0.5">ℹ️</div>
-                  <div className="text-sm text-blue-700">
+                  <div className="text-orange-500 mt-0.5">ℹ️</div>
+                  <div className="text-sm text-orange-600">
                     <p className="font-medium mb-1">Tournament Info:</p>
                     <p>• {superPlayers.length} Super Players will compete</p>
                     <p>• Bracket will auto-generate based on player count</p>
@@ -2389,20 +2475,20 @@ const GroupStageManagement = () => {
               </button>
             </div>
 
-            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-8">
+            <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-4 mb-8">
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Players</p>
+                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Players</p>
                   <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length}</p>
                 </div>
-                <div className="h-auto w-px bg-blue-100"></div>
+                <div className="h-auto w-px bg-orange-100"></div>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Matches</p>
+                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Matches</p>
                   <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length - 1}</p>
                 </div>
-                <div className="h-auto w-px bg-blue-100"></div>
+                <div className="h-auto w-px bg-orange-100"></div>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1">Total Rounds</p>
+                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Rounds</p>
                   <p className="text-2xl font-bold text-gray-800">{Math.log2(selectedDirectKnockoutPlayers.length)}</p>
                 </div>
               </div>
@@ -2414,7 +2500,7 @@ const GroupStageManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div
                   className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'global'
-                    ? 'border-indigo-500 bg-indigo-50/50 shadow-md'
+                    ? 'border-orange-500 bg-orange-50/50 shadow-md'
                     : 'border-gray-200 hover:border-gray-300'
                     }`}
                   onClick={() => setDrawMethod('global')}
@@ -2423,12 +2509,12 @@ const GroupStageManagement = () => {
                   <div className="text-xs text-gray-500 leading-snug">
                     Standard seeding protection logic (1 vs Last, etc). Best for balanced competition.
                   </div>
-                  {drawMethod === 'global' && <div className="absolute top-2 right-2 text-indigo-500"><FiCheck /></div>}
+                  {drawMethod === 'global' && <div className="absolute top-2 right-2 text-orange-500"><FiCheck /></div>}
                 </div>
 
                 <div
                   className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'local'
-                    ? 'border-indigo-500 bg-indigo-50/50 shadow-md'
+                    ? 'border-orange-500 bg-orange-50/50 shadow-md'
                     : 'border-gray-200 hover:border-gray-300'
                     }`}
                   onClick={() => setDrawMethod('local')}
@@ -2437,7 +2523,7 @@ const GroupStageManagement = () => {
                   <div className="text-xs text-gray-500 leading-snug">
                     Fixed custom slot assignments based on specific local templates.
                   </div>
-                  {drawMethod === 'local' && <div className="absolute top-2 right-2 text-indigo-500"><FiCheck /></div>}
+                  {drawMethod === 'local' && <div className="absolute top-2 right-2 text-orange-500"><FiCheck /></div>}
                 </div>
               </div>
             </div>

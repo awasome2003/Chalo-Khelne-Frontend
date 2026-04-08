@@ -68,7 +68,7 @@ export default function GroupListPage() {
           <p className="text-gray-400 text-sm mt-1">Go to Registered Players to create groups</p>
           <button
             onClick={() => navigate(`/tournaments/${tournamentId}/players`)}
-            className="mt-4 bg-[#004E93] text-white px-5 py-2 rounded-lg text-sm font-semibold w-auto"
+            className="mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg text-sm font-semibold w-auto"
           >
             Go to Players
           </button>
@@ -90,7 +90,7 @@ export default function GroupListPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                      isRound2 ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                      isRound2 ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"
                     }`}>
                       {isRound2 ? "R2" : String.fromCharCode(65 + idx)}
                     </div>
@@ -117,7 +117,7 @@ export default function GroupListPage() {
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${progress === 100 ? "bg-green-500" : "bg-blue-500"}`}
+                        className={`h-full rounded-full transition-all ${progress === 100 ? "bg-green-500" : "bg-orange-500"}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>

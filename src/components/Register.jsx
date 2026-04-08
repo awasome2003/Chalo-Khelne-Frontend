@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import "./RegistrationForm.css";
@@ -169,7 +169,6 @@ const RegistrationForm = () => {
           Already registered? <a href="/login">Please Login</a>
         </p>
       </form>
-      <ToastContainer />
     </div>
   );
 };

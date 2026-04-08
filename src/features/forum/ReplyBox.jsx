@@ -18,14 +18,14 @@ export function ReplyInput({ onSubmit, submitting, parentReplyId = null, placeho
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
           rows={2}
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none"
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition resize-none"
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
         />
       </div>
       <button
         onClick={handleSubmit}
         disabled={!text.trim() || submitting}
-        className="self-end px-4 py-3 bg-[#004E93] hover:bg-[#073E73] text-white rounded-xl transition disabled:opacity-50 w-auto active:scale-[0.97]"
+        className="self-end px-4 py-3 bg-orange-500 hover:bg-orange-700 text-white rounded-xl transition disabled:opacity-50 w-auto active:scale-[0.97]"
       >
         <Send className="w-4 h-4" />
       </button>
@@ -74,7 +74,7 @@ export function ReplyCard({ reply, userId, onLike, onReplyTo }) {
             {!isNested && (
               <button
                 onClick={() => onReplyTo?.(reply._id)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#004E93] transition w-auto"
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition w-auto"
               >
                 <CornerDownRight className="w-3 h-3" /> Reply
               </button>

@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useRef } from "react";
 import {
   Upload,
@@ -52,7 +53,7 @@ export default function BulkResultUploadModal({
 
     const ext = selected.name.split(".").pop().toLowerCase();
     if (!["csv", "xlsx", "xls"].includes(ext)) {
-      alert("Invalid file type. Please upload a .csv or .xlsx file.");
+      toast.warn("Invalid file type. Please upload a .csv or .xlsx file.");
       return;
     }
     setFile(selected);
@@ -84,7 +85,7 @@ export default function BulkResultUploadModal({
       setPreview(res.data);
       setStep("preview");
     } catch (err) {
-      alert("Preview failed: " + (err.response?.data?.message || err.message));
+      toast.error("Preview failed: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ export default function BulkResultUploadModal({
       setResult(res.data);
       setStep("result");
     } catch (err) {
-      alert("Upload failed: " + (err.response?.data?.message || err.message));
+      toast.error("Upload failed: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -139,17 +140,17 @@ export default function BulkResultUploadModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
           <div>
             <h3 className="text-white text-lg font-bold flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
               {title || "Bulk Result Upload (CSV/Excel)"}
             </h3>
-            <p className="text-indigo-200 text-sm">
+            <p className="text-orange-200 text-sm">
               Upload match results from a spreadsheet file
             </p>
           </div>
-          <button onClick={handleClose} className="text-white hover:text-indigo-200 bg-transparent w-auto">
+          <button onClick={handleClose} className="text-white hover:text-orange-200 bg-transparent w-auto">
             <X size={24} />
           </button>
         </div>
@@ -160,17 +161,17 @@ export default function BulkResultUploadModal({
           {step === "upload" && (
             <div className="space-y-6">
               {/* Download template */}
-              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-4">
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FileText className="w-5 h-5 text-orange-500" />
                   <div>
-                    <p className="text-sm font-semibold text-blue-800">Download Sample Template</p>
-                    <p className="text-xs text-blue-600">Get the correct CSV format with column headers</p>
+                    <p className="text-sm font-semibold text-orange-700">Download Sample Template</p>
+                    <p className="text-xs text-orange-500">Get the correct CSV format with column headers</p>
                   </div>
                 </div>
                 <button
                   onClick={handleDownloadTemplate}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 w-auto"
+                  className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 flex items-center gap-2 w-auto"
                 >
                   <Download className="w-4 h-4" />
                   Download
@@ -180,7 +181,7 @@ export default function BulkResultUploadModal({
               {/* Drop zone */}
               <div
                 className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
-                  file ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/30"
+                  file ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-orange-400 hover:bg-orange-50/30"
                 }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
@@ -268,9 +269,9 @@ export default function BulkResultUploadModal({
             <div className="space-y-4">
               {/* Stats bar */}
               <div className="flex gap-3">
-                <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-blue-700">{preview.totalRows}</p>
-                  <p className="text-xs text-blue-500">Total Rows</p>
+                <div className="flex-1 bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-orange-600">{preview.totalRows}</p>
+                  <p className="text-xs text-orange-500">Total Rows</p>
                 </div>
                 <div className="flex-1 bg-green-50 border border-green-200 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-green-700">
@@ -361,9 +362,9 @@ export default function BulkResultUploadModal({
             <div className="space-y-4">
               {/* Summary */}
               <div className="flex gap-3">
-                <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-blue-700">{result.summary?.totalRows || 0}</p>
-                  <p className="text-xs text-blue-500 font-medium">Total</p>
+                <div className="flex-1 bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-orange-600">{result.summary?.totalRows || 0}</p>
+                  <p className="text-xs text-orange-500 font-medium">Total</p>
                 </div>
                 <div className="flex-1 bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                   <p className="text-3xl font-bold text-green-700">{result.summary?.succeeded || 0}</p>
@@ -471,7 +472,7 @@ export default function BulkResultUploadModal({
               <button
                 onClick={handlePreview}
                 disabled={!file || loading}
-                className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 w-auto flex items-center gap-2"
+                className="px-5 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 w-auto flex items-center gap-2"
               >
                 {loading ? (
                   <RefreshCcw className="w-4 h-4 animate-spin" />
@@ -522,7 +523,7 @@ export default function BulkResultUploadModal({
               </button>
               <button
                 onClick={handleDone}
-                className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 w-auto flex items-center gap-2"
+                className="px-5 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 w-auto flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 Done

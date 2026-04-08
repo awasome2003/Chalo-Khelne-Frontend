@@ -167,7 +167,7 @@ export default function InningsBasedScorer({
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="flex-1 bg-[#004E93] text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
             <><RefreshCcw className="w-4 h-4 animate-spin" /> Saving...</>

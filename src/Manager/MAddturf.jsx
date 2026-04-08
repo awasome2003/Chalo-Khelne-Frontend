@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState } from 'react';
 import axios from 'axios';
 import { MapPin, Clock, DollarSign, Camera, Phone, Shield, Star, Dumbbell, ArrowLeft, Check, Loader2, Plus, X } from 'lucide-react';
@@ -49,9 +50,9 @@ const AddTurf = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !address || !city) { alert("Name, address, and city are required"); return; }
+    if (!name || !address || !city) { toast.warn("Name, address, and city are required"); return; }
     const validSports = sports.filter(s => s.name.trim());
-    if (validSports.length === 0) { alert("Add at least one sport"); return; }
+    if (validSports.length === 0) { toast.warn("Add at least one sport"); return; }
 
     setLoading(true);
     const formData = new FormData();
@@ -74,10 +75,10 @@ const AddTurf = () => {
 
     try {
       await axios.post("/api/turfs/", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      alert("Turf added successfully!");
+      toast.success("Turf added successfully!");
       navigate(-1);
     } catch (error) {
-      alert("Failed: " + (error.response?.data?.message || error.message));
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
@@ -111,7 +112,7 @@ const AddTurf = () => {
         </Section>
 
         <Section title="Photos" icon={Camera}>
-          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[#004E93] hover:bg-blue-50/30 transition cursor-pointer relative">
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-orange-500 hover:bg-orange-50/30 transition cursor-pointer relative">
             <input type="file" multiple onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
             <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600 font-medium">Click or drag photos here</p>
@@ -131,12 +132,12 @@ const AddTurf = () => {
                 <div className="flex-1">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Sport Name</label>
                   <input type="text" value={sport.name} onChange={(e) => updateSport(idx, "name", e.target.value)} placeholder="e.g. Cricket"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
                 </div>
                 <div className="w-32">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">₹/hr</label>
                   <input type="number" value={sport.pricePerHour} onChange={(e) => updateSport(idx, "pricePerHour", e.target.value)} placeholder="500"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
                 </div>
                 {sports.length > 1 && (
                   <button type="button" onClick={() => removeSport(idx)} className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition w-auto">
@@ -146,7 +147,7 @@ const AddTurf = () => {
               </div>
             ))}
           </div>
-          <button type="button" onClick={addSport} className="mt-2 text-sm font-semibold text-[#004E93] flex items-center gap-1 w-auto">
+          <button type="button" onClick={addSport} className="mt-2 text-sm font-semibold text-orange-500 flex items-center gap-1 w-auto">
             <Plus className="w-4 h-4" /> Add sport
           </button>
         </Section>
@@ -161,7 +162,7 @@ const AddTurf = () => {
             <div className="flex flex-wrap gap-2">
               {DAYS.map(day => (
                 <button key={day} type="button" onClick={() => toggleDay(day)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition w-auto ${selectedDays.includes(day) ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition w-auto ${selectedDays.includes(day) ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
                   {day.slice(0, 3)}
                 </button>
               ))}
@@ -183,7 +184,7 @@ const AddTurf = () => {
         <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
           <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition w-auto">Cancel</button>
           <button type="submit" disabled={loading}
-            className="flex-1 md:flex-none md:px-10 py-3 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]">
+            className="flex-1 md:flex-none md:px-10 py-3 rounded-xl bg-orange-500 hover:bg-orange-700 text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]">
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><Check className="w-4 h-4" /> Add Turf</>}
           </button>
         </div>
@@ -196,7 +197,7 @@ function Section({ title, icon: Icon, children }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center"><Icon className="w-4 h-4 text-[#004E93]" /></div>
+        <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center"><Icon className="w-4 h-4 text-orange-500" /></div>
         <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
       </div>
       <div className="p-6 space-y-4">{children}</div>
@@ -211,7 +212,7 @@ function InputField({ label, value, onChange, icon: Icon, type = "text", ...prop
       <div className="relative">
         {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />}
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition`} {...props} />
+          className={`w-full ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition`} {...props} />
       </div>
     </div>
   );
@@ -222,7 +223,7 @@ function TextareaField({ label, value, onChange, rows = 3, ...props }) {
     <div>
       <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
       <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows}
-        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none" {...props} />
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition resize-none" {...props} />
     </div>
   );
 }

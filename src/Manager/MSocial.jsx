@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useEffect, useContext } from "react";
 import { Heart, Bookmark, Share2, Plus, X, Send, MapPin, Link2, Trophy, MessageCircle, Clock } from "lucide-react";
 import axios from "axios";
@@ -44,7 +45,7 @@ function MSocial() {
       setTournamentName(""); setCaption(""); setLink(""); setLocation("");
       setModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || "Post creation failed");
+      toast.info(err.response?.data?.message || "Post creation failed");
     } finally {
       setSubmitting(false);
     }
@@ -77,8 +78,8 @@ function MSocial() {
   const formatText = (text) => {
     if (!text) return null;
     return text.split(/(@\w+|#\w+)/g).map((part, i) => {
-      if (part.startsWith("@")) return <span key={i} className="text-[#004E93] font-semibold cursor-pointer hover:underline">{part}</span>;
-      if (part.startsWith("#")) return <span key={i} className="text-[#FF6A00] font-semibold cursor-pointer hover:underline">{part}</span>;
+      if (part.startsWith("@")) return <span key={i} className="text-orange-500 font-semibold cursor-pointer hover:underline">{part}</span>;
+      if (part.startsWith("#")) return <span key={i} className="text-orange-500 font-semibold cursor-pointer hover:underline">{part}</span>;
       return <span key={i}>{part}</span>;
     });
   };
@@ -133,7 +134,7 @@ function MSocial() {
               <div key={post._id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow">
                 {/* Post Header */}
                 <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                     {(post.user?.name || post.user?.userName || "U").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -142,7 +143,7 @@ function MSocial() {
                         {post.user?.name || post.user?.userName || "User"}
                       </span>
                       {post.user?.role && (
-                        <span className="text-[9px] font-bold text-[#004E93] bg-[#004E93]/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">
                           {post.user.role}
                         </span>
                       )}
@@ -164,7 +165,7 @@ function MSocial() {
                 {/* Tournament Badge */}
                 {post.tournamentName && (
                   <div className="px-5 pb-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF6A00] bg-[#FF6A00]/10 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-500 bg-orange-500/10 px-2.5 py-1 rounded-full">
                       <Trophy className="w-3 h-3" />
                       {post.tournamentName}
                     </span>
@@ -182,7 +183,7 @@ function MSocial() {
                 {post.link && (
                   <div className="px-5 pb-3">
                     <a href={post.link} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-[#004E93] hover:underline font-medium">
+                      className="inline-flex items-center gap-1.5 text-xs text-orange-500 hover:underline font-medium">
                       <Link2 className="w-3 h-3" />
                       {post.link.length > 45 ? post.link.substring(0, 45) + "..." : post.link}
                     </a>
@@ -201,9 +202,9 @@ function MSocial() {
 
                   <button onClick={() => toggleSave(post._id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition w-auto ${
-                      isSaved ? "text-[#FF6A00] bg-[#FF6A00]/10 hover:bg-[#FF6A00]/20" : "text-gray-500 hover:bg-gray-100"
+                      isSaved ? "text-orange-500 bg-orange-500/10 hover:bg-orange-500/20" : "text-gray-500 hover:bg-gray-100"
                     }`}>
-                    <Bookmark className={`w-4 h-4 ${isSaved ? "fill-[#FF6A00]" : ""}`} />
+                    <Bookmark className={`w-4 h-4 ${isSaved ? "fill-orange-500" : ""}`} />
                   </button>
 
                   <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition w-auto">
@@ -219,7 +220,7 @@ function MSocial() {
       {/* Floating Create Button */}
       <button
         onClick={() => setModalOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#FF6A00] hover:bg-[#E55D00] text-white rounded-full shadow-lg shadow-orange-200 flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-40"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-[#E55D00] text-white rounded-full shadow-lg shadow-orange-200 flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-40"
       >
         <Plus className="w-6 h-6" />
       </button>
@@ -244,7 +245,7 @@ function MSocial() {
                   <Trophy className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={tournamentName} onChange={(e) => setTournamentName(e.target.value)}
                     placeholder="e.g. Pune Open 2026"
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
                 </div>
               </div>
 
@@ -252,7 +253,7 @@ function MSocial() {
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Caption *</label>
                 <textarea rows={3} value={caption} onChange={(e) => setCaption(e.target.value)}
                   placeholder="What's happening? Use @mentions and #hashtags..."
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition resize-none" />
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition resize-none" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -262,7 +263,7 @@ function MSocial() {
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
                       placeholder="City"
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
                   </div>
                 </div>
                 <div>
@@ -271,7 +272,7 @@ function MSocial() {
                     <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input type="text" value={link} onChange={(e) => setLink(e.target.value)}
                       placeholder="https://..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
                   </div>
                 </div>
               </div>
@@ -283,7 +284,7 @@ function MSocial() {
                   Cancel
                 </button>
                 <button type="submit" disabled={!caption.trim() || submitting}
-                  className="px-5 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-2 w-auto active:scale-[0.97]">
+                  className="px-5 py-2.5 bg-orange-500 hover:bg-orange-700 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-2 w-auto active:scale-[0.97]">
                   {submitting ? "Posting..." : <><Send className="w-4 h-4" /> Post</>}
                 </button>
               </div>

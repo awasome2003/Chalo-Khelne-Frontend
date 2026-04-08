@@ -121,7 +121,6 @@ const InviteEmployees = () => {
                 const mob = item.mobile?.toString().trim();
 
                 if ((id && seenIds.has(id)) || (mob && seenMobiles.has(mob))) {
-                    console.warn("Skipping duplicate in excel:", item);
                     return;
                 }
 
@@ -244,7 +243,7 @@ const InviteEmployees = () => {
                     <div className="flex border-b border-gray-100">
                         <button
                             onClick={() => setActiveTab("qr")}
-                            className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "qr" ? "bg-gray-50 text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-800"
+                            className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "qr" ? "bg-gray-50 text-orange-500 border-b-2 border-orange-500" : "text-gray-500 hover:text-gray-800"
                                 }`}
                         >
                             <QrCode className="w-5 h-5" /> QR Code
@@ -258,7 +257,7 @@ const InviteEmployees = () => {
                         </button>
                         <button
                             onClick={() => setActiveTab("manual")}
-                            className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "manual" ? "bg-gray-50 text-purple-600 border-b-2 border-purple-600" : "text-gray-500 hover:text-gray-800"
+                            className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "manual" ? "bg-gray-50 text-emerald-600 border-b-2 border-emerald-600" : "text-gray-500 hover:text-gray-800"
                                 }`}
                         >
                             <UserPlus className="w-5 h-5" /> Manual Add
@@ -284,7 +283,7 @@ const InviteEmployees = () => {
                                 </p>
                                 <button
                                     onClick={downloadQRCode}
-                                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                                    className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl hover:bg-orange-600 transition flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
                                 >
                                     <Download className="w-5 h-5" /> Download QR Code
                                 </button>
@@ -299,7 +298,7 @@ const InviteEmployees = () => {
                                         <h3 className="text-sm font-bold text-gray-700">Upload Filled Sheet</h3>
                                         <button
                                             onClick={downloadTemplate}
-                                            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                            className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1"
                                         >
                                             <Download className="w-3 h-3" /> Download Empty Template
                                         </button>
@@ -379,7 +378,7 @@ const InviteEmployees = () => {
                                             value={newEmployee.employeeId}
                                             onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
                                             placeholder="EMP001"
-                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                                         />
                                     </div>
                                     <div className="md:col-span-1">
@@ -389,7 +388,7 @@ const InviteEmployees = () => {
                                             value={newEmployee.name}
                                             onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
                                             placeholder="John Doe"
-                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                                         />
                                     </div>
                                     <div className="md:col-span-1">
@@ -403,13 +402,13 @@ const InviteEmployees = () => {
                                                 setNewEmployee({ ...newEmployee, mobile: val });
                                             }}
                                             placeholder="1234567890"
-                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-sm"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                                         />
                                     </div>
                                     <div className="flex items-end">
                                         <button
                                             type="submit"
-                                            className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition flex items-center justify-center gap-2 text-sm"
+                                            className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition flex items-center justify-center gap-2 text-sm"
                                         >
                                             Add to List
                                         </button>
@@ -418,7 +417,7 @@ const InviteEmployees = () => {
 
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                        <User className="w-5 h-5 text-purple-600" />
+                                        <User className="w-5 h-5 text-emerald-600" />
                                         Whitelisted Employees ({manualEmployees.length})
                                     </h3>
 
@@ -430,9 +429,9 @@ const InviteEmployees = () => {
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {manualEmployees.map((emp) => (
-                                                <div key={emp.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group hover:border-purple-200 hover:shadow-sm transition-all">
+                                                <div key={emp.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group hover:border-emerald-200 hover:shadow-sm transition-all">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 font-bold">
+                                                        <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold">
                                                             {emp.name?.charAt(0) || "E"}
                                                         </div>
                                                         <div>
@@ -454,7 +453,7 @@ const InviteEmployees = () => {
                                     {manualEmployees.length > 0 && (
                                         <button
                                             onClick={handleInviteManual}
-                                            className="w-full mt-6 py-4 bg-purple-600 text-white font-bold rounded-2xl hover:bg-purple-700 transition shadow-lg shadow-purple-200"
+                                            className="w-full mt-6 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-200"
                                         >
                                             Update Whitelist ({manualEmployees.length} Employees)
                                         </button>

@@ -65,7 +65,10 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
               </span>
             </div>
             <div className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
-              {config.labels.matchResult || "Sets"} · Best of {matchFormat.totalSets}
+              {matchFormat.scoringType === "time" ? `${config.labels.matchResult || "Score"}`
+                : matchFormat.scoringType === "innings" ? `${config.labels.matchResult || "Score"}`
+                : matchFormat.scoringType === "single" ? `${config.labels.matchResult || "Result"}`
+                : `${config.labels.matchResult || "Sets"} · Best of ${matchFormat.totalSets}`}
             </div>
           </div>
 

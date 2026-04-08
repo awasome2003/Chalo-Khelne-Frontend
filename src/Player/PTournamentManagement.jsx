@@ -50,7 +50,6 @@ const TournamentList = () => {
     axios
       .get(`/api/tournaments/tournaments`)
       .then((response) => {
-        console.log("Fetched tournaments:", response.data);
         setTournaments(response.data);
       })
       .catch((error) => {
@@ -64,17 +63,14 @@ const TournamentList = () => {
   }, [tournaments]);
   useEffect(() => {
     if (selectedTournament) {
-      console.log("Selected Tournament ID:", selectedTournament);
 
       axios
         .get(
           `/api/tournaments/bookings/tournament/${selectedTournament}`
         )
         .then((response) => {
-          console.log("API Response:", response.data);
 
           if (response.data.success && response.data.bookings.length > 0) {
-            console.log("Fetched bookings:", response.data.bookings);
 
             const players = response.data.bookings.map((booking) => ({
               id: booking._id,
@@ -88,7 +84,6 @@ const TournamentList = () => {
 
             setRegisteredPlayers(players);
           } else {
-            console.log("No bookings found.");
             setRegisteredPlayers([]); // Reset if no bookings
           }
         })
@@ -96,7 +91,6 @@ const TournamentList = () => {
           console.error("Error fetching registered players:", error);
         });
     } else {
-      console.log("No tournament selected yet.");
     }
   }, [selectedTournament]);
 
@@ -177,7 +171,6 @@ const TournamentList = () => {
   const handleViewGroups = () => {
     // Logic to show the groups somewhere, could be a redirect or UI update
     // For example, you could store the groups in another state to display them elsewhere
-    console.log("Viewing groups:", groupNames, groupPlayers);
     setIsLastModalOpen(false); // Close last modal
     // Optionally, you could show a list or navigate to a different page
   };
@@ -215,8 +208,8 @@ const TournamentList = () => {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition flex items-center mt-0 gap-2 ${
                 activeTab === tab
-                  ? "bg-[#004E93] shadow text-white" // Active tab
-                  : "bg-transparent text-gray-600 hover:bg[#004E93] hover:text-white" 
+                  ? "bg-orange-500 shadow text-white" // Active tab
+                  : "bg-transparent text-gray-600 hover:bg-orange-500 hover:text-white" 
               }`}
             >
               {tab}
@@ -240,11 +233,10 @@ const TournamentList = () => {
               key={tournament._id}
               className={`flex items-center justify-between p-4 rounded-lg shadow-md cursor-pointer transition ${
                 tournament.id === selectedTournament
-                  ? "bg-[#004E93] text-white"
+                  ? "bg-orange-500 text-white"
                   : "bg-white"
               }`}
               onClick={() => {
-                console.log("Selecting tournament with ID:", tournament._id);
                 setSelectedTournament(tournament._id);
                 setSelectedTab("Registered Players"); // Set main tab to "Registered Players"
                 setSelectedSubTab("Registered Player"); // Set sub-tab to "Registered Player"
@@ -298,8 +290,8 @@ const TournamentList = () => {
                 }}
                 className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
                   selectedTab === tab
-                    ? "bg-[#004E93] text-white"
-                    : "bg-gray-200 text-gray-600 hover:bg-[#004E93] hover:text-white"
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-200 text-gray-600 hover:bg-orange-500 hover:text-white"
                 }`}
               >
                 {tab}
@@ -327,8 +319,8 @@ const TournamentList = () => {
                       onClick={() => setSelectedSubTab(subTab)}
                       className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
                         selectedSubTab === subTab
-                          ? "bg-white text-black border border-gray-300 hover:bg[#004E93] hover:text-white"
-                          : "bg-gray-200 text-gray-600 hover:bg[#004E93] hover:text-white"
+                          ? "bg-white text-black border border-gray-300 hover:bg-orange-500 hover:text-white"
+                          : "bg-gray-200 text-gray-600 hover:bg-orange-500 hover:text-white"
                       } outline-none`}
                     >
                       {subTab}

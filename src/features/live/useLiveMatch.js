@@ -31,17 +31,26 @@ export default function useLiveMatch(matchId) {
 
   if (!match) return { match: null, isLoading, error, config: null, derived: null, isRealtime };
 
-  const sportName = match.sportsType || match.sport || "Table Tennis";
+  const sportName = match.sportsType || match.sport || null;
   const config = getSportConfig(sportName);
 
   const fmt = match.matchFormat || {};
+  const scoringType = fmt.scoringType || null;
+  const isNonSet = scoringType === "time" || scoringType === "innings" || scoringType === "single";
   const matchFormat = {
-    totalSets: fmt.maxSets || fmt.totalSets || 5,
-    setsToWin: fmt.setsToWin || Math.ceil((fmt.maxSets || fmt.totalSets || 5) / 2),
-    totalGames: fmt.maxGames || fmt.totalGames || 5,
-    gamesToWin: fmt.gamesToWin || Math.ceil((fmt.maxGames || fmt.totalGames || 5) / 2),
-    pointsToWinGame: fmt.pointsToWinGame || 11,
-    marginToWin: fmt.marginToWin || 2,
+    scoringType,
+    totalSets: fmt.maxSets || fmt.totalSets || 1,
+    setsToWin: fmt.setsToWin || Math.ceil((fmt.maxSets || fmt.totalSets || 1) / 2),
+    totalGames: fmt.maxGames || fmt.totalGames || 1,
+    gamesToWin: fmt.gamesToWin || Math.ceil((fmt.maxGames || fmt.totalGames || 1) / 2),
+    pointsToWinGame: fmt.pointsToWinGame || fmt.pointsPerSet || null,
+    marginToWin: fmt.marginToWin ?? null,
+    deuceRule: fmt.deuceRule ?? (!isNonSet),
+    // Sport-specific fields
+    oversCount: fmt.oversCount || null,
+    inningsCount: fmt.inningsCount || null,
+    halvesCount: fmt.halvesCount || null,
+    halvesDuration: fmt.halvesDuration || null,
   };
 
   const p1 = match.player1?.userName || match.player1?.playerName || "Player 1";

@@ -81,7 +81,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
             className="w-full h-full object-cover"
           />
           {turf.discount && (
-            <div className="absolute top-4 right-4 bg-[#FF6A00] text-white px-3 py-1 rounded-md font-medium">
+            <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-md font-medium">
               {turf.discount}% off
             </div>
           )}
@@ -115,7 +115,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
             <button
               className={`py-3 px-1 border-b-2 ${
                 activeTab === "info"
-                  ? "border-[#1B89FF] text-[#1B89FF] bg-transparent hover:bg-transparent"
+                  ? "border-[#F97316] text-[#F97316] bg-transparent hover:bg-transparent"
                   : "border-transparent text-gray-500 bg-transparent hover:bg-gray-200"
               } font-medium text-sm transition-colors`}
               onClick={() => setActiveTab("info")}
@@ -125,7 +125,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
             <button
               className={`py-3 px-1 border-b-2 ${
                 activeTab === "amenities"
-                  ? "border-[#1B89FF] text-[#1B89FF] bg-transparent hover:bg-transparent"
+                  ? "border-[#F97316] text-[#F97316] bg-transparent hover:bg-transparent"
                   : "border-transparent text-gray-500 bg-transparent hover:bg-gray-200"
               } font-medium text-sm transition-colors`}
               onClick={() => setActiveTab("amenities")}
@@ -135,7 +135,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
             <button
               className={`py-3 px-1 border-b-2 ${
                 activeTab === "reviews"
-                  ? "border-[#1B89FF] text-[#1B89FF] bg-transparent hover:bg-transparent"
+                  ? "border-[#F97316] text-[#F97316] bg-transparent hover:bg-transparent"
                   : "border-transparent text-gray-500 bg-transparent hover:bg-gray-200"
               } font-medium text-sm transition-colors`}
               onClick={() => setActiveTab("reviews")}
@@ -165,7 +165,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   <h3 className="font-medium mb-2">Address</h3>
                   <p className="text-gray-700">{getAddress()}</p>
                   <p className="text-gray-700">{getAreaCity()}</p>
-                  <button className="text-[#1B89FF] text-sm font-medium mt-2 flex items-center gap-1 w-auto hover:bg-transparent bg-transparent hover:text-blue-900">
+                  <button className="text-[#F97316] text-sm font-medium mt-2 flex items-center gap-1 w-auto hover:bg-transparent bg-transparent hover:text-blue-900">
                     <ExternalLink
                       className="w-5 h-5"
                       onClick={(e) => {
@@ -205,7 +205,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
 
                 {/* Booking CTA */}
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-6">
-                  <h3 className="font-medium text-[#1B89FF] mb-2">
+                  <h3 className="font-medium text-[#F97316] mb-2">
                     Ready to Play?
                   </h3>
                   <p className="text-sm text-gray-700 mb-4">
@@ -215,7 +215,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
-                      className="bg-[#1B89FF] text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                      className="bg-[#F97316] text-white py-2 px-4 rounded-lg font-medium hover:bg-orange-500 transition-colors flex items-center justify-center gap-2"
                       onClick={onSignInPrompt}
                     >
                       Book Now <ArrowRight className="w-4 h-4" />
@@ -234,7 +234,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
               <div className="grid grid-cols-2 gap-4">
                 {/* Sample amenities - in a real app, these would come from the turf data */}
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -257,7 +257,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -279,7 +279,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -304,7 +304,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -325,7 +325,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -348,7 +348,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#1B89FF]">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#F97316]">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4"
@@ -450,7 +450,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                     helpful and the equipment was in good condition...
                   </p>
                   <button
-                    className="text-[#1B89FF] text-sm mt-1 font-medium w-auto bg-transparent hover:bg-transparent hover:text-blue-800"
+                    className="text-[#F97316] text-sm mt-1 font-medium w-auto bg-transparent hover:bg-transparent hover:text-blue-800"
                     onClick={onSignInPrompt}
                   >
                     Read more
@@ -486,7 +486,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
                     is excellent and the ambiance is great...
                   </p>
                   <button
-                    className="text-[#1B89FF] text-sm mt-1 font-medium bg-transparent hover:bg-transparent hover:text-blue-800 w-auto"
+                    className="text-[#F97316] text-sm mt-1 font-medium bg-transparent hover:bg-transparent hover:text-blue-800 w-auto"
                     onClick={onSignInPrompt}
                   >
                     Read more
@@ -496,7 +496,7 @@ const TurfDetailModal = ({ turf, onClose, onSignInPrompt }) => {
 
               <div className="mt-4">
                 <button
-                  className="w-full border border-gray-300 rounded-lg py-2 text-[#1B89FF] font-medium hover:bg-gray-50 transition-colors bg-transparent hover:bg-transparent hover:text-blue-800"
+                  className="w-full border border-gray-300 rounded-lg py-2 text-[#F97316] font-medium hover:bg-gray-50 transition-colors bg-transparent hover:bg-transparent hover:text-blue-800"
                   onClick={onSignInPrompt}
                 >
                   See all reviews
@@ -535,7 +535,7 @@ const SignInModal = ({ onClose, message }) => {
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-[#1B89FF] mx-auto mb-4">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-[#F97316] mx-auto mb-4">
             <UserPlus className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -548,14 +548,14 @@ const SignInModal = ({ onClose, message }) => {
         </div>
 
         <div className="space-y-3">
-          <button className="w-full bg-[#1B89FF] text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
+          <button className="w-full bg-[#F97316] text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-500 transition-colors flex items-center justify-center gap-2">
             <LogIn className="w-5 h-5" />
             Sign in
           </button>
 
           <div className="text-center mt-4 ">
             <button
-              className="text-[#1B89FF] text-sm font-medium hover:underline hover:bg-transparent bg-transparent w-auto"
+              className="text-[#F97316] text-sm font-medium hover:underline hover:bg-transparent bg-transparent w-auto"
               onClick={onClose}
             >
               Continue as guest
@@ -795,12 +795,12 @@ const TurfContent = () => {
   // Loading spinner component
   const LoadingSpinner = () => (
     <div className="flex justify-center items-center h-32">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
     </div>
   );
 
   return (
-    <div className="bg-[#F2F4F6]">
+    <div className="bg-[#F5F7FA]">
       <div className="div">
         <Carousel />
       </div>

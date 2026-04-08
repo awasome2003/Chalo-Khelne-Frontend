@@ -28,14 +28,14 @@ const NEWS_TYPES = [
 ];
 
 const TYPE_COLORS = {
-  "Tournament Announcement": "bg-blue-50 text-blue-700 border-blue-200",
+  "Tournament Announcement": "bg-blue-50 text-orange-600 border-blue-200",
   "Sports News": "bg-indigo-50 text-indigo-700 border-indigo-200",
   "Club Updates": "bg-purple-50 text-purple-700 border-purple-200",
   "Training Announcement": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 const TYPE_GRADIENTS = {
-  "Tournament Announcement": "from-blue-500 to-indigo-600",
+  "Tournament Announcement": "from-orange-500 to-orange-600",
   "Sports News": "from-indigo-500 to-purple-600",
   "Club Updates": "from-purple-500 to-pink-600",
   "Training Announcement": "from-emerald-500 to-teal-600",
@@ -114,8 +114,8 @@ export default function LNews() {
       {/* Hero Header */}
       <div className="relative overflow-hidden bg-gray-50 border-b border-gray-200">
         <div className="absolute inset-0">
-          <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-blue-100/40 blur-[100px] rounded-full" />
-          <div className="absolute bottom-0 left-1/4 w-[300px] h-[300px] bg-indigo-100/30 blur-[80px] rounded-full" />
+          <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-orange-100/40 blur-[100px] rounded-full" />
+          <div className="absolute bottom-0 left-1/4 w-[300px] h-[300px] bg-amber-100/30 blur-[80px] rounded-full" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 py-16 relative z-10">
@@ -125,11 +125,11 @@ export default function LNews() {
             variants={fadeInUp}
             className="max-w-2xl"
           >
-            <span className="inline-block px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-100 mb-4">
+            <span className="inline-block px-4 py-1.5 bg-blue-50 text-orange-500 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-100 mb-4">
               Latest Updates
             </span>
             <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 leading-none">
-              Sports <span className="text-blue-600">News</span>
+              Sports <span className="text-orange-500">News</span>
             </h1>
             <p className="text-gray-500 mt-4 text-lg max-w-lg">
               Stay updated with tournament announcements, club updates, and the
@@ -160,7 +160,7 @@ export default function LNews() {
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
           </div>
         ) : news.length === 0 ? (
           <div className="text-center py-32">
@@ -227,7 +227,7 @@ export default function LNews() {
                       </span>
                     </div>
 
-                    <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
+                    <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-gray-900 leading-tight group-hover:text-orange-500 transition-colors">
                       {news[0].title}
                     </h2>
 
@@ -240,7 +240,7 @@ export default function LNews() {
                         {news[0].sports.map((s) => (
                           <span
                             key={s}
-                            className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-100"
+                            className="px-2.5 py-1 bg-blue-50 text-orange-500 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-100"
                           >
                             {s}
                           </span>
@@ -248,7 +248,7 @@ export default function LNews() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 text-blue-600 font-bold text-sm group-hover:gap-3 transition-all">
+                    <div className="flex items-center gap-2 text-orange-500 font-bold text-sm group-hover:gap-3 transition-all">
                       Read Full Article
                       <ArrowRight className="w-4 h-4" />
                     </div>
@@ -301,7 +301,7 @@ export default function LNews() {
 
                     {/* Card Content */}
                     <div className="p-5 space-y-3">
-                      <h3 className="text-lg font-black italic tracking-tight text-gray-900 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-lg font-black italic tracking-tight text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-500 transition-colors">
                         {article.title}
                       </h3>
 
@@ -314,7 +314,7 @@ export default function LNews() {
                           {article.sports.slice(0, 2).map((s) => (
                             <span
                               key={s}
-                              className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100"
+                              className="px-2 py-0.5 bg-blue-50 text-orange-500 rounded text-[10px] font-bold border border-blue-100"
                             >
                               {s}
                             </span>
@@ -459,7 +459,7 @@ export default function LNews() {
                     {selectedArticle.sports.map((s) => (
                       <span
                         key={s}
-                        className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100"
+                        className="px-3 py-1 bg-blue-50 text-orange-500 rounded-lg text-xs font-bold border border-blue-100"
                       >
                         {s}
                       </span>
@@ -470,7 +470,7 @@ export default function LNews() {
                 {/* Body */}
                 {articleLoading ? (
                   <div className="flex justify-center py-10">
-                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                    <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
                   </div>
                 ) : (
                   <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">

@@ -10,7 +10,7 @@ export default function RefereeDetailModal({ referee, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#004E93] to-[#1D6A8B] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-orange-500 to-[#1D6A8B] p-6 text-white relative">
           <button onClick={onClose} className="absolute top-4 right-4 p-1 hover:bg-white/10 rounded-lg w-auto">
             <X className="w-5 h-5" />
           </button>

@@ -1,7 +1,7 @@
 /**
  * Standardized badge/pill component.
  *
- * variant: "live" | "completed" | "upcoming" | "pending" | "cancelled" | "info" | "accent"
+ * variant: "live" | "completed" | "upcoming" | "pending" | "cancelled" | "info" | "accent" | "sport"
  * size: "xs" | "sm" | "md"
  * dot: boolean — show animated dot (for LIVE)
  */
@@ -13,15 +13,18 @@ const VARIANTS = {
   pending: "bg-amber-50 text-amber-600 border-amber-200",
   cancelled: "bg-gray-50 text-gray-500 border-gray-200",
   info: "bg-gray-100 text-gray-600 border-gray-200",
-  accent: "bg-[#fff8ec] text-[#cc4c02] border-[#ffdca5]",
+  accent: "bg-amber-50 text-amber-700 border-amber-200",
   success: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  primary: "bg-[#eff7ff] text-[#004e93] border-[#b6ddff]",
+  primary: "bg-orange-50 text-orange-700 border-orange-200",
+  secondary: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  sport: "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-transparent shadow-sm",
 };
 
 const SIZES = {
   xs: "text-[10px] px-1.5 py-0.5",
   sm: "text-xs px-2 py-0.5",
   md: "text-xs px-2.5 py-1",
+  lg: "text-sm px-3 py-1.5",
 };
 
 export default function Badge({
@@ -34,7 +37,7 @@ export default function Badge({
   return (
     <span
       className={`
-        inline-flex items-center gap-1 font-bold rounded-full border
+        inline-flex items-center gap-1.5 font-bold rounded-full border
         ${VARIANTS[variant] || VARIANTS.info}
         ${SIZES[size] || SIZES.sm}
         ${className}

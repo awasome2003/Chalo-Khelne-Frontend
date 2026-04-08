@@ -65,14 +65,14 @@ export default function MessageInput({ onSend, sending }) {
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Type a message..."
             rows={1}
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition"
+            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
           />
         </div>
 
         <button
           onClick={handleSend}
           disabled={(!text.trim() && files.length === 0) || sending}
-          className="p-2.5 bg-[#004E93] hover:bg-[#073E73] text-white rounded-xl transition disabled:opacity-50 w-auto flex-shrink-0 active:scale-[0.95]"
+          className="p-2.5 bg-orange-500 hover:bg-orange-700 text-white rounded-xl transition disabled:opacity-50 w-auto flex-shrink-0 active:scale-[0.95]"
         >
           <Send className="w-5 h-5" />
         </button>

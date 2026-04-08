@@ -33,7 +33,7 @@ export default function TournamentStats({ players, groups, allMatches, live, com
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-bold text-gray-700">Tournament Progress</span>
-          <span className="text-sm font-black text-[#004E93]">{progress}%</span>
+          <span className="text-sm font-black text-orange-500">{progress}%</span>
         </div>
         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
           <div

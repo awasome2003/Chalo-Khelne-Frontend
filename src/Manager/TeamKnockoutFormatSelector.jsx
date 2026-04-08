@@ -75,20 +75,20 @@ function FormatCard({ format, selected, expanded, onSelect, onToggle }) {
 
   return (
     <div className={`rounded-2xl border-2 transition-all overflow-hidden ${
-      selected ? "border-[#004E93] bg-[#004E93]/5 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
+      selected ? "border-orange-500 bg-orange-500/5 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
     }`}>
       {/* Main Row */}
       <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={onSelect}>
         {/* Radio */}
         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition ${
-          selected ? "border-[#004E93] bg-[#004E93]" : "border-gray-300"
+          selected ? "border-orange-500 bg-orange-500" : "border-gray-300"
         }`}>
           {selected && <Check className="w-3 h-3 text-white" />}
         </div>
 
         {/* Icon */}
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          selected ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-500"
+          selected ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500"
         }`}>
           {format.hasDoubles ? <Users className="w-5 h-5" /> : <Swords className="w-5 h-5" />}
         </div>
@@ -96,7 +96,7 @@ function FormatCard({ format, selected, expanded, onSelect, onToggle }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className={`font-bold text-sm ${selected ? "text-[#004E93]" : "text-gray-800"}`}>{format.name}</h3>
+            <h3 className={`font-bold text-sm ${selected ? "text-orange-500" : "text-gray-800"}`}>{format.name}</h3>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
@@ -126,18 +126,18 @@ function FormatCard({ format, selected, expanded, onSelect, onToggle }) {
             {format.sets.map((set) => (
               <div key={set.setNumber} className="flex items-center gap-2 text-xs">
                 <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${
-                  set.isDecider ? "bg-orange-100 text-orange-600" : set.type === "doubles" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                  set.isDecider ? "bg-orange-100 text-orange-600" : set.type === "doubles" ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-500"
                 }`}>
                   {set.setNumber}
                 </span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                  set.type === "doubles" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
+                  set.type === "doubles" ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-500"
                 }`}>
                   {set.type === "doubles" ? "DBL" : "SGL"}
                 </span>
                 <span className="text-gray-700 font-medium">{set.label}</span>
                 {set.requiresSelection && (
-                  <span className="text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
                     PICK
                   </span>
                 )}
@@ -150,12 +150,12 @@ function FormatCard({ format, selected, expanded, onSelect, onToggle }) {
             ))}
             {/* Show selectable options inline */}
             {format.sets.filter((s) => s.requiresSelection).map((s) => (
-              <div key={`opts-${s.setNumber}`} className="mt-2 ml-8 pl-3 border-l-2 border-purple-200">
-                <p className="text-[10px] font-bold text-purple-500 mb-1">Set {s.setNumber} — Captain picks pairing:</p>
+              <div key={`opts-${s.setNumber}`} className="mt-2 ml-8 pl-3 border-l-2 border-emerald-200">
+                <p className="text-[10px] font-bold text-emerald-600 mb-1">Set {s.setNumber} — Captain picks pairing:</p>
                 <div className="space-y-0.5">
                   {s.options.map((opt) => (
                     <div key={opt.id} className="text-[10px] text-gray-500 flex items-center gap-1.5">
-                      <span className="w-1 h-1 rounded-full bg-purple-300" />
+                      <span className="w-1 h-1 rounded-full bg-emerald-300" />
                       {opt.label}
                     </div>
                   ))}
@@ -171,7 +171,7 @@ function FormatCard({ format, selected, expanded, onSelect, onToggle }) {
               <div className="text-center">
                 <div className="flex gap-1 justify-center mb-1">
                   {["A", "B", ...(format.minPlayers >= 3 ? ["C"] : [])].map((p) => (
-                    <div key={p} className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-black text-xs">{p}</div>
+                    <div key={p} className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xs">{p}</div>
                   ))}
                 </div>
                 <span className="text-[10px] text-gray-500 font-medium">Home</span>

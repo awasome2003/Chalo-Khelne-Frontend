@@ -43,7 +43,7 @@ export default function ThreadList() {
         <button
           onClick={() => setActiveCategory(null)}
           className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition w-auto ${
-            !activeCategory ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            !activeCategory ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
           All
@@ -53,7 +53,7 @@ export default function ThreadList() {
             key={cat._id}
             onClick={() => setActiveCategory(cat._id)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition w-auto flex items-center gap-1 ${
-              activeCategory === cat._id ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              activeCategory === cat._id ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
             <span>{cat.icon}</span> {cat.name}

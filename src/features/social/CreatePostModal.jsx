@@ -96,7 +96,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) 
           <button
             onClick={handleSubmit}
             disabled={!caption.trim() || loading}
-            className="px-5 py-2 bg-[#004E93] text-white text-sm font-semibold rounded-lg hover:bg-blue-800 transition disabled:opacity-50 w-auto"
+            className="px-5 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 transition disabled:opacity-50 w-auto"
           >
             {loading ? "Posting..." : "Post"}
           </button>

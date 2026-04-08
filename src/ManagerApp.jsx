@@ -6,7 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import MDashboard from "./Manager/MDashboard";
 import MTournamentManagement from "./Manager/MTournamentManagement";
 import MSlot_Booking from "./Manager/MSlot_Booking";
-import MSocial from "./Manager/MSocial";
+import MSocial from "./Manager/MSocialV2";
 import MRefree from "./Manager/MRefree";
 import MTrainers from "./Manager/MTrainers";
 import MSettings from "./Manager/MSettings";
@@ -34,6 +34,9 @@ import PlayersPage from "./Manager/Tournament/PlayersPage";
 import GroupListPage from "./Manager/Tournament/GroupListPage";
 import GroupDetailPage from "./Manager/Tournament/GroupDetailPage";
 import KnockoutPage from "./Manager/Tournament/KnockoutPage";
+import StaffApplicationsPage from "./Manager/Tournament/StaffApplicationsPage";
+import AllStaffApplicationsPage from "./Manager/AllStaffApplicationsPage";
+import TournamentLeaderboard from "./Manager/TournamentLeaderboard";
 
 // Feature modules
 import { LiveMatchPage } from "./features/live";
@@ -66,6 +69,7 @@ const ManagerApp = () => {
 
           {/* Tournament Management */}
           <Route path="/mtournament-management" element={<MTournamentManagement />} />
+          <Route path="/staff-applications" element={<AllStaffApplicationsPage />} />
           <Route path="/invite-employees" element={<InviteEmployees />} />
 
           {/* Facility */}
@@ -104,11 +108,13 @@ const ManagerApp = () => {
           <Route path="/tournaments/:tournamentId/groups" element={<GroupListPage />} />
           <Route path="/tournaments/:tournamentId/groups/:groupId" element={<GroupDetailPage />} />
           <Route path="/tournaments/:tournamentId/knockout" element={<KnockoutPage />} />
+          <Route path="/tournaments/:tournamentId/staff" element={<StaffApplicationsPage />} />
 
           {/* Legacy Group Stage (backward compat) */}
           <Route path="/tournament-management/group-stage" element={<MGroupStageManagement />} />
           <Route path="/tournament-management/group-stage/:tournamentId/:groupId/scoreboard" element={<MGroupStageScoreBoard />} />
           <Route path="/tournament-management/group-stage/:tournamentId/:groupId/points-table" element={<MPointsTableScreen />} />
+          <Route path="/tournament-management/group-stage/:tournamentId/leaderboard" element={<TournamentLeaderboard />} />
           <Route path="/tournament-management/group-stage/:tournamentId/final-knockout" element={
             <div className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4 text-gray-800">Final Knockout Phase</h2>

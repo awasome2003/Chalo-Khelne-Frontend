@@ -6,4 +6,6 @@ export { default as PageHeader } from "./PageHeader";
 export { default as EmptyState } from "./EmptyState";
 export { default as DataTable } from "./DataTable";
 export { default as ProgressBar } from "./ProgressBar";
+export { default as SectionCard } from "./SectionCard";
+export { default as ActionBar } from "./ActionBar";
 export { default as theme } from "./theme";

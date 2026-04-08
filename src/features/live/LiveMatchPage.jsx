@@ -122,9 +122,14 @@ export default function LiveMatchPage() {
               <h3 className="font-bold text-gray-300 text-sm mb-3">Match Info</h3>
               <div className="space-y-2.5 text-sm">
                 <InfoRow label="Sport" value={derived.sportName} />
-                <InfoRow label="Format" value={`Best of ${matchFormat.totalSets} ${config.labels.set || "sets"}`} />
-                <InfoRow label={`${config.labels.game || "Games"}/Set`} value={matchFormat.gamesToWin ? `First to ${matchFormat.gamesToWin}` : "—"} />
-                <InfoRow label={`${config.labels.point || "Points"}/Game`} value={matchFormat.pointsToWinGame || "—"} />
+                <InfoRow label="Format" value={
+                  matchFormat.scoringType === "time" ? `${matchFormat.halvesCount || matchFormat.totalSets || "—"} ${config.labels.set || "periods"} × ${matchFormat.halvesDuration || "—"} min`
+                  : matchFormat.scoringType === "innings" ? `${matchFormat.inningsCount || matchFormat.totalSets || "—"} ${config.labels.set || "innings"}, ${matchFormat.oversCount || "—"} ${config.labels.point || "overs"}`
+                  : matchFormat.scoringType === "single" ? "Single result"
+                  : `Best of ${matchFormat.totalSets} ${config.labels.set || "sets"}`
+                } />
+                {matchFormat.scoringType === "sets" && <InfoRow label={`${config.labels.game || "Games"}/${config.labels.set || "Set"}`} value={matchFormat.gamesToWin ? `First to ${matchFormat.gamesToWin}` : "—"} />}
+                {matchFormat.pointsToWinGame && <InfoRow label={`${config.labels.point || "Points"}/${config.labels.game || "Game"}`} value={matchFormat.pointsToWinGame} />}
                 {matchFormat.marginToWin > 1 && <InfoRow label="Win by" value={`${matchFormat.marginToWin} point margin`} />}
                 <InfoRow label="Status" value={
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${

@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -98,10 +99,10 @@ export default function RbacManagement() {
   const handleSeed = async () => {
     try {
       const res = await axios.post("/api/roles/seed");
-      alert(`Seed complete!\nPermissions: ${res.data.permissions.created} created, ${res.data.permissions.skipped} skipped\nRoles: ${res.data.roles.created} created, ${res.data.roles.updated} updated`);
+      toast.info(`Seed complete!\nPermissions: ${res.data.permissions.created} created, ${res.data.permissions.skipped} skipped\nRoles: ${res.data.roles.created} created, ${res.data.roles.updated} updated`);
       fetchAll();
     } catch (err) {
-      alert("Seed failed: " + (err.response?.data?.message || err.message));
+      toast.info("Seed failed: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -116,7 +117,7 @@ export default function RbacManagement() {
       }
       fetchAll();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -130,13 +131,13 @@ export default function RbacManagement() {
       setNewRole({ name: "", slug: "", authorityLevel: 5, description: "", color: "#6B7280" });
       fetchAll();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
   const handleDeleteRole = async (roleId, roleName, isSystem) => {
     if (isSystem) {
-      alert("System roles cannot be deleted.");
+      toast.info("System roles cannot be deleted.");
       return;
     }
     if (!confirm(`Delete role "${roleName}"? This cannot be undone.`)) return;
@@ -144,7 +145,7 @@ export default function RbacManagement() {
       await axios.delete(`/api/roles/${roleId}`);
       fetchAll();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -157,13 +158,13 @@ export default function RbacManagement() {
       setNewPerm({ key: "", name: "", module: "tournament", action: "read", description: "" });
       fetchAll();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
   const handleDeletePermission = async (permId, isSystem) => {
     if (isSystem) {
-      alert("System permissions cannot be deleted.");
+      toast.info("System permissions cannot be deleted.");
       return;
     }
     if (!confirm("Delete this permission?")) return;
@@ -171,7 +172,7 @@ export default function RbacManagement() {
       await axios.delete(`/api/roles/permissions/${permId}`);
       fetchAll();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 

@@ -78,7 +78,6 @@ const ClubAdminProfile = () => {
         authorizations: profile.authorizations || '',
       });
     } catch (error) {
-      console.log("No existing profile found.");
       setIsNewProfile(true);
     }
   };
@@ -111,11 +110,11 @@ const ClubAdminProfile = () => {
       if (isNewProfile) {
         await axios.post('/api/clubadminprofile/', { userId, ...formData });
 
-        // alert('Profile created successfully!');
+        // toast.info('Profile created successfully!');
         toast.success('Profile created successfully!');
       } else {
         await axios.put(`/api/clubadminprofile/${userId}`, formData);
-        // alert('Profile updated successfully!');
+        // toast.info('Profile updated successfully!');
         toast.success('Profile updated successfully!');
       }
       fetchProfile();

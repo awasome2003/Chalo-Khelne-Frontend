@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -78,10 +79,10 @@ export default function Inquiries() {
 
             const res = await axios.post(endpoint, formData);
             setGeneratedCredentials(res.data.credentials);
-            alert(`${onboardType === "corporate" ? "Corporate" : "Club"} Account Created Successfully!`);
+            toast.info(`${onboardType === "corporate" ? "Corporate" : "Club"} Account Created Successfully!`);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || "Error creating account");
+            toast.info(error.response?.data?.message || "Error creating account");
         } finally {
             setIsSubmitting(false);
         }

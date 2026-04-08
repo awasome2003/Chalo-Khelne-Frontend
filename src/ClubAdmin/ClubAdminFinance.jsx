@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -67,7 +68,7 @@ export default function ClubAdminFinance() {
       setManagerDetail(res.data);
       setView("manager");
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -80,7 +81,7 @@ export default function ClubAdminFinance() {
       setTournamentDetail(res.data);
       setView("tournament");
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }

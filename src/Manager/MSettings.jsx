@@ -107,7 +107,7 @@ export default function MSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-8 h-8 text-[#004E93] animate-spin" />
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
       </div>
     );
   }
@@ -124,13 +124,13 @@ export default function MSettings() {
         {/* Profile Card */}
         <Section icon={User} title="Profile">
           <div className="flex items-center gap-4 mb-5 pb-5 border-b border-gray-100">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-2xl font-black">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-orange-200">
               {(profile?.name || auth?.name || "U").charAt(0).toUpperCase()}
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-800">{profile?.name || auth?.name || "Manager"}</h3>
               <p className="text-sm text-gray-500">{profile?.email || auth?.email}</p>
-              <span className="text-[10px] font-bold text-[#004E93] bg-[#004E93]/10 px-2 py-0.5 rounded-full mt-1 inline-block">Manager</span>
+              <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full mt-1 inline-block">Manager</span>
             </div>
           </div>
 
@@ -142,9 +142,9 @@ export default function MSettings() {
                 <p className="text-xs text-gray-400 font-medium">Full Name</p>
                 {editingName ? (
                   <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} autoFocus
-                    className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-48" />
+                    className="text-sm font-semibold text-gray-800 border-b-2 border-orange-500 outline-none bg-transparent py-0.5 w-48" />
                 ) : (
-                  <p className="text-sm font-semibold text-gray-800">{profile?.email || auth?.email || "—"}</p>
+                  <p className="text-sm font-semibold text-gray-800">{profile?.name || auth?.name || "—"}</p>
                 )}
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function MSettings() {
                 </button>
               </div>
             ) : (
-              <button onClick={() => setEditingName(true)} className="p-1.5 text-gray-400 hover:text-[#004E93] hover:bg-blue-50 rounded-lg transition w-auto">
+              <button onClick={() => setEditingName(true)} className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition w-auto">
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
@@ -174,7 +174,7 @@ export default function MSettings() {
                 <p className="text-xs text-gray-400 font-medium">Email Address</p>
                 {editingEmail ? (
                   <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoFocus
-                    className="text-sm font-semibold text-gray-800 border-b-2 border-[#004E93] outline-none bg-transparent py-0.5 w-56" />
+                    className="text-sm font-semibold text-gray-800 border-b-2 border-orange-500 outline-none bg-transparent py-0.5 w-56" />
                 ) : (
                   <p className="text-sm font-semibold text-gray-800">{profile?.email || auth?.email || '-'}</p>
                 )}
@@ -192,7 +192,7 @@ export default function MSettings() {
                 </button>
               </div>
             ) : (
-              <button onClick={() => setEditingEmail(true)} className="p-1.5 text-gray-400 hover:text-[#004E93] hover:bg-blue-50 rounded-lg transition w-auto">
+              <button onClick={() => setEditingEmail(true)} className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition w-auto">
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
@@ -213,13 +213,13 @@ export default function MSettings() {
           <button onClick={() => setShowPasswordModal(true)}
             className="w-full flex items-center justify-between py-3 hover:bg-gray-50 rounded-xl px-3 -mx-3 transition group">
             <div className="flex items-center gap-3">
-              <Lock className="w-4 h-4 text-gray-400 group-hover:text-[#004E93]" />
+              <Lock className="w-4 h-4 text-gray-400 group-hover:text-orange-500" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-gray-800">Change Password</p>
                 <p className="text-xs text-gray-400">Update your account password</p>
               </div>
             </div>
-            <div className="text-xs text-[#004E93] font-semibold opacity-0 group-hover:opacity-100 transition">Change →</div>
+            <div className="text-xs text-orange-500 font-semibold opacity-0 group-hover:opacity-100 transition">Change →</div>
           </button>
         </Section>
 
@@ -232,9 +232,9 @@ export default function MSettings() {
             <InfoRow label="Support" value="support@chalokhelne.com" />
           </div>
           <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
-            <a href="/l/terms-and-conditions" className="text-xs text-[#004E93] font-medium hover:underline">Terms & Conditions</a>
-            <a href="/l/privacy-policy" className="text-xs text-[#004E93] font-medium hover:underline">Privacy Policy</a>
-            <a href="/l/faq" className="text-xs text-[#004E93] font-medium hover:underline">FAQs</a>
+            <a href="/l/terms-and-conditions" className="text-xs text-orange-500 font-medium hover:underline">Terms & Conditions</a>
+            <a href="/l/privacy-policy" className="text-xs text-orange-500 font-medium hover:underline">Privacy Policy</a>
+            <a href="/l/faq" className="text-xs text-orange-500 font-medium hover:underline">FAQs</a>
           </div>
         </Section>
 
@@ -273,7 +273,7 @@ export default function MSettings() {
                   Cancel
                 </button>
                 <button type="submit" disabled={changingPassword}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#004E93] hover:bg-[#073E73] text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2">
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-700 text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2">
                   {changingPassword ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</> : "Update Password"}
                 </button>
               </div>
@@ -290,8 +290,8 @@ function Section({ icon: Icon, title, children }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#004E93]/10 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-[#004E93]" />
+        <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-orange-500" />
         </div>
         <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
       </div>
@@ -316,7 +316,7 @@ function PasswordInput({ label, value, onChange }) {
       <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
       <div className="relative">
         <input type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} required minLength={label.includes("New") ? 6 : undefined}
-          className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+          className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
         <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-auto">
           <Eye className="w-4 h-4" />
         </button>

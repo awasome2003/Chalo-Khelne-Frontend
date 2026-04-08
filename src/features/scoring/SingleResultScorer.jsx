@@ -54,7 +54,7 @@ export default function SingleResultScorer({
                 onClick={() => setSelectedResult(result)}
                 className={`w-full py-4 rounded-xl text-sm font-bold transition border-2 ${
                   isSelected
-                    ? "border-[#004E93] bg-blue-50 text-[#004E93]"
+                    ? "border-orange-500 bg-blue-50 text-orange-500"
                     : "border-gray-200 text-gray-600 hover:border-gray-300"
                 }`}
               >
@@ -94,7 +94,7 @@ export default function SingleResultScorer({
         <button
           onClick={handleSubmit}
           disabled={submitting || (hasResults ? !selectedResult : (!score1 || !score2))}
-          className="flex-1 bg-[#004E93] text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
             <><RefreshCcw className="w-4 h-4 animate-spin" /> Saving...</>

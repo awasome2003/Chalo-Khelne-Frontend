@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useEffect, useContext } from "react";
 import {
   FaHeart,
@@ -68,7 +69,7 @@ function CSocial() {
       setModalOpen(false);
     } catch (err) {
       console.error("Error creating post:", err.response || err);
-      alert(err.response?.data?.message || "Post creation failed");
+      toast.info(err.response?.data?.message || "Post creation failed");
     }
   };
 

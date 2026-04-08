@@ -1,11 +1,14 @@
 import React, { useEffect } from "react";
-import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, MapPin, Calendar, Award, IndianRupee, ArrowLeft, Clock } from "lucide-react";
 
 const EventDetails = () => {
+  const navigate = useNavigate();
+
   const crumbs = [
-    { label: "Events", href: "/" },
-    { label: "Live", href: "/" },
-    { label: "Event Details", href: "#", active: true },
+    { label: "Events", path: "/l/event" },
+    { label: "Live" },
+    { label: "Event Details", active: true },
   ];
 
   useEffect(() => {
@@ -13,140 +16,146 @@ const EventDetails = () => {
   }, []);
 
   return (
-    <div className="px-[120px] py-[100px] bg-[#F2F4F6]">
-      <nav className="flex items-center space-x-1 text-sm mb-[30px]">
-        {crumbs.map((crumb, index) => (
-          <div key={index} className="flex items-center">
-            <a
-              href={crumb.href}
-              className={`${
-                crumb.active
-                  ? "text-blue-500 font-medium"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              {crumb.label}
-            </a>
-            {index < crumbs.length - 1 && (
-              <ChevronRight className="w-4 h-4 mx-1 text-gray-400" />
-            )}
+    <div className="min-h-screen bg-[#F5F7FA]">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-6 md:px-12 py-6">
+        <div className="max-w-[1200px] mx-auto">
+          {/* Back + Breadcrumbs */}
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-gray-100 transition w-auto">
+              <ArrowLeft className="w-4 h-4 text-gray-500" />
+            </button>
+            <nav className="flex items-center gap-1 text-sm">
+              {crumbs.map((crumb, i) => (
+                <div key={i} className="flex items-center">
+                  {crumb.path ? (
+                    <button onClick={() => navigate(crumb.path)} className="text-gray-400 hover:text-orange-500 transition-colors text-xs font-medium w-auto">
+                      {crumb.label}
+                    </button>
+                  ) : (
+                    <span className={`text-xs font-medium ${crumb.active ? "text-orange-500" : "text-gray-400"}`}>
+                      {crumb.label}
+                    </span>
+                  )}
+                  {i < crumbs.length - 1 && <ChevronRight className="w-3.5 h-3.5 mx-1 text-gray-300" />}
+                </div>
+              ))}
+            </nav>
           </div>
-        ))}
-      </nav>
-      <div>
-        <h1 className="font-roboto text-[24px] font-semibold mb-[20px] text-[#333] font-roboto text-2xl">
-          Event Details Page
-        </h1>
-        <div className="h-[425px]">
-          <img
-            src="/src/assets/event1.png"
-            alt="event image"
-            className="w-full h-full"
-          />
+
+          <h1 className="text-2xl font-bold text-gray-900">Event Details</h1>
         </div>
       </div>
-      <div className="mt-[30px]">
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Tournament Name
-          </p>
-          <p className="text-[#666] font-roboto text-lg font-normal ">
-            Tournament Type
-          </p>
+
+      <div className="max-w-[1200px] mx-auto px-6 md:px-12 py-8 space-y-5">
+        {/* Hero Image */}
+        <div className="rounded-2xl overflow-hidden h-[320px] md:h-[420px] bg-gray-200">
+          <img src="/src/assets/card-img.png" alt="Event" className="w-full h-full object-cover" />
         </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Club Name
-          </p>
-          <p className="text-[#666] font-roboto text-lg font-normal ">
-            Rajdhani Sports Club 1st Floor, Victory Complex, Opposite City Park,
-            Sector 12, Nigadi, Pune - 411017, India
-          </p>
+
+        {/* Info Cards */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Tournament Name</h2>
+          <span className="text-xs font-semibold text-orange-500 bg-orange-50 px-2.5 py-0.5 rounded-full">Knockout</span>
         </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Oct 19th - Oct 20th
-          </p>
-          <p className="text-[#666] font-roboto text-lg font-normal ">
-            Booking closes on: 19th Oct 2024
-          </p>
-        </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Event Description
-          </p>
-          <p className="text-[#666] font-roboto text-lg font-normal ">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Duis aute irure dolor in
-            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-            culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum
-            dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-            veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
-            ea commodo consequat. Duis aute irure dolor in reprehenderit in
-            voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-            Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
-          </p>
-        </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Organized by
-          </p>
-          <p className="text-[#666] font-roboto text-[20px] font-normal ">
-            Organizer Name
-          </p>
-        </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Amenities
-          </p>
-          <div className="flex justify-start items-center gap-[10px]">
-            <p className="flex justify-start items-center gap-[10px] px-6 py-2 rounded-full bg-[#EDEAEB] text-[#333] text-[20px] font-normal font-roboto leading-none">
-              <img src="./src/assets/checkroom.svg" alt="" />
-              Changing room
-            </p>
-            <p className="flex justify-start items-center gap-[10px] px-6 py-2 rounded-full bg-[#EDEAEB] text-[#333] text-[20px] font-normal font-roboto leading-none">
-              <img src="./src/assets/local_parking.svg" alt="" />
-              Parking
-            </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Venue</p>
+                <p className="text-sm font-bold text-gray-900">Rajdhani Sports Club</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">1st Floor, Victory Complex, Opposite City Park, Sector 12, Nigadi, Pune - 411017</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Schedule</p>
+                <p className="text-sm font-bold text-gray-900">Oct 19 – Oct 20</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">Booking closes on: Oct 18, 2024</p>
           </div>
         </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Selected Categories
-          </p>
-          <div className="flex justify-start items-center gap-[10px]">
-            <button className="gap-2 px-6 py-2 rounded-full bg-[#004E93] text-[#FFF] text-[18px] font-semibold font-roboto leading-none">
-              Open Category
-            </button>
-            <button className="gap-2 px-6 py-2 rounded-full bg-[#EDEAEB] text-[#333] text-[18px] font-normal font-roboto leading-none">
-              Under 15 ( U15 )
-            </button>
-            <button className="gap-2 px-6 py-2 rounded-full bg-[#EDEAEB] text-[#333] text-[18px] font-normal font-roboto leading-none">
-              Veterans ( 39+ )
-            </button>
-            <button className="gap-2 px-6 py-2 rounded-full bg-[#EDEAEB] text-[#333] text-[18px] font-normal font-roboto leading-none">
-              Veterans ( 59+ )
-            </button>
-          </div>
-        </div>
-        <div className="bg-[#FFF] p-[16px] rounded-[16px] mb-[24px]">
-          <p className="mb-[20px] text-[#333] font-roboto text-2xl font-semibold">
-            Cancellation Policy
-          </p>
-          <p className="text-[#666] font-roboto text-lg font-normal ">
-            Cancellation Policy
+
+        {/* Description */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-3">About the Event</h3>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Join us for an exciting tournament that brings together the finest athletes for a showcase of skill and sportsmanship. Whether you're a seasoned competitor or a newcomer, this event offers competitive matches across multiple categories.
           </p>
         </div>
 
-        <button className="w-full pr-[16px] py-[8px] pl-[24px] rounded-[25px] border border-[#FF6A00] text-[#FF6A00]">
-          View Match Details
-        </button>
-        <p className="w-full text-center">Match Started 20 min ago</p>
+        {/* Organizer */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+              <Award className="w-4 h-4 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Organized by</p>
+              <p className="text-sm font-bold text-gray-900">Organizer Name</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Amenities */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-3">Amenities</h3>
+          <div className="flex flex-wrap gap-2">
+            {["Changing Room", "Parking", "Drinking Water", "First Aid"].map((a) => (
+              <span key={a} className="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-medium text-gray-600">
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-3">Categories</h3>
+          <div className="flex flex-wrap gap-2">
+            {["Open Category", "Under 15 (U15)", "Veterans (39+)", "Veterans (59+)"].map((cat, i) => (
+              <button
+                key={cat}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition w-auto ${
+                  i === 0 ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Cancellation */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-2">Cancellation Policy</h3>
+          <p className="text-xs text-gray-500">Full refund if cancelled 48 hours before the event. 50% refund for cancellations within 24-48 hours. No refund for cancellations within 24 hours.</p>
+        </div>
+
+        {/* CTA */}
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-orange-500" />
+            <div>
+              <p className="text-sm font-bold text-gray-900">Match in progress</p>
+              <p className="text-xs text-gray-500">Started 20 minutes ago</p>
+            </div>
+          </div>
+          <button className="w-full sm:w-auto px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-orange-200 active:scale-[0.97]">
+            View Match Details
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import PrivacyImage from '../assets/PrivacyPolicy.jpg'; 
+import PrivacyImage from '../assets/PrivacyPolicy.jpg';
 
 const LPrivacyPolicy = () => {
     const navigate = useNavigate();
@@ -23,7 +23,7 @@ const LPrivacyPolicy = () => {
                         <h1 className="text-3xl font-semibold">Privacy Policy for Chalo Khelne</h1>
                         <button
                             onClick={handleBackToHome}
-                            className="mt-4 px-5 py-2 bg-[#FF6A00] hover:bg-blue-600 transition text-white rounded-md w-auto"
+                            className="mt-4 px-5 py-2 bg-orange-500 hover:bg-orange-500 transition text-white rounded-md w-auto"
                         >
                             Back to Home Page
                         </button>
@@ -112,17 +112,32 @@ const LPrivacyPolicy = () => {
                 </section>
 
                 <section className="mb-8">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4">8. Changes to This Privacy Policy</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">8. Data Retention</h2>
+                    <p className="mb-2">
+                        We retain your personal data only for as long as necessary to fulfill the purposes outlined in this Privacy Policy, including providing our services, complying with legal obligations, resolving disputes, and enforcing our agreements.
+                    </p>
+                    <ul className="list-disc ml-5 text-gray-700 space-y-2">
+                        <li>Account Information: Retained as long as your account is active.</li>
+                        <li>Usage & Analytics Data: Retained for up to 90 days.</li>
+                        <li>Support & Communication Data: Retained for up to 6 months.</li>
+                    </ul>
+                    <p className="mt-2">
+                        If you request account deletion, your personal data will be deleted or anonymized within a reasonable time, unless retention is required by law.
+                    </p>
+                </section>
+
+                <section className="mb-8">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">9. Changes to This Privacy Policy</h2>
                     <p>
                         We may update this policy. You will be notified via the "Effective Date" change at the top of this page.
                     </p>
                 </section>
 
                 <section className="mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4">9. Contact Us</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">10. Contact Us</h2>
                     <p className="mb-2">If you have any questions or concerns:</p>
                     <ul className="list-disc ml-5 text-gray-700 space-y-2">
-                        <li>Email: <a href="mailto:sales@chalokhelne.com" className="text-blue-500 hover:underline">sales@chalokhelne.com</a></li>
+                        <li>Email: <a href="mailto:sales@chalokhelne.com" className="text-orange-500 hover:underline">sales@chalokhelne.com</a></li>
                         <li>Phone: 9272090926</li>
                     </ul>
                 </section>

@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext"; 
 import axios from "axios";
@@ -56,12 +57,12 @@ const PTurfbook = () => {
     e.preventDefault();
   
     if (!turfId) {
-      alert("Turf ID is missing!");
+      toast.info("Turf ID is missing!");
       return;
     }
   
     if (!auth?._id) {
-      alert("User ID is missing! Please log in.");
+      toast.info("User ID is missing! Please log in.");
       return;
     }
   
@@ -72,7 +73,6 @@ const PTurfbook = () => {
       status: "pending"
     };
   
-    console.log("Booking Data:", bookingData);
   
     try {
       const response = await axios.post(
@@ -81,7 +81,7 @@ const PTurfbook = () => {
       );
   
       if (response.status === 201) {
-        alert("Booking Confirmed!");
+        toast.info("Booking Confirmed!");
         setBooking({
           name: auth?.name || "",
           email: auth?.email || "",
@@ -97,7 +97,7 @@ const PTurfbook = () => {
       }
     } catch (error) {
       console.error("Booking Error:", error.response?.data || error.message);
-      alert("Failed to book turf. Please try again.");
+      toast.error("Failed to book turf. Please try again.");
     }
   };
   

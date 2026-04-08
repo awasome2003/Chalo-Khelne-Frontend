@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
@@ -104,7 +105,7 @@ const CRefree = () => {
     try {
       const { club, positionType, game, matchFee, date, time, venue, duration, contact } = requestForm;
       if (!game || !matchFee || !date || !time || !venue || !duration || !contact) {
-        alert("Please fill all required fields");
+        toast.warn("Please fill all required fields");
         return;
       }
       await axios.post("/api/referee/requests", requestForm);
@@ -124,7 +125,7 @@ const CRefree = () => {
       fetchRequests();
       setActiveTab("requests");
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -133,7 +134,7 @@ const CRefree = () => {
       await axios.put(`/api/referee/requests/${id}/status`, { status });
       fetchRequests();
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 

@@ -11,12 +11,14 @@ import {
   X,
   ChevronRight,
   Gift,
+  Briefcase,
 } from "lucide-react";
 
 const Sidebar = ({ collapsed, toggleSidebar }) => {
   const navItems = [
     { to: "/mdashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
     { to: "/mtournament-management", icon: <Trophy size={20} />, label: "Tournament Management" },
+    { to: "/staff-applications", icon: <Briefcase size={20} />, label: "Staff Applications" },
     { to: "/msocial", icon: <Hash size={20} />, label: "Social" },
     { to: "/mnews", icon: <Newspaper size={20} />, label: "News" },
     { to: "/payments", icon: <CreditCard size={20} />, label: "Payments" },
@@ -32,13 +34,13 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
       {/* Header / Toggle */}
       <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100">
         {!collapsed && (
-          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
+          <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-orange-500 bg-clip-text text-transparent truncate">
             Manager
           </span>
         )}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+          className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-orange-500 transition-colors"
         >
           {collapsed ? <Menu size={24} /> : <X size={24} />}
         </button>
@@ -52,7 +54,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
             to={item.to}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group relative ${isActive
-                ? "bg-blue-50 text-blue-600 shadow-sm"
+                ? "bg-orange-50 text-orange-500 shadow-sm"
                 : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               }`
             }
@@ -60,7 +62,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
             {({ isActive }) => (
               <>
                 <div
-                  className={`p-2 rounded-lg transition-all duration-300 ${isActive ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-transparent group-hover:bg-white"
+                  className={`p-2 rounded-lg transition-all duration-300 ${isActive ? "bg-orange-500 text-white shadow-md shadow-orange-200" : "bg-transparent group-hover:bg-white"
                     }`}
                 >
                   {item.icon}
@@ -74,7 +76,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
 
                 {/* Active Indicator Strip (Right) */}
                 {!collapsed && isActive && (
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-orange-500" />
                 )}
 
                 {/* Collapsed Tooltip */}
@@ -94,7 +96,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
       {/* Footer (Optional user profile placeholder) */}
       <div className="p-4 border-t border-gray-100 bg-gray-50">
         <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : "px-2"}`}>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold border-2 border-white shadow-sm shrink-0">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center text-orange-600 font-bold border-2 border-white shadow-sm shrink-0">
             M
           </div>
           {!collapsed && (

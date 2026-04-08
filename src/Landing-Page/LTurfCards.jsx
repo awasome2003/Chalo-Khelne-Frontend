@@ -1,135 +1,95 @@
 import React from "react";
-import { Star } from "lucide-react";
+import { Star, MapPin, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
-import { FaDirections } from "react-icons/fa";
-import Logo from '../assets/turf-card.jpg';
 
 const TurfCards = ({ turf, onTurfClick }) => {
-  // Create safe getters for potentially missing data
-  const getName = () =>
-    turf?.name ||
-    "T12 Sports Turf (Football Cricket) , Coaching for different sports.";
-  const getDiscount = () => turf?.discount || 20;
-  const getRating = () =>
-    turf?.ratings?.average ? turf.ratings.average.toFixed(1) : "4.5";
+  const name = turf?.name || "Sports Turf";
+  const rating = turf?.ratings?.average ? turf.ratings.average.toFixed(1) : null;
+  const ratingCount = turf?.ratings?.count || 0;
 
-  const getAddress = () => {
-    if (!turf?.address) return "Mirchandani Palms, Pimple Saudagar";
-    return turf.address.fullAddress || "Address unavailable";
-  };
+  const address = turf?.address?.fullAddress || "Address unavailable";
+  const areaCity = [turf?.address?.area, turf?.address?.city, turf?.address?.pincode].filter(Boolean).join(", ") || "";
 
-  const getAreaCity = () => {
-    if (!turf?.address) return "Pune - 17";
-
-    const area = turf?.address?.area || "";
-    const city = turf?.address?.city || "";
-    const pincode = turf?.address?.pincode || "";
-
-    let location = "";
-    if (area) location += area;
-    if (city) {
-      if (location) location += ", ";
-      location += city;
-    }
-    if (pincode) {
-      if (location) location += " - ";
-      location += pincode;
-    }
-
-    return location || "Location unavailable";
-  };
-
-  const getSports = () => {
-    if (!turf?.sports || !Array.isArray(turf.sports)) {
-      return [
-        { name: "Box Cricket", icon: "/src/assets/sports_cricket.svg" },
-        { name: "Football", icon: "/src/assets/sports_soccer.svg" },
-        { name: "Badminton", icon: "/src/assets/shuttlecock.svg" },
-        { name: "Table Tennis", icon: "/src/assets/ping-pong.svg" },
-      ];
-    }
-    return turf.sports;
-  };
+  const sports = Array.isArray(turf?.sports) ? turf.sports : [];
+  const minPrice = sports.length > 0 ? Math.min(...sports.map((s) => s.pricePerHour || 0)) : 0;
+  const image = turf?.images?.[0] ? `/uploads/${turf.images[0]}` : null;
 
   return (
     <motion.div
-      className="relative rounded-xl overflow-hidden border border-[#DDD] bg-white cursor-pointer min-h-[300px] h-full"
-      onClick={() => onTurfClick && onTurfClick(turf)}
-      whileHover={{
-        y: -5,
-        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-      }}
+      className="rounded-2xl overflow-hidden border border-gray-200 bg-white cursor-pointer hover:border-orange-300 hover:shadow-lg transition-all group h-full flex flex-col"
+      onClick={() => onTurfClick?.(turf)}
+      whileHover={{ y: -6 }}
       transition={{ duration: 0.2 }}
     >
-      {/* Image with Discount Tag */}
-      <div className="relative h-[200px] w-full overflow-hidden">
-        <motion.img
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.3 }}
-          src={
-            turf?.images?.[0]
-              ? `/uploads/${turf.images[0]}`
-              : Logo
-          }
-          alt={getName()}
-          className="h-full w-full object-cover"
-        />
-        {getDiscount() && (
-          <div className="absolute top-2 right-2 bg-[#FF6A00] text-white text-sm px-2 py-1 rounded-md font-medium">
-            {getDiscount()}% off
+      {/* Image */}
+      <div className="relative h-44 overflow-hidden bg-gray-100">
+        {image ? (
+          <img
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+            <MapPin className="w-10 h-10 text-orange-200" />
+          </div>
+        )}
+
+        {/* Rating badge */}
+        {rating && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-lg">
+            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+            <span className="text-xs font-bold text-white">{rating}</span>
+          </div>
+        )}
+
+        {/* Price badge */}
+        {minPrice > 0 && (
+          <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg">
+            <span className="text-xs font-bold text-gray-900">₹{minPrice}<span className="text-gray-400 font-normal">/hr</span></span>
           </div>
         )}
       </div>
 
-      {/* Card Content */}
-      <div className="p-4 text-black">
-        <div className="flex justify-between items-center gap-[16px] mb-[12px]">
-          <h3 className="text-base font-semibold text-black leading-tight">
-            {getName()}
+      {/* Content */}
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h3 className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2 flex-1">
+            {name}
           </h3>
-          <div className="flex items-center gap-1 text-yellow-400">
-            <Star className="w-4 h-4 fill-yellow-400" />
-            <span className="text-sm text-black">{getRating()}/5</span>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mb-[10px]">
-          <p className="text-sm text-black">
-            {getAddress()}
-            <br />
-            {getAreaCity()}
-          </p>
-            <FaDirections
-            className="h-8 w-8 cursor-pointer"
-            style={{ color: "#022E54" }}
+          <button
             onClick={(e) => {
               e.stopPropagation();
-              window.open(
-                `https://maps.google.com/?q=${getAddress()},${getAreaCity()}`,
-                "_blank"
-              );
+              window.open(`https://maps.google.com/?q=${encodeURIComponent(address + " " + areaCity)}`, "_blank");
             }}
-          />
+            className="p-1.5 rounded-lg hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition-colors flex-shrink-0 w-auto"
+            title="Get directions"
+          >
+            <Navigation className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Chips */}
-        <div className="flex flex-wrap gap-2">
-          {getSports().map((sport, index) => (
-            <span
-              key={sport.name || `sport-${index}`}
-              className="text-xs text-[#666] border border-gray-300 rounded-full px-[8px] py-1 flex items-center gap-1 mt-2"
-            >
-              {sport.icon && (
-                <img
-                  src={sport.icon}
-                  alt={sport.name || "Sport"}
-                  className="w-[14px] h-[14px]"
-                />
-              )}
-              {sport.name || "Sport"}
-            </span>
-          ))}
+        <div className="mb-3">
+          <p className="text-xs text-gray-500 line-clamp-1">{address}</p>
+          {areaCity && <p className="text-[11px] text-gray-400 mt-0.5">{areaCity}</p>}
         </div>
+
+        {/* Sports chips */}
+        {sports.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-auto">
+            {sports.slice(0, 3).map((sport, i) => (
+              <span key={sport.name || i} className="text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-100 rounded-full px-2.5 py-0.5">
+                {sport.name}
+              </span>
+            ))}
+            {sports.length > 3 && (
+              <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
+                +{sports.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

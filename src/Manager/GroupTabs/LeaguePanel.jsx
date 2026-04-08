@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiFlag, FiTable, FiEdit2, FiCheck, FiInfo, FiUpload } from "react-icons/fi";
@@ -34,12 +35,12 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
     try {
       const res = await groupTabsApi.transitionToKnockout(tournamentId);
       if (res.data.success) {
-        alert("Transitioned to knockout successfully!");
+        toast.success("Transitioned to knockout successfully!");
       } else {
-        alert(res.data.message || "Failed to transition");
+        toast.info(res.data.message || "Failed to transition");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Error transitioning to knockout");
+      toast.info(err.response?.data?.message || "Error transitioning to knockout");
     } finally {
       setTransitionLoading(false);
     }
@@ -75,7 +76,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
             }}
             className={`px-4 py-2 text-sm w-auto font-semibold rounded-lg transition-all groupstabs whitespace-nowrap ${
               activeGroup === group._id
-                ? "bg-[#1D6A8B] text-white shadow-sm"
+                ? "bg-[#F97316] text-white shadow-sm"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
@@ -88,7 +89,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
         <div className="w-full p-4 bg-white rounded-2xl">
           {/* Group Header */}
           <div className="flex justify-between items-center mb-0">
-            <h2 className="text-[18px] font-[500] text-[#004E93]">
+            <h2 className="text-[18px] font-[500] text-orange-500">
               {currentGroup.groupName || `Group ${groups.indexOf(currentGroup) + 1}`}
             </h2>
             {groupsWithMatches.has(currentGroup._id) ? (
@@ -101,7 +102,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
                 </div>
               </div>
             ) : (
-              <button className="text-[#004E93] hover:text-blue-800" onClick={() => onEditGroup(currentGroup)}>
+              <button className="text-orange-500 hover:text-orange-700" onClick={() => onEditGroup(currentGroup)}>
                 <FiEdit2 />
               </button>
             )}
@@ -126,8 +127,8 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
             </button>
 
             <button
-              className="w-full py-2 rounded-full text-[16px] font-[400] flex items-center justify-center gap-3 text-[#004E93] bg-white hover:bg-transparent"
-              style={{ border: "1px solid #004E93" }}
+              className="w-full py-2 rounded-full text-[16px] font-[400] flex items-center justify-center gap-3 text-orange-500 bg-white hover:bg-transparent"
+              style={{ border: "1px solid #F97316" }}
               onClick={() => {
                 if (showStandings && standingsData[activeGroup]) {
                   setShowStandings(false);
@@ -143,7 +144,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
 
             <button
               className="w-full py-2 rounded-full text-[16px] font-[400] flex items-center justify-center gap-3 text-gray-600 bg-white hover:bg-gray-50"
-              style={{ border: "1px solid #ddd" }}
+              style={{ border: "1px solid #E5E7EB" }}
               onClick={() =>
                 navigate(`/tournament-management/group-stage/${tournamentId}/${activeGroup}/points-table`, {
                   state: { tournamentId, groupId: activeGroup, round: 1 },
@@ -158,13 +159,13 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
               matchesData[activeGroup].some((m) => !isCompleted(m.status)) && (
                 <>
                   <button
-                    className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-md"
+                    className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
                     onClick={onOpenBulkScore}
                   >
                     <FiCheck /> Bulk Score Upload
                   </button>
                   <button
-                    className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-indigo-700 border-2 border-indigo-300 bg-indigo-50 hover:bg-indigo-100"
+                    className="w-full py-2 rounded-full font-[500] flex items-center justify-center gap-3 text-orange-600 border-2 border-orange-300 bg-orange-50 hover:bg-orange-100"
                     onClick={onOpenCsvUpload}
                   >
                     <FiUpload /> Upload CSV/Excel
@@ -199,7 +200,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
           {/* Matches List */}
           {matchesData[activeGroup]?.length > 0 && (
             <div className="mt-6">
-              <h5 className="mb-3 text-lg font-semibold text-[#004E93]">
+              <h5 className="mb-3 text-lg font-semibold text-orange-500">
                 Matches — {currentGroup.groupName || `Group ${groups.indexOf(currentGroup) + 1}`}
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -234,7 +235,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
 function StandingsTable({ data, qualifyPerGroup }) {
   return (
     <div className="mt-4 bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5">
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5">
         <h6 className="text-white text-sm font-bold">{data.groupName} — Standings</h6>
       </div>
       <div className="overflow-x-auto">
@@ -267,7 +268,7 @@ function StandingsTable({ data, qualifyPerGroup }) {
                 <td className="px-3 py-2 text-center text-red-500">{p.lost}</td>
                 <td className="px-3 py-2 text-center text-gray-600">{p.setsWon}-{p.setsLost}</td>
                 <td className="px-3 py-2 text-center text-gray-600">{p.pointsScored}-{p.pointsConceded}</td>
-                <td className="px-3 py-2 text-center font-bold text-blue-700">{p.totalPoints}</td>
+                <td className="px-3 py-2 text-center font-bold text-orange-600">{p.totalPoints}</td>
               </tr>
             ))}
           </tbody>
@@ -293,13 +294,13 @@ function MatchCard({ match, onClick, formatDate, formatTime }) {
     <div
       className={`shadow-md rounded-lg p-4 cursor-pointer ${
         isCompleted ? "bg-green-50 border-l-4 border-green-500" :
-        isInProgress ? "bg-yellow-50 border-l-4 border-yellow-500" : "bg-[#F2F4F6]"
+        isInProgress ? "bg-yellow-50 border-l-4 border-yellow-500" : "bg-[#F5F7FA]"
       }`}
       onClick={onClick}
     >
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-700 rounded-full text-[12px] font-[500] px-2 py-1">
+          <span className="bg-orange-100 text-orange-600 rounded-full text-[12px] font-[500] px-2 py-1">
             R1 - M{match.matchNumber}
           </span>
           <span className="bg-gray-200 text-gray-700 rounded-full text-[12px] px-2 py-1">
@@ -313,19 +314,19 @@ function MatchCard({ match, onClick, formatDate, formatTime }) {
         </button>
       </div>
 
-      <p className="text-center text-[16px] text-[#333] font-[400] mb-2">
+      <p className="text-center text-[16px] text-gray-900 font-[400] mb-2">
         {formatDate(match.startTime)} {formatTime(match.startTime) && `• ${formatTime(match.startTime)}`}
       </p>
 
       <div className="flex flex-col items-center">
         <PlayerRow player={match.player1} isWinner={isWinner(match.player1)} matchType={match.matchType} />
-        <div className="text-[#333] text-[14px] my-1 flex items-center gap-2">
+        <div className="text-gray-900 text-[14px] my-1 flex items-center gap-2">
           VS
-          {isCompleted && match.result?.finalScore && (
+          {isCompleted && (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r?.completed ? (
             <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-              {match.result.finalScore.player1Sets}-{match.result.finalScore.player2Sets}
+              {r.player1Score}-{r.player2Score}
             </span>
-          )}
+          ) : null; })()}
         </div>
         <PlayerRow player={match.player2} isWinner={isWinner(match.player2)} matchType={match.matchType} />
       </div>
@@ -359,11 +360,11 @@ function PlayerRow({ player, isWinner, matchType }) {
           className="w-8 h-8 rounded-full object-cover"
         />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
           {player.userName?.charAt(0) || "?"}
         </div>
       )}
-      <span className={`font-[500] text-[14px] ${isWinner ? "text-green-600" : "text-[#004E93]"}`}>
+      <span className={`font-[500] text-[14px] ${isWinner ? "text-green-600" : "text-orange-500"}`}>
         {player.userName}
         {matchType === "doubles" && player.partner?.userName && (
           <span className="text-gray-400 font-normal"> & {player.partner.userName}</span>

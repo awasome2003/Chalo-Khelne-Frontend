@@ -8,11 +8,12 @@ import {
   Clock,
   Calendar,
   ChevronRight,
-  LayoutDashboard,
   Users,
   TrendingUp,
-  Activity
+  Activity,
+  Zap,
 } from "lucide-react";
+import { StatCard, Badge, SectionCard, EmptyState, Button } from "../shared/ui";
 
 const Dashboard = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -75,288 +76,248 @@ const Dashboard = () => {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-600 font-medium">Loading dashboard...</p>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-[3px] border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-400 font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
 
   if (error)
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl border border-red-100 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Activity className="text-red-500" size={32} />
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-red-100 max-w-md w-full text-center">
+          <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-red-100">
+            <Activity className="text-red-500 w-6 h-6" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2">Something went wrong</h3>
-          <p className="text-red-600 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition"
-          >
+          <p className="text-sm text-red-500 mb-6">{error}</p>
+          <Button variant="danger" onClick={() => window.location.reload()}>
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans pb-12">
-      {/* Header Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <LayoutDashboard className="text-blue-600" size={32} />
-                Management Dashboard
-              </h1>
-              <p className="text-gray-500 mt-2 text-lg">
-                Welcome back! Here's what's happening today.
-              </p>
+    <div className="p-6 lg:p-8 space-y-8 animate-fadeIn">
+
+      {/* ─── Hero Header ─── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-400 rounded-2xl p-6 lg:p-8 text-white">
+        {/* Decorative sport shapes */}
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-[0.06]">
+          <svg viewBox="0 0 200 200" fill="currentColor">
+            <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="3" fill="none" />
+            <circle cx="100" cy="100" r="60" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="100" cy="100" r="30" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          </svg>
+        </div>
+        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full" />
+
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-5 h-5 text-[#FF9D32]" />
+              <span className="text-xs font-bold text-white/70 uppercase tracking-widest">Manager Hub</span>
             </div>
-            {/* Quick Actions (Placeholder) */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleViewAllTournaments}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2"
-              >
-                Manage Tournaments
-              </button>
+            <h1 className="text-2xl lg:text-3xl font-black leading-tight">
+              Welcome back!
+            </h1>
+            <p className="text-white/60 mt-1 text-sm">
+              Here's your tournament activity at a glance.
+            </p>
+          </div>
+          <Button
+            variant="accent"
+            size="lg"
+            onClick={handleViewAllTournaments}
+            className="flex-shrink-0"
+          >
+            <Trophy className="w-4 h-4" />
+            Manage Tournaments
+          </Button>
+        </div>
+
+        {/* Inline stats row */}
+        <div className="relative mt-6 grid grid-cols-3 gap-4">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+            <div className="text-2xl font-black">{tournaments.length}</div>
+            <div className="text-xs text-white/60 font-medium">Active Tournaments</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+            <div className="text-2xl font-black">{whitelistedEmployees.length}</div>
+            <div className="text-xs text-white/60 font-medium">Whitelisted Players</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-emerald-300" />
+              <span className="text-2xl font-black">High</span>
             </div>
+            <div className="text-xs text-white/60 font-medium">Activity Level</div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-12">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-              <Trophy size={24} />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Active Tournaments</p>
-              <h3 className="text-2xl font-bold text-gray-900">{tournaments.length}</h3>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
-              <Users size={24} />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Whitelisted Employees</p>
-              <h3 className="text-2xl font-bold text-gray-900">{whitelistedEmployees.length}</h3>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Total Activity</p>
-              <h3 className="text-2xl font-bold text-gray-900">High</h3>
-            </div>
-          </div>
-        </div>
-
-        {/* Tournaments Section */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Trophy className="text-orange-500" size={24} />
-              Recent Tournaments
-            </h2>
-            <button
-              onClick={handleViewAllTournaments}
-              className="text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1 transition"
-            >
-              View All <ChevronRight size={18} />
-            </button>
-          </div>
-
-          {tournaments.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trophy size={40} className="text-gray-300" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Tournaments found</h3>
-              <p className="text-gray-500 mb-8">Get started by creating your first tournament event.</p>
-              <button
-                onClick={handleViewAllTournaments}
-                className="px-8 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition"
-              >
+      {/* ─── Recent Tournaments ─── */}
+      <SectionCard
+        title="Recent Tournaments"
+        icon={Trophy}
+        iconColor="text-orange-500"
+        action={{ label: "View All", onClick: handleViewAllTournaments }}
+        noPadding
+      >
+        {tournaments.length === 0 ? (
+          <EmptyState
+            icon={Trophy}
+            title="No tournaments yet"
+            description="Create your first tournament to get started."
+            action={
+              <Button variant="accent" onClick={handleViewAllTournaments}>
                 Create Tournament
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {tournaments.map((tournament) => {
-                // Formatting Date Logic
-                const startDateStr = tournament.startDate
-                  ? new Date(tournament.startDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-                  : "";
-                const endDateStr = tournament.endDate
-                  ? new Date(tournament.endDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-                  : "";
+              </Button>
+            }
+          />
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {tournaments.map((tournament) => {
+              // Formatting Date Logic
+              const startDateStr = tournament.startDate
+                ? new Date(tournament.startDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
+                : "";
+              const endDateStr = tournament.endDate
+                ? new Date(tournament.endDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
+                : "";
 
-                const dateDisplay = startDateStr
-                  ? (endDateStr && startDateStr !== endDateStr ? `${startDateStr} – ${endDateStr}` : startDateStr)
-                  : "TBA";
+              const dateDisplay = startDateStr
+                ? (endDateStr && startDateStr !== endDateStr ? `${startDateStr} – ${endDateStr}` : startDateStr)
+                : "TBA";
 
-                // Fee Calculation Logic (Fixed scope)
-                const cats = tournament.categories || tournament.category || [];
-                let parsedCats = [];
-                if (Array.isArray(cats)) parsedCats = cats;
+              // Fee Calculation Logic
+              const cats = tournament.categories || tournament.category || [];
+              let parsedCats = [];
+              if (Array.isArray(cats)) parsedCats = cats;
 
-                const fees = parsedCats.map(cat => Number(cat.fee) || 0);
-                const minFee = fees.length ? Math.min(...fees) : 0;
-                const maxFee = fees.length ? Math.max(...fees) : 0;
+              const fees = parsedCats.map(cat => Number(cat.fee) || 0);
+              const minFee = fees.length ? Math.min(...fees) : 0;
+              const maxFee = fees.length ? Math.max(...fees) : 0;
 
-                const feeDisplay = (minFee > 0 || maxFee > 0)
-                  ? (minFee === maxFee ? `₹${minFee}` : `₹${minFee} – ₹${maxFee}`)
-                  : "Free / TBA";
+              const feeDisplay = (minFee > 0 || maxFee > 0)
+                ? (minFee === maxFee ? `₹${minFee}` : `₹${minFee} – ₹${maxFee}`)
+                : "Free";
 
-                return (
-                  <div
-                    key={tournament._id || tournament.id}
-                    onClick={handleTournamentClick}
-                    className="group bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer flex flex-col h-full"
-                  >
-                    <div className="relative h-56 overflow-hidden bg-gray-100">
-                      <img
-                        src={
-                          tournament.tournamentLogo
-                            ? `/uploads/${tournament.tournamentLogo}`
-                            : tournamentImage
-                        }
-                        alt={tournament.title}
-                        onError={(e) => { e.currentTarget.src = tournamentImage; }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-white/90 backdrop-blur-md text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-sm uppercase tracking-wide">
-                          Tournament
-                        </span>
-                      </div>
-                      <div className="absolute bottom-4 left-4 text-white">
-                        <p className="text-xs font-medium opacity-90 mb-1 flex items-center gap-1">
-                          <Calendar size={12} /> {dateDisplay}
-                        </p>
-                      </div>
-                    </div>
+              return (
+                <div
+                  key={tournament._id || tournament.id}
+                  onClick={handleTournamentClick}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/80 transition-colors cursor-pointer group"
+                >
+                  {/* Thumbnail */}
+                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 ring-1 ring-gray-100">
+                    <img
+                      src={
+                        tournament.tournamentLogo
+                          ? `/uploads/${tournament.tournamentLogo}`
+                          : tournamentImage
+                      }
+                      alt={tournament.title}
+                      onError={(e) => { e.currentTarget.src = tournamentImage; }}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
 
-                    <div className="p-6 flex flex-col flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1 mb-3">
-                        {tournament.title}
-                      </h3>
-
-                      <div className="space-y-3 mb-6 flex-1">
-                        <div className="flex items-start gap-2 text-gray-500 text-sm">
-                          <Users size={16} className="mt-0.5 shrink-0 text-blue-500" />
-                          <span className="line-clamp-1">{tournament.organizerName || "Organizer"}</span>
-                        </div>
-                        <div className="flex items-start gap-2 text-gray-500 text-sm">
-                          <MapPin size={16} className="mt-0.5 shrink-0 text-red-500" />
-                          <span className="line-clamp-1">{tournament.eventLocation || "Location TBA"}</span>
-                        </div>
-                        <div className="flex items-start gap-2 text-gray-500 text-sm">
-                          <Clock size={16} className="mt-0.5 shrink-0 text-orange-500" />
-                          <span>
-                            {tournament.selectedTime?.startTime
-                              ? `${tournament.selectedTime.startTime} – ${tournament.selectedTime.endTime || ''}`
-                              : "Time TBA"
-                            }
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Entry Fee</p>
-                          <p className="text-lg font-bold text-green-600">{feeDisplay}</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                          <ChevronRight size={20} />
-                        </div>
-                      </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-orange-500 transition-colors">
+                      {tournament.title}
+                    </h4>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> {dateDisplay}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {tournament.eventLocation?.[0] || "TBA"}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
 
-        {/* Whitelisted Employees Section */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="text-purple-600" size={24} />
-              Recently Whitelisted Employees
-            </h2>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            {whitelistedEmployees.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users size={32} className="text-gray-300" />
+                  {/* Fee + Arrow */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <Badge variant={feeDisplay === "Free" ? "success" : "accent"} size="sm">
+                      {feeDisplay}
+                    </Badge>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-orange-500 transition-colors" />
+                  </div>
                 </div>
-                <p className="text-gray-500">No whitelisted employees found yet.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Employee</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Employee ID</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Mobile</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Tournament</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {whitelistedEmployees.slice(0, 5).map((emp, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100">
-                              {emp.name?.charAt(0) || "E"}
-                            </div>
-                            <span className="font-semibold text-gray-900">{emp.name}</span>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ─── Whitelisted Employees ─── */}
+      <SectionCard
+        title="Whitelisted Employees"
+        subtitle={whitelistedEmployees.length > 0 ? `${whitelistedEmployees.length} total` : undefined}
+        icon={Users}
+        iconColor="text-emerald-600"
+        noPadding
+      >
+        {whitelistedEmployees.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No whitelisted employees"
+            description="Employees will appear here once added to a tournament."
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Employee</th>
+                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">ID</th>
+                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Mobile</th>
+                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tournament</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {whitelistedEmployees.slice(0, 5).map((emp, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {emp.name?.charAt(0) || "E"}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                          {emp.employeeId}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                          {emp.mobile}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                            {emp.tournamentTitle}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          <span className="text-sm font-semibold text-gray-800">{emp.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap text-xs text-gray-400 font-mono">
+                        {emp.employeeId}
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap text-xs text-gray-500 font-medium">
+                        {emp.mobile}
+                      </td>
+                      <td className="px-6 py-3.5 whitespace-nowrap">
+                        <Badge variant="primary" size="xs">
+                          {emp.tournamentTitle}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {whitelistedEmployees.length > 5 && (
-              <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-500">
-                  Showing top 5 of <span className="font-bold text-gray-900">{whitelistedEmployees.length}</span> whitelisted employees.
+              <div className="px-6 py-3 border-t border-gray-50 text-center">
+                <p className="text-xs text-gray-400">
+                  Showing 5 of <span className="font-bold text-gray-600">{whitelistedEmployees.length}</span> employees
                 </p>
               </div>
             )}
-          </div>
-        </section>
-      </div>
+          </>
+        )}
+      </SectionCard>
     </div>
   );
 };

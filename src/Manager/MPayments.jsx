@@ -172,7 +172,7 @@ const MPayments = ({ tournamentId }) => {
                 <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-                            <CreditCard className="w-8 h-8 text-indigo-600" />
+                            <CreditCard className="w-8 h-8 text-orange-500" />
                             Payment Setup
                         </h1>
                         <p className="mt-2 text-gray-500">Configure how you'd like to receive payments for this tournament.</p>
@@ -184,7 +184,7 @@ const MPayments = ({ tournamentId }) => {
                         disabled={loading}
                         className={`flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold transition-all shadow-lg ${loading
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
+                            : "bg-orange-500 text-white hover:bg-orange-600 shadow-orange-200"
                             }`}
                     >
                         {loading ? (
@@ -205,15 +205,15 @@ const MPayments = ({ tournamentId }) => {
                     {/* QR Codes Section */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <QrCode className="w-6 h-6 text-indigo-500" />
+                            <QrCode className="w-6 h-6 text-orange-500" />
                             <h2 className="text-xl font-bold text-gray-800">QR Codes</h2>
                         </div>
 
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                            <label className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group">
+                            <label className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/30 transition-all group">
                                 <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
-                                <Upload className="w-6 h-6 text-gray-400 group-hover:text-indigo-500 mb-2 transition-colors" />
-                                <span className="text-xs font-medium text-gray-500 group-hover:text-indigo-600">Upload</span>
+                                <Upload className="w-6 h-6 text-gray-400 group-hover:text-orange-500 mb-2 transition-colors" />
+                                <span className="text-xs font-medium text-gray-500 group-hover:text-orange-500">Upload</span>
                             </label>
 
                             <AnimatePresence>
@@ -278,7 +278,7 @@ const MPayments = ({ tournamentId }) => {
                     {/* UPI IDs Section */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <Smartphone className="w-6 h-6 text-indigo-500" />
+                            <Smartphone className="w-6 h-6 text-orange-500" />
                             <h2 className="text-xl font-bold text-gray-800">UPI Identifiers</h2>
                         </div>
 
@@ -289,13 +289,13 @@ const MPayments = ({ tournamentId }) => {
                                     type="text"
                                     value={newUpi}
                                     onChange={e => setNewUpi(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-sm"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none text-sm"
                                     placeholder="yourname@upi"
                                 />
                             </div>
                             <button
                                 onClick={handleAddUpi}
-                                className="px-5 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                                className="px-5 py-2.5 bg-orange-50 text-orange-500 rounded-xl font-bold hover:bg-orange-100 transition-colors flex items-center gap-2"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add
@@ -310,11 +310,11 @@ const MPayments = ({ tournamentId }) => {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 10 }}
-                                        className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl group hover:border-indigo-200 transition-all"
+                                        className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl group hover:border-orange-200 transition-all"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                                            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                                                <CheckCircle2 className="w-4 h-4 text-orange-500" />
                                             </div>
                                             <span className="text-sm font-medium text-gray-700">{u.upi}</span>
                                         </div>
@@ -339,8 +339,8 @@ const MPayments = ({ tournamentId }) => {
                 {/* Offline Payments Section */}
                 <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 overflow-hidden">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 bg-indigo-50 rounded-xl">
-                            <User className="w-6 h-6 text-indigo-600" />
+                        <div className="p-2 bg-orange-50 rounded-xl">
+                            <User className="w-6 h-6 text-orange-500" />
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-800">Physical Payment Receivers</h2>
@@ -355,7 +355,7 @@ const MPayments = ({ tournamentId }) => {
                                 type="text"
                                 value={newOfflinePayment.receiverName}
                                 onChange={e => handleOfflinePaymentChange("receiverName", e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                                 placeholder="Full Name"
                             />
                         </div>
@@ -365,7 +365,7 @@ const MPayments = ({ tournamentId }) => {
                                 type="text"
                                 value={newOfflinePayment.receiverContact}
                                 onChange={e => handleOfflinePaymentChange("receiverContact", e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                                 placeholder="Contact Number"
                             />
                         </div>
@@ -375,14 +375,14 @@ const MPayments = ({ tournamentId }) => {
                                 type="text"
                                 value={newOfflinePayment.label}
                                 onChange={e => handleOfflinePaymentChange("label", e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                                 placeholder="Label (e.g. Venue desk)"
                             />
                         </div>
                         <div className="md:col-span-1">
                             <button
                                 onClick={handleAddOfflinePayment}
-                                className="w-full h-full flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                                className="w-full h-full flex items-center justify-center bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all shadow-md active:scale-95"
                             >
                                 <Plus className="w-6 h-6" />
                             </button>
@@ -397,13 +397,13 @@ const MPayments = ({ tournamentId }) => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className="relative p-5 bg-white border border-gray-100 rounded-2xl group hover:shadow-md hover:border-indigo-100 transition-all"
+                                    className="relative p-5 bg-white border border-gray-100 rounded-2xl group hover:shadow-md hover:border-orange-100 transition-all"
                                 >
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h3 className="font-bold text-gray-900 line-clamp-1">{o.receiverName}</h3>
-                                                <p className="text-indigo-600 text-sm font-medium flex items-center gap-1 mt-1">
+                                                <p className="text-orange-500 text-sm font-medium flex items-center gap-1 mt-1">
                                                     <Phone className="w-3 h-3" />
                                                     {o.receiverContact}
                                                 </p>
@@ -416,7 +416,7 @@ const MPayments = ({ tournamentId }) => {
                                             </button>
                                         </div>
                                         {o.label && (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-600 border border-orange-100">
                                                 {o.label}
                                             </span>
                                         )}

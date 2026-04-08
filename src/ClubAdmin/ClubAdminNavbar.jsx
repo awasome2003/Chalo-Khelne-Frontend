@@ -72,7 +72,7 @@ const ClubAdminNavbar = () => {
   return (
     <div className="navbar">
       <div className="flex items-center w-full md:w-auto navbar1">
-        <img src="/src/assets/sportapp_logo.svg" alt="Logo" className="w-[45.811px] h-[35.481px]" />
+        <img src="/sportapp_logo.png" alt="Logo" className="w-[45.811px] h-[35.481px]" />
         <div className="search-container ml-2">
           <input type="text" placeholder="Search" className="bg-white searchinput" />
           <FiSearch className="search-icon" />

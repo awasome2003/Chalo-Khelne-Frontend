@@ -12,7 +12,6 @@ const PTurfdetails = () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/turf/turfs/${id}`);
         const data = await response.json();
-        console.log("Turf Details:", data);
         setTurf(data);
       } catch (error) {
         console.error("Error fetching turf details:", error);

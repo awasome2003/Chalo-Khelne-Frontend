@@ -106,8 +106,8 @@ export default function KnockoutPage() {
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${allDone ? "bg-green-100" : "bg-blue-100"}`}>
-                      {allDone ? <Trophy className="w-4 h-4 text-green-600" /> : <Swords className="w-4 h-4 text-blue-600" />}
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${allDone ? "bg-green-100" : "bg-orange-100"}`}>
+                      {allDone ? <Trophy className="w-4 h-4 text-green-600" /> : <Swords className="w-4 h-4 text-orange-500" />}
                     </div>
                     <div className="text-left">
                       <h3 className="font-bold text-gray-800">{label}</h3>
@@ -176,10 +176,11 @@ function KnockoutMatchRow({ match, onScore }) {
           </span>
 
           <div className="flex flex-col items-center min-w-[50px]">
-            {isComp && match.result?.finalScore ? (
+            {isComp ? (
+              (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return (
               <span className="bg-gray-900 text-white px-3 py-0.5 rounded-lg text-sm font-bold">
-                {match.result.finalScore.player1Sets}-{match.result.finalScore.player2Sets}
-              </span>
+                {r?.player1Score || 0}-{r?.player2Score || 0}
+              </span>); })()
             ) : isLive ? (
               <span className="text-yellow-600 font-bold text-sm animate-pulse">LIVE</span>
             ) : (

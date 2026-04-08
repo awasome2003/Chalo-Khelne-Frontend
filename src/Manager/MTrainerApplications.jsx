@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -23,13 +24,6 @@ const MTrainerApplications = () => {
         return;
       }
 
-      console.log(
-        "Fetching applications for manager:",
-        managerId,
-        "with status:",
-        filter
-      );
-
       const response = await fetch(
         `/api/manager/trainer-applications?managerId=${managerId}&status=${filter}`
       );
@@ -39,8 +33,6 @@ const MTrainerApplications = () => {
       }
 
       const data = await response.json();
-      console.log("Fetched applications:", data);
-      console.log("First application data:", data[0]);
       setApplications(data);
     } catch (error) {
       console.error("Error fetching applications:", error);
@@ -72,11 +64,11 @@ const MTrainerApplications = () => {
       } else {
         const errorData = await response.json();
         console.error("Error response:", errorData);
-        alert(errorData.message || "Failed to process application");
+        toast.info(errorData.message || "Failed to process application");
       }
     } catch (error) {
       console.error(`Error ${action} application:`, error);
-      alert("Network error occurred");
+      toast.info("Network error occurred");
     }
   };
 
@@ -298,7 +290,7 @@ const MTrainerApplications = () => {
                                     href={`/api${cert.certificateUrl}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 text-xs underline"
+                                    className="text-orange-500 hover:text-orange-700 text-xs underline"
                                   >
                                     View Certificate
                                   </a>

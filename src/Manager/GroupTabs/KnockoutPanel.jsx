@@ -38,17 +38,17 @@ export default function KnockoutPanel({ onOpenMatchModal, onOpenBulkScore }) {
           {/* Round Header Accordion */}
           <div
             className={`p-3 rounded-lg cursor-pointer flex justify-between items-center ${
-              openIndex === roundIndex ? "bg-[#004E93]" : "bg-[#EDEAEB]"
+              openIndex === roundIndex ? "bg-orange-500" : "bg-gray-100"
             }`}
             onClick={() => toggleAccordion(roundIndex)}
           >
-            <h2 className={`text-[18px] font-[600] mb-0 ${openIndex === roundIndex ? "text-white" : "text-[#333]"}`}>
+            <h2 className={`text-[18px] font-[600] mb-0 ${openIndex === roundIndex ? "text-white" : "text-gray-900"}`}>
               {roundName.charAt(0).toUpperCase() + roundName.slice(1).replace("-", " ")} ({matches.length} matches)
             </h2>
 
             {matches.some((m) => m.status !== "completed" && m.status !== "COMPLETED") && (
               <button
-                className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-purple-500 hover:bg-purple-600 mr-8 w-auto"
+                className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 mr-8 w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenBulkScore(
@@ -62,7 +62,7 @@ export default function KnockoutPanel({ onOpenMatchModal, onOpenBulkScore }) {
               </button>
             )}
 
-            <span className={`transform transition-transform duration-300 ${openIndex === roundIndex ? "rotate-180 text-white" : "text-[#333]"}`}>
+            <span className={`transform transition-transform duration-300 ${openIndex === roundIndex ? "rotate-180 text-white" : "text-gray-900"}`}>
               <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                 <path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" />
               </svg>
@@ -109,7 +109,7 @@ function KnockoutMatchCard({ match, onClick, formatTime }) {
         {/* Left: Match Info */}
         <div className="flex-shrink-0 w-full lg:w-44 border-b lg:border-b-0 lg:border-r border-gray-100 pb-4 lg:pb-0 flex flex-col items-center lg:items-start pr-2">
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
-            <span className="bg-[#1D6A8B]/10 text-[#1D6A8B] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+            <span className="bg-[#F97316]/10 text-[#F97316] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
               {(match.roundName || match.round || "Knockout").replace("-", " ")}
             </span>
             <span className="bg-gray-100 text-gray-500 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
@@ -118,7 +118,7 @@ function KnockoutMatchCard({ match, onClick, formatTime }) {
           </div>
           <div className="text-xl font-black text-gray-800">{formatTime(match.matchStartTime || match.startTime)}</div>
           <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 font-bold">
-            <FiFlag size={12} className="text-[#1D6A8B]" /> COURT {match.courtNumber || "TBD"}
+            <FiFlag size={12} className="text-[#F97316]" /> COURT {match.courtNumber || "TBD"}
           </div>
         </div>
 
@@ -130,9 +130,7 @@ function KnockoutMatchCard({ match, onClick, formatTime }) {
             <div className="text-[11px] font-black text-gray-300 italic mb-2 tracking-[0.2em]">VS</div>
             {isCompleted ? (
               <div className="bg-gray-900 text-white px-4 py-1.5 rounded-xl font-mono text-xl font-bold tracking-widest shadow-2xl">
-                {match.result?.finalScore
-                  ? `${match.result.finalScore.player1Sets}-${match.result.finalScore.player2Sets}`
-                  : "0-0"}
+                {(() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r ? `${r.player1Score}-${r.player2Score}` : "0-0"; })()}
               </div>
             ) : isInProgress ? (
               <div className="flex flex-col items-center animate-pulse">
@@ -160,7 +158,7 @@ function KnockoutMatchCard({ match, onClick, formatTime }) {
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
+            className="w-10 h-10 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all"
           >
             <FiEdit2 size={18} />
           </button>
@@ -194,7 +192,7 @@ function PlayerAvatar({ player, isWinner, isCompleted }) {
             className={`w-16 h-16 rounded-full object-cover border-4 ${isWinner ? "border-green-400 shadow-xl" : "border-gray-100"}`}
           />
         ) : (
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-black border-4 ${isWinner ? "border-green-400 bg-green-500 shadow-xl" : "border-gray-100 bg-[#1D6A8B]"}`}>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-black border-4 ${isWinner ? "border-green-400 bg-green-500 shadow-xl" : "border-gray-100 bg-[#F97316]"}`}>
             {player.playerName?.charAt(0) || "?"}
           </div>
         )}
@@ -207,7 +205,7 @@ function PlayerAvatar({ player, isWinner, isCompleted }) {
       <div className={`mt-3 font-black text-sm uppercase ${isWinner ? "text-green-700" : "text-gray-900"}`}>
         {player.playerName}
       </div>
-      {player.seed && <div className="text-[10px] text-[#1D6A8B] font-bold">SEED #{player.seed}</div>}
+      {player.seed && <div className="text-[10px] text-[#F97316] font-bold">SEED #{player.seed}</div>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import CorporateLayout from "./CorporateAdmin/CorporateLayout";
+import { AppLayout } from "./shared/layout";
 import CorporateDashboard from "./CorporateAdmin/CorporateDashboard";
 import CorporateStaff from "./CorporateAdmin/CorporateStaff";
 import CorporateProfile from "./CorporateAdmin/CorporateProfile";
@@ -10,7 +10,7 @@ import { ChatList as GroupChatList, ChatPage as GroupChatPage } from "./features
 const CorporateApp = () => {
     return (
         <Routes>
-            <Route element={<CorporateLayout />}>
+            <Route element={<AppLayout role="corporate_admin" />}>
                 <Route element={<ProtectedRoute role="corporate_admin" />}>
                     <Route path="/corporate-dashboard" element={<CorporateDashboard />} />
                     <Route path="/corporate-tournaments" element={<CorporateTournaments />} />

@@ -5,8 +5,8 @@ export default function EmptyState({ icon: Icon, title, description, action, cla
   return (
     <div className={`flex flex-col items-center justify-center py-16 px-8 ${className}`}>
       {Icon && (
-        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-          <Icon className="w-7 h-7 text-gray-400" />
+        <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-4">
+          <Icon className="w-7 h-7 text-orange-300" />
         </div>
       )}
       <h3 className="text-base font-bold text-gray-700 mb-1">{title}</h3>

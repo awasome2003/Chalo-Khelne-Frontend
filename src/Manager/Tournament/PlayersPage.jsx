@@ -56,7 +56,7 @@ export default function PlayersPage() {
         </div>
         <button
           onClick={() => navigate(`/tournaments/${tournamentId}/groups`)}
-          className="bg-[#004E93] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-800 transition w-auto"
+          className="bg-orange-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-800 transition w-auto"
         >
           View Groups →
         </button>
@@ -71,7 +71,7 @@ export default function PlayersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search players..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
           />
         </div>
         {["all", "confirmed", "pending", "cancelled"].map((s) => (
@@ -79,7 +79,7 @@ export default function PlayersPage() {
             key={s}
             onClick={() => setStatusFilter(s)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition w-auto ${
-              statusFilter === s ? "bg-[#004E93] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              statusFilter === s ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)} ({statusCounts[s]})

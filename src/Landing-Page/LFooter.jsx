@@ -39,8 +39,8 @@ const Footer = () => {
   return (
     <footer className="relative bg-gray-50 pt-32 pb-20 overflow-hidden border-t border-gray-200">
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-100/40 blur-[120px] rounded-full -translate-y-1/2" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-100/30 blur-[120px] rounded-full translate-y-1/2" />
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-100/40 blur-[120px] rounded-full -translate-y-1/2" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-100/30 blur-[120px] rounded-full translate-y-1/2" />
 
       <div className="max-w-[1440px] mx-auto px-8 md:px-16 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
@@ -48,16 +48,16 @@ const Footer = () => {
           {/* Brand Briefing */}
           <div className="lg:col-span-4 space-y-10">
             <div className="flex items-center gap-4 group">
-              <div className="w-16 h-16 bg-blue-600 rounded-[2rem] flex items-center justify-center p-3 shadow-lg shadow-blue-500/15 group-hover:rotate-12 transition-transform duration-500">
+              <div className="w-16 h-16 bg-orange-500 rounded-[2rem] flex items-center justify-center p-3 shadow-lg shadow-orange-500/15 group-hover:rotate-12 transition-transform duration-500">
                 <img
-                  src="/src/assets/sportapp_logo.svg"
+                  src="/sportapp_logo.png"
                   alt="Logo"
                   className="w-full h-full invert brightness-0"
                 />
               </div>
               <div>
                 <h3 className="text-3xl font-bold tracking-tight text-gray-900">
-                  Chalo <span className="text-blue-600">Khelne</span>
+                  Chalo <span className="text-orange-500">Khelne</span>
                 </h3>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Connecting Sports Communities</p>
               </div>
@@ -73,7 +73,7 @@ const Footer = () => {
                   key={idx}
                   href="#"
                   whileHover={{ y: -5, scale: 1.1 }}
-                  className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 hover:border-blue-500 transition-all shadow-sm hover:shadow-lg"
+                  className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-white hover:bg-orange-500 hover:border-orange-500 transition-all shadow-sm hover:shadow-lg"
                 >
                   <Icon className="w-5 h-5" />
                 </motion.a>
@@ -85,7 +85,7 @@ const Footer = () => {
           <div className="lg:col-span-4 grid grid-cols-2 gap-10">
             {footerLinks.map((section, idx) => (
               <div key={idx} className="space-y-8">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-3">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-orange-500 flex items-center gap-3">
                   <div className="w-6 h-[1px] bg-blue-400" />
                   {section.title}
                 </h4>
@@ -97,7 +97,7 @@ const Footer = () => {
                         className="text-gray-500 hover:text-gray-900 font-semibold tracking-tight text-sm flex items-center group transition-all"
                       >
                         <span className="w-0 group-hover:w-4 overflow-hidden transition-all duration-300">
-                          <ArrowRight className="w-3 h-3 text-blue-500 mr-2" />
+                          <ArrowRight className="w-3 h-3 text-orange-500 mr-2" />
                         </span>
                         {link.name}
                       </Link>
@@ -108,13 +108,13 @@ const Footer = () => {
             ))}
 
             <div className="col-span-2 space-y-8">
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-3">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-orange-500 flex items-center gap-3">
                 <div className="w-6 h-[1px] bg-blue-400" />
                 Contact Us
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="py-6 px-2 bg-white rounded-[2rem] border border-gray-200 space-y-2 group hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm">
-                  <Globe className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                  <Globe className="w-5 h-5 text-gray-400 group-hover:text-orange-500" />
                   <p className="text-xs font-bold text-gray-800 uppercase tracking-wide">sales@chalokhelne.com</p>
                 </div>
                 <div className="py-6 px-2 bg-white rounded-[2rem] border border-gray-200 space-y-2 group hover:bg-amber-50 hover:border-amber-200 transition-all shadow-sm">
@@ -127,7 +127,7 @@ const Footer = () => {
 
           {/* Mobile Access Point */}
           <div className="lg:col-span-4 lg:pl-10">
-            <div className="relative p-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[3rem] shadow-xl shadow-blue-500/15 overflow-hidden group">
+            <div className="relative p-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-[3rem] shadow-xl shadow-orange-500/15 overflow-hidden group">
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/2" />
               <Smartphone className="absolute bottom-[-20%] right-[-10%] w-48 h-48 text-white/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700" />
 
@@ -178,7 +178,7 @@ const Footer = () => {
             className="fixed bottom-10 right-10 z-[110] group"
             aria-label="Scroll to top"
           >
-            <div className="relative w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:bg-blue-500 transition-colors">
+            <div className="relative w-16 h-16 bg-orange-500 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-orange-500/25 group-hover:bg-orange-500 transition-colors">
               <div className="absolute inset-0 bg-blue-400/30 rounded-3xl animate-ping opacity-20 group-hover:opacity-40" />
               <ArrowUp className="w-6 h-6 relative z-10 group-hover:-translate-y-1 transition-transform" />
             </div>

@@ -48,6 +48,16 @@ function isTokenExpired(token) {
 }
 
 /**
+ * Routes that should NOT trigger auto-logout on 401.
+ */
+const AUTH_ENDPOINTS = ["/login", "/register", "/send-otp", "/verify-otp", "/forgot-password"];
+
+function isAuthEndpoint(url) {
+  if (!url) return false;
+  return AUTH_ENDPOINTS.some((ep) => url.includes(ep));
+}
+
+/**
  * Force logout — clear storage, call AuthContext logout, redirect.
  */
 function forceLogout(message) {
@@ -66,11 +76,10 @@ function forceLogout(message) {
     toastId: "session-expired",
   });
 
-  // Redirect to login after short delay
+  // Reset flag after delay (no hard reload — React handles navigation)
   setTimeout(() => {
     _isLoggingOut = false;
-    window.location.href = "/login";
-  }, 1000);
+  }, 2000);
 }
 
 /**
@@ -110,7 +119,12 @@ export function setupAxiosInterceptors() {
         const { status, data } = error.response;
 
         // 401 — Token invalid/expired on server
+        // Skip for auth endpoints (login returns 401 for bad credentials — not a session issue)
         if (status === 401) {
+          if (isAuthEndpoint(error.config?.url)) {
+            // Let the component handle auth endpoint errors (e.g. wrong password)
+            return Promise.reject(error);
+          }
           forceLogout(data?.message || "Session expired. Please login again.");
           return Promise.reject(error);
         }

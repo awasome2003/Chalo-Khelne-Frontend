@@ -2,120 +2,113 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Share2,
-  X,
-  LogIn,
-  UserPlus,
-  MapPin,
-  Calendar,
-  Award,
-  ArrowRight,
-  IndianRupee,
+  Share2, X, LogIn, MapPin, Calendar, Award, ArrowRight, IndianRupee, Users, Loader2, Trophy,
 } from "lucide-react";
 import Carousel from "./LCarousel.jsx";
+import defaultImg from "../assets/tournament.avif";
 
-// Tournament Detail Modal Component
+// ─── Tournament Detail Modal ─────────────────────────────────
 const TournamentDetailModal = ({ tournament, onClose, onSignInPrompt }) => {
   if (!tournament) return null;
 
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "TBD";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[100] flex items-center justify-center overflow-y-auto p-4 md:p-8"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center overflow-y-auto p-4 md:p-8"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, y: 40 }}
+        initial={{ scale: 0.95, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 40, opacity: 0 }}
-        className="bg-white rounded-[3rem] max-w-5xl w-full overflow-hidden relative shadow-2xl flex flex-col md:flex-row h-full max-h-[85vh]"
+        exit={{ scale: 0.95, y: 20, opacity: 0 }}
+        className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-black bg-white/10 hover:bg-white backdrop-blur-md p-3 rounded-full z-50 transition-all border border-white/20 shadow-xl"
-        >
-          <X className="w-6 h-6" />
+        {/* Top accent */}
+        <div className="h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-500" />
+
+        {/* Close */}
+        <button onClick={onClose} className="absolute top-5 right-5 p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition z-50 w-auto">
+          <X className="w-4 h-4 text-gray-500" />
         </button>
 
-        {/* Hero Section */}
-        <div className="w-full md:w-5/12 h-64 md:h-full relative overflow-hidden">
+        {/* Hero Image */}
+        <div className="relative h-56 md:h-64 overflow-hidden">
           <img
-            src={`/src/assets/card-img.png`}
+            src={tournament.tournamentLogo ? `/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}` : defaultImg}
             alt={tournament.title}
             className="w-full h-full object-cover"
+            onError={(e) => { e.target.src = defaultImg; }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/90 via-black/40 to-transparent flex items-end p-8 md:p-12">
-            <div className="space-y-4">
-              <span className="px-4 py-2 bg-blue-600 text-[10px] font-black tracking-widest uppercase rounded-full border border-blue-400/50 text-white italic">
-                {tournament.type || "Pro Series"}
-              </span>
-              <h1 className="text-4xl md:text-6xl font-black text-white italic leading-none uppercase tracking-tighter">
-                {tournament.title}
-              </h1>
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute bottom-5 left-6 right-16">
+            <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 inline-block">
+              {tournament.type || "Tournament"}
+            </span>
+            <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
+              {tournament.title}
+            </h1>
           </div>
         </div>
 
-        {/* Details Section */}
-        <div className="flex-1 p-8 md:p-12 overflow-y-auto bg-gray-50/50">
-          <div className="space-y-12">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {[
-                { icon: Award, label: "Organizer", value: tournament.organizerName, color: "text-blue-600 bg-blue-50" },
-                { icon: MapPin, label: "Venue", value: tournament.eventLocation, color: "text-indigo-600 bg-indigo-50" },
-                { icon: Calendar, label: "Schedule", value: new Date(tournament.selectedDate).toDateString(), color: "text-purple-600 bg-purple-50" },
-                { icon: IndianRupee, label: "Entry Fee", value: `₹ ${tournament.tournamentFee}/-`, color: "text-green-600 bg-green-50" }
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-5">
-                  <div className={`p-4 rounded-2xl ${item.color} shadow-sm border border-black/5`}>
-                    <item.icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{item.label}</p>
-                    <p className="font-bold text-gray-900 italic">{item.value || "TBD"}</p>
-                  </div>
+        {/* Details */}
+        <div className="p-6 md:p-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            {[
+              { icon: Award, label: "Organizer", value: tournament.organizerName, color: "text-orange-500 bg-orange-50" },
+              { icon: MapPin, label: "Venue", value: tournament.eventLocation, color: "text-emerald-600 bg-emerald-50" },
+              { icon: Calendar, label: "Date", value: formatDate(tournament.selectedDate || tournament.startDate), color: "text-blue-600 bg-blue-50" },
+              { icon: IndianRupee, label: "Entry Fee", value: tournament.tournamentFee > 0 ? `₹${tournament.tournamentFee}` : "Free", color: "text-amber-600 bg-amber-50" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center flex-shrink-0`}>
+                  <item.icon className="w-4 h-4" />
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] italic">Mission Objective</h3>
-              <p className="text-gray-600 font-medium leading-relaxed italic text-lg">
-                {tournament.description || "Enter the arena where legends are forged. This high-stakes tournament brings together the finest athletes for a showdown of raw skill and tactical brilliance."}
-              </p>
-            </div>
-
-            <div className="p-8 rounded-[2.5rem] bg-gray-900 text-white relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div>
-                  <h4 className="text-xl font-black italic uppercase tracking-tight mb-1">Registration ends soon</h4>
-                  <p className="text-gray-400 text-sm font-medium italic">Secure your presence in the tournament bracket today.</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{item.label}</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{item.value || "TBD"}</p>
                 </div>
-                <button
-                  onClick={onSignInPrompt}
-                  className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black italic uppercase tracking-widest text-sm transition-all shadow-xl flex items-center justify-center gap-3"
-                >
-                  Enlist Now <ArrowRight className="w-5 h-5" />
-                </button>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="space-y-4">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] italic">Tournament Protocol</h3>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {["Arrive 45m before kick-off", "Valid photo identity required", "Professional gear mandatory", "Official rulings are final"].map((rule, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm font-bold text-gray-700 italic">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    {rule}
-                  </li>
-                ))}
-              </ul>
+          {/* Description */}
+          {tournament.description && (
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">About</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{tournament.description}</p>
             </div>
+          )}
+
+          {/* Rules */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rules & Guidelines</h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {["Arrive 30 minutes before start", "Valid photo ID required", "Proper sports gear mandatory", "Referee decisions are final"].map((rule, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                  {rule}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* CTA */}
+          <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="text-base font-bold text-gray-900">Ready to compete?</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Sign in to secure your spot in this tournament</p>
+            </div>
+            <button
+              onClick={onSignInPrompt}
+              className="w-full sm:w-auto px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-sm transition-all shadow-sm shadow-orange-200 flex items-center justify-center gap-2 active:scale-[0.97]"
+            >
+              Join Tournament <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </motion.div>
@@ -123,189 +116,137 @@ const TournamentDetailModal = ({ tournament, onClose, onSignInPrompt }) => {
   );
 };
 
-// Sign In Modal Component
-const SignInModal = ({ onClose, message }) => {
-  return (
+// ─── Sign In Modal ───────────────────────────────────────────
+const SignInModal = ({ onClose, message }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+    onClick={onClose}
+  >
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4"
-      onClick={onClose}
+      initial={{ scale: 0.95, y: 20 }}
+      animate={{ scale: 1, y: 0 }}
+      exit={{ scale: 0.95, y: 20, opacity: 0 }}
+      className="bg-white rounded-2xl max-w-sm w-full p-8 relative shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 40 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 40, opacity: 0 }}
-        className="bg-white rounded-[3rem] max-w-md w-full p-12 relative shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+      <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-400 absolute top-0 left-0 right-0 rounded-t-2xl" />
 
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
-        >
-          <X className="w-6 h-6" />
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition w-auto">
+        <X className="w-4 h-4 text-gray-400" />
+      </button>
+
+      <div className="text-center mt-4">
+        <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <LogIn className="w-7 h-7 text-orange-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Sign in required</h2>
+        <p className="text-sm text-gray-500 mt-2">{message || "Sign in to access all tournament features."}</p>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        <a href="/login" className="block w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-bold text-sm transition-all text-center shadow-sm shadow-orange-200">
+          Sign In
+        </a>
+        <button onClick={onClose} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 py-3 rounded-xl font-semibold text-sm transition-all">
+          Continue as Guest
         </button>
-
-        <div className="text-center space-y-6">
-          <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 mx-auto shadow-inner">
-            <UserPlus className="w-10 h-10" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black text-gray-900 italic uppercase tracking-tighter">
-              Awaiting Orders
-            </h2>
-            <p className="text-gray-500 font-medium italic">
-              {message || "Authentication required to access the tactical grid and secure your mission slot."}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-10 space-y-4">
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black italic uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3">
-            <LogIn className="w-5 h-5" />
-            Sign In
-          </button>
-
-          <button
-            onClick={onClose}
-            className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 py-5 rounded-2xl font-black italic uppercase tracking-[0.2em] transition-all text-xs"
-          >
-            Deploy as Guest
-          </button>
-        </div>
-
-        <p className="mt-8 text-center text-[10px] text-gray-400 font-black uppercase tracking-widest italic leading-relaxed">
-          By engaging, you agree to our <br /> combat protocols & privacy terms.
-        </p>
-      </motion.div>
+      </div>
     </motion.div>
-  );
-};
+  </motion.div>
+);
 
+// ─── Main Event Page ─────────────────────────────────────────
 const Event = () => {
   const [searchParams] = useSearchParams();
   const deepLinkedTournamentId = searchParams.get("tournamentId");
 
-  const [TopactiveTab, setTopActiveTab] = useState("event");
   const [activeTab, setActiveTab] = useState("Live");
-
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [signInMessage, setSignInMessage] = useState("");
 
-  const Toptabs = ["event", "score"];
-  const tabs = ["Live", "Upcoming", "My Registration", "History"];
-
-  const handleTournamentClick = (tournament) => {
-    setSelectedTournament(tournament);
-  };
+  const tabs = ["Live", "Upcoming", "History"];
 
   const handleSignInPrompt = (message) => {
-    setSignInMessage(message || "Sign in to access all features and register for tournaments.");
+    setSignInMessage(message || "Sign in to access all tournament features.");
     setShowSignInModal(true);
   };
 
-  // Handle Deep Linking & App Redirection
+  // Deep linking
   useEffect(() => {
     if (deepLinkedTournamentId) {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const playStoreLink = "https://play.google.com/store/apps/details?id=com.chalokhelnesport.client";
       const appScheme = `chalokhelne://tournament/details/${deepLinkedTournamentId}`;
 
-      // 1. Logic for Mobile App Redirection
       if (isMobile) {
         const start = Date.now();
-        // Try to open the app
         window.location.href = appScheme;
-
-        // Fallback to Play Store if app is not opening/installed
         const timeout = setTimeout(() => {
-          // If the tab is still active and visible after 1.2s, assume app isn't installed
           if (!document.hidden && (Date.now() - start < 2000)) {
             window.location.href = playStoreLink;
           }
         }, 1200);
-
         return () => clearTimeout(timeout);
       }
 
-      // 2. Web Fallback Fetch
-      const fetchSingleTournament = async () => {
+      (async () => {
         try {
-          const response = await fetch(`http://localhost:3003/api/tournaments/${deepLinkedTournamentId}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.tournament) {
-              setSelectedTournament(data.tournament);
-            }
+          const res = await fetch(`/api/tournaments/${deepLinkedTournamentId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.tournament) setSelectedTournament(data.tournament);
           }
-        } catch (err) {
-          console.error("Deep link error:", err);
-        }
-      };
-      fetchSingleTournament();
+        } catch (err) { console.error("Deep link error:", err); }
+      })();
     }
   }, [deepLinkedTournamentId]);
 
   useEffect(() => {
-    if (selectedTournament || showSignInModal) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = (selectedTournament || showSignInModal) ? "hidden" : "";
   }, [selectedTournament, showSignInModal]);
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="relative">
-        <Carousel />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent" />
-      </div>
+      {/* Carousel */}
+      <Carousel />
 
-      <div className="max-w-[1400px] mx-auto px-8 md:px-16 py-20">
-        {/* Top Navigation Control */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 mb-20">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="w-10 h-[1px] bg-blue-600" />
-              <span className="text-blue-600 text-[10px] font-black uppercase tracking-[0.4em] italic">Tactical Grid</span>
+      {/* Content */}
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-[3px] bg-orange-500 rounded-full" />
+              <span className="text-xs font-bold text-orange-500 uppercase tracking-[0.15em]">Explore</span>
             </div>
-            <h1 className="text-6xl font-black italic uppercase tracking-tighter text-gray-900 leading-none">
-              Tournament <br /> <span className="text-transparent stroke-gray-900 stroke-1">Operations</span>
-            </h1>
-          </div>
-
-          <div className="flex bg-gray-50 p-2 rounded-[2rem] border border-black/5 self-start">
-            {Toptabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setTopActiveTab(tab)}
-                className={`px-10 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-widest italic transition-all ${TopactiveTab === tab ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                {tab}
-              </button>
-            ))}
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Tournaments</h1>
+            <p className="text-sm text-gray-400 mt-1">Find and join tournaments near you</p>
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex flex-wrap gap-4 mb-16">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-2 mb-10">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest italic transition-all border ${activeTab === tab ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white border-black/10 text-gray-500 hover:border-black/20'}`}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all w-auto ${
+                activeTab === tab
+                  ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
             >
               {tab}
             </button>
           ))}
         </div>
 
-        {/* Tournament Content */}
-        <ModifiedTournamentCards onTournamentClick={handleTournamentClick} />
+        {/* Tournament Cards */}
+        <TournamentCards onTournamentClick={(t) => setSelectedTournament(t)} />
       </div>
 
       {/* Modals */}
@@ -315,45 +256,19 @@ const Event = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center p-8 text-center"
+            className="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-8 text-center"
           >
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
-            <motion.div
-              animate={{
-                scale: [1, 1.1, 1],
-                rotate: [0, 5, -5, 0]
-              }}
-              transition={{ repeat: Infinity, duration: 4 }}
-              className="w-24 h-24 bg-blue-600 rounded-[2rem] flex items-center justify-center p-5 mb-8 shadow-2xl shadow-blue-500/40 relative"
-            >
-              <Zap className="w-full h-full text-white animate-pulse" />
-              <div className="absolute inset-0 border-2 border-white/20 rounded-[2rem] animate-ping" />
-            </motion.div>
-
-            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">
-              Launching <span className="text-blue-600">Command Center</span>
-            </h2>
-            <p className="text-gray-500 font-bold italic uppercase tracking-widest text-[10px] mb-12">
-              Initiating Tactical Handshake with ChaloKhelne Mobile
-            </p>
-
-            <div className="flex gap-2">
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  animate={{ opacity: [0.2, 1, 0.2] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                  className="w-2 h-2 bg-blue-600 rounded-full"
-                />
-              ))}
+            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-6">
+              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             </div>
-
-            <button
-              onClick={() => window.location.href = "https://play.google.com/store/apps/details?id=com.chalokhelnesport.client"}
-              className="mt-20 text-[10px] font-black text-gray-600 hover:text-white uppercase tracking-[0.4em] transition-colors"
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Loading tournament...</h2>
+            <p className="text-sm text-gray-400">Fetching tournament details</p>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.chalokhelnesport.client"
+              className="mt-8 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors"
             >
-              Manual Extraction to Play Store
-            </button>
+              Open in Chalo Khelne App →
+            </a>
           </motion.div>
         )}
 
@@ -361,7 +276,7 @@ const Event = () => {
           <TournamentDetailModal
             tournament={selectedTournament}
             onClose={() => setSelectedTournament(null)}
-            onSignInPrompt={() => handleSignInPrompt("Sign in to register.")}
+            onSignInPrompt={() => handleSignInPrompt("Sign in to join this tournament.")}
           />
         )}
         {showSignInModal && (
@@ -375,92 +290,112 @@ const Event = () => {
   );
 };
 
-const ModifiedTournamentCards = ({ onTournamentClick }) => {
+// ─── Tournament Cards Grid ───────────────────────────────────
+const TournamentCards = ({ onTournamentClick }) => {
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchTournaments = async () => {
+    (async () => {
       try {
-        const response = await fetch("http://localhost:3003/api/tournaments");
-        if (!response.ok) throw new Error("Connection Failure");
-        const data = await response.json();
+        const res = await fetch("/api/tournaments");
+        if (!res.ok) throw new Error("Failed to load");
+        const data = await res.json();
         setTournaments(data.tournaments || data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTournaments();
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
+    })();
   }, []);
 
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD";
+
   if (loading) return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-      {[1, 2, 3].map(i => <div key={i} className="h-[500px] rounded-[3rem] bg-gray-50 animate-pulse" />)}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3].map((i) => <div key={i} className="h-[360px] rounded-2xl bg-gray-100 animate-pulse" />)}
     </div>
   );
 
-  if (error) return <div className="text-center py-20 text-red-500 font-black italic uppercase">Critical Error: {error}</div>;
+  if (error) return (
+    <div className="text-center py-16">
+      <p className="text-sm text-red-500">{error}</p>
+    </div>
+  );
+
+  if (tournaments.length === 0) return (
+    <div className="text-center py-16">
+      <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-4">
+        <Trophy className="w-7 h-7 text-orange-300" />
+      </div>
+      <h3 className="text-base font-bold text-gray-700">No tournaments found</h3>
+      <p className="text-sm text-gray-400 mt-1">Check back soon for upcoming events</p>
+    </div>
+  );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {tournaments.map((tournament) => (
         <motion.div
           key={tournament._id}
-          whileHover={{ y: -10 }}
-          className="group relative rounded-[3rem] overflow-hidden bg-white border border-black/5 shadow-2xl shadow-black/5 cursor-pointer"
+          whileHover={{ y: -6 }}
+          transition={{ duration: 0.2 }}
+          className="group rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-orange-300 hover:shadow-lg cursor-pointer transition-all"
           onClick={() => onTournamentClick(tournament)}
         >
-          <div className="relative h-72 overflow-hidden">
+          {/* Image */}
+          <div className="relative h-48 overflow-hidden">
             <img
-              src={tournament.tournamentLogo ? `http://localhost:3003/api/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}` : "/src/assets/card-img.png"}
+              src={tournament.tournamentLogo ? `/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}` : defaultImg}
               alt={tournament.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => { e.target.src = defaultImg; }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
-            <div className="absolute top-6 left-6">
-              <span className="px-4 py-2 bg-blue-600/90 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest italic border border-white/20">
-                {tournament.type}
+            <div className="absolute top-3 left-3">
+              <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                {tournament.type || "Tournament"}
               </span>
             </div>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const shareLink = `https://chalokhelne.com/l/event?tournamentId=${tournament._id}`;
-                navigator.clipboard.writeText(shareLink);
-                alert("Universal Deployment Link Copied!");
+                const link = `${window.location.origin}/l/event?tournamentId=${tournament._id}`;
+                navigator.clipboard.writeText(link);
               }}
-              className="absolute top-6 right-6 p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 text-white hover:bg-white hover:text-black transition-all"
+              className="absolute top-3 right-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white hover:text-gray-900 transition-all w-auto"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="p-8 space-y-6">
-            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-gray-900 group-hover:text-blue-600 transition-colors">
+          {/* Content */}
+          <div className="p-5">
+            <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1 mb-3">
               {tournament.title}
             </h3>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-gray-500 italic font-medium">
-                <MapPin className="w-4 h-4 text-blue-500" />
-                <span className="truncate">{tournament.eventLocation}</span>
-              </div>
-              <p className="text-sm font-black text-gray-400 uppercase tracking-widest">{tournament.organizerName}</p>
+            <div className="space-y-2 mb-4">
+              {tournament.eventLocation && (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{tournament.eventLocation}</span>
+                </div>
+              )}
+              <p className="text-xs font-semibold text-gray-400">{tournament.organizerName}</p>
             </div>
 
-            <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Entry Orders</p>
-                <p className="text-xl font-black italic text-gray-900">₹ {tournament.tournamentFee}<span className="text-sm text-gray-400">/-</span></p>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Entry Fee</p>
+                <p className={`text-sm font-bold ${tournament.tournamentFee > 0 ? "text-gray-900" : "text-emerald-600"}`}>
+                  {tournament.tournamentFee > 0 ? `₹${tournament.tournamentFee}` : "Free"}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Timeline</p>
-                <p className="text-xs font-black italic text-gray-700 uppercase">{new Date(tournament.selectedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">Date</p>
+                <p className="text-xs font-bold text-gray-700">{formatDate(tournament.selectedDate || tournament.startDate)}</p>
               </div>
             </div>
           </div>

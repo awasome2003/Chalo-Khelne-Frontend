@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState } from "react";
 import { X } from "lucide-react";
 
@@ -21,7 +22,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSubmit, loading 
   const handleSubmit = async () => {
     const required = ["game", "matchFee", "date", "time", "venue", "duration", "contact"];
     const missing = required.filter((f) => !form[f]);
-    if (missing.length) { alert(`Missing: ${missing.join(", ")}`); return; }
+    if (missing.length) { toast.info(`Missing: ${missing.join(", ")}`); return; }
     await onSubmit(form);
     setForm({ ...INITIAL_FORM });
     onClose();
@@ -98,7 +99,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSubmit, loading 
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-5 py-2 bg-[#004E93] text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-50 w-auto"
+            className="px-5 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-50 w-auto"
           >
             {loading ? "Submitting..." : "Submit Request"}
           </button>

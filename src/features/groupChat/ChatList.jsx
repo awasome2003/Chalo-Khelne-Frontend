@@ -43,7 +43,7 @@ export default function ChatList() {
           <p className="text-sm text-gray-500 mt-0.5">{chats.length} chat{chats.length !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FF6A00] hover:bg-[#E55D00] text-white text-sm font-semibold rounded-xl transition shadow-sm w-auto active:scale-[0.97]">
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-orange-500 hover:bg-[#E55D00] text-white text-sm font-semibold rounded-xl transition shadow-sm w-auto active:scale-[0.97]">
           <Plus className="w-4 h-4" /> New Chat
         </button>
       </div>
@@ -61,13 +61,13 @@ export default function ChatList() {
           {chats.map((chat) => (
             <button key={chat._id} onClick={() => navigate(`/group-chat/${chat._id}`)}
               className="w-full bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#004E93] to-[#2DA5FF] flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-[#2DA5FF] flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
                 {chat.name?.charAt(0)?.toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-gray-800 text-sm truncate">{chat.name}</h3>
-                  {chat.isOwner && <Crown className="w-3.5 h-3.5 text-[#FF6A00] flex-shrink-0" />}
+                  {chat.isOwner && <Crown className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />}
                 </div>
                 <p className="text-xs text-gray-400 truncate">
                   {chat.lastMessageText ? `${chat.lastMessageBy}: ${chat.lastMessageText}` : "No messages yet"}
@@ -94,17 +94,17 @@ export default function ChatList() {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Chat Name *</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Table Tennis Squad"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" autoFocus />
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" autoFocus />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Description</label>
                 <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What's this chat about?"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#004E93]/20 focus:border-[#004E93] transition" />
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="px-5 py-2.5 text-gray-600 text-sm font-medium hover:bg-gray-100 rounded-xl transition w-auto">Cancel</button>
                 <button onClick={handleCreate} disabled={!name.trim() || createMutation.isPending}
-                  className="px-5 py-2.5 bg-[#004E93] hover:bg-[#073E73] text-white text-sm font-bold rounded-xl transition disabled:opacity-50 w-auto active:scale-[0.97]">
+                  className="px-5 py-2.5 bg-orange-500 hover:bg-orange-700 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 w-auto active:scale-[0.97]">
                   {createMutation.isPending ? "Creating..." : "Create"}
                 </button>
               </div>

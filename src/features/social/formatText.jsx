@@ -17,14 +17,14 @@ export function formatDescription(text) {
   return parts.map((part, i) => {
     if (part.startsWith("@")) {
       return (
-        <span key={i} className="text-blue-600 font-semibold cursor-pointer hover:underline">
+        <span key={i} className="text-orange-500 font-semibold cursor-pointer hover:underline">
           {part}
         </span>
       );
     }
     if (part.startsWith("#")) {
       return (
-        <span key={i} className="text-purple-600 font-semibold cursor-pointer hover:underline">
+        <span key={i} className="text-emerald-600 font-semibold cursor-pointer hover:underline">
           {part}
         </span>
       );

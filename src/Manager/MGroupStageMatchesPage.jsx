@@ -85,7 +85,6 @@ const MGroupStageMatchesPage = () => {
                 `/api/tournaments/matches/${tournamentId}/${activeGroupId}`
             );
 
-            console.log(response)
 
             if (response.data.success) {
                 setMatchesData(prev => ({
@@ -134,7 +133,6 @@ const MGroupStageMatchesPage = () => {
             }
 
             const data = await response.json();
-            console.log("Fetched Score Data:", data);
 
             if (data.score) {
                 const scoreData = data.score;
@@ -221,7 +219,6 @@ const MGroupStageMatchesPage = () => {
             }
 
             const data = await response.json();
-            console.log("Score updated successfully:", data);
 
             return data.updatedScore;
         } catch (error) {
@@ -281,7 +278,6 @@ const MGroupStageMatchesPage = () => {
             if (!response.ok) throw new Error("Failed to save score");
 
             const data = await response.json();
-            console.log("Score saved response:", data);
 
             showModal("Set Complete", "Score has been saved successfully!");
             setTeamAPoints(0);
@@ -376,7 +372,7 @@ const MGroupStageMatchesPage = () => {
                     <h2 className="text-xl font-bold">Matches</h2>
                     {(matchesData[activeGroupId] || []).some(m => m.status !== 'COMPLETED') && (
                         <button
-                            className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-purple-500 hover:bg-purple-600 w-auto"
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 w-auto"
                             onClick={() => setShowBulkUpload(true)}
                         >
                             Bulk Upload
@@ -433,7 +429,7 @@ const MGroupStageMatchesPage = () => {
                         <div className="flex gap-4">
                             <button
                                 onClick={() => setShowManualPopup(true)}
-                                className="bg-blue-600 text-white px-4 py-2 rounded"
+                                className="bg-orange-500 text-white px-4 py-2 rounded"
                             >
                                 Manual Scoreboard
                             </button>
@@ -452,7 +448,7 @@ const MGroupStageMatchesPage = () => {
             <div className="min-h-screen bg-black relative flex flex-col justify-center items-center">
                 {/* Toggle Switch for Automated or Manual Mode */}
                 {!showEditView && (
-                    <div className="absolute right-0 top-16 transform rotate-60 bg-blue-900 p-2 rounded-2xl z-10 flex items-center gap-2 mr-40">
+                    <div className="absolute right-0 top-16 transform rotate-60 bg-gray-900 p-2 rounded-2xl z-10 flex items-center gap-2 mr-40">
                         <Switch
                             checked={isEnabled}
                             onChange={(event) => setIsEnabled(event.target.checked)}
@@ -491,7 +487,7 @@ const MGroupStageMatchesPage = () => {
                                             className={`
                       w-full flex justify-between items-center p-4 rounded-lg mb-2
                       ${selectedGame === setIndex
-                                                    ? "bg-gray-700 border border-blue-500"
+                                                    ? "bg-gray-700 border border-orange-500"
                                                     : "bg-gray-800"
                                                 }
                     `}
@@ -585,7 +581,7 @@ const MGroupStageMatchesPage = () => {
                                                                 className={`
                               w-full flex justify-between items-center p-3 rounded-lg
                               ${isSelected
-                                                                        ? "bg-gray-700 border border-blue-500"
+                                                                        ? "bg-gray-700 border border-orange-500"
                                                                         : "bg-gray-800"
                                                                     }
                             `}
@@ -700,7 +696,7 @@ const MGroupStageMatchesPage = () => {
 
                         {/* Back to Scoreboard Button */}
                         <button
-                            className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                            className="fixed top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
                             onClick={() => {
                                 setShowEditView(false);
                                 setSelectedGame(null);
@@ -717,7 +713,7 @@ const MGroupStageMatchesPage = () => {
                                 <div className="flex flex-col md:flex-row h-screen">
                                     {/* Player A Side */}
                                     <div
-                                        className={`w-full md:w-1/2 bg-blue-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black py-6 md:py-0 transition-colors ${tapCooldown ? "opacity-50 cursor-not-allowed" : "active:bg-blue-600"
+                                        className={`w-full md:w-1/2 bg-orange-500 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black py-6 md:py-0 transition-colors ${tapCooldown ? "opacity-50 cursor-not-allowed" : "active:bg-orange-500"
                                             }`}
                                         onClick={() =>
                                             !route?.params?.viewOnly && !tapCooldown && incrementPlayerA()
@@ -974,7 +970,7 @@ const MGroupStageMatchesPage = () => {
                                 {sets.length === parseInt(setCount) && (
                                     <button
                                         onClick={submitMatch} // <-- will send all sets to backend
-                                        className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                                        className="mt-6 w-full bg-orange-500 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors"
                                     >
                                         <Check className="w-5 h-5" />
                                         <span>Submit Match</span>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Share2 } from "lucide-react";
+import { Share2, MapPin, Calendar, IndianRupee, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
+import defaultImg from "../assets/tournament.avif";
 
 const TournamentsCard = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -10,12 +11,9 @@ const TournamentsCard = () => {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const response = await fetch(`/api/tournaments`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch tournaments");
-        }
+        const response = await fetch("/api/tournaments");
+        if (!response.ok) throw new Error("Failed to fetch tournaments");
         const data = await response.json();
-
         setTournaments(data.tournaments || data);
       } catch (err) {
         setError(err.message);
@@ -23,42 +21,40 @@ const TournamentsCard = () => {
         setLoading(false);
       }
     };
-
     fetchTournaments();
   }, []);
 
   const formatDate = (dateString) => {
-    const options = { year: "numeric", month: "short", day: "numeric" };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
-  const formatDateBefore = (dateString) => {
-    const options = { year: "numeric", month: "short", day: "numeric" };
-    const date = new Date(dateString);
-    date.setDate(date.getDate() - 1); // Subtract one day
-    return date.toLocaleDateString(undefined, options);
+    if (!dateString) return "TBD";
+    return new Date(dateString).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-2xl bg-gray-100 animate-pulse h-[380px]" />
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        Error loading tournaments: {error}
+      <div className="text-center py-12">
+        <p className="text-sm text-red-500">Failed to load tournaments. Please try again.</p>
       </div>
     );
   }
 
   if (!tournaments || tournaments.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">No tournaments available</p>
+      <div className="text-center py-16">
+        <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-4">
+          <Trophy className="w-7 h-7 text-orange-300" />
+        </div>
+        <h3 className="text-base font-bold text-gray-700">No tournaments available</h3>
+        <p className="text-sm text-gray-400 mt-1">Check back soon for upcoming events</p>
       </div>
     );
   }
@@ -68,74 +64,70 @@ const TournamentsCard = () => {
       {tournaments.map((tournament) => (
         <motion.div
           key={tournament._id}
-          whileHover={{
-            boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.12)",
-          }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="rounded-[24px] overflow-hidden bg-white cursor-pointer"
+          whileHover={{ y: -6 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-orange-300 hover:shadow-lg cursor-pointer transition-all group"
         >
-          {/* Image Section */}
-          <div className="relative h-[250px] overflow-hidden">
-            <motion.img
-              variants={{
-                hover: { scale: 1.05 },
-              }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+          {/* Image */}
+          <div className="relative h-48 overflow-hidden">
+            <img
               src={
                 tournament.tournamentLogo
-                  ? `/uploads/tournaments/${tournament.tournamentLogo
-                      .split("\\")
-                      .pop()}`
-                  : "/src/assets/card-img.png"
+                  ? `/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}`
+                  : defaultImg
               }
               alt={tournament.title}
-              className="w-full h-full object-cover rounded-[24px]"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => { e.target.src = defaultImg; }}
             />
-            <button className="absolute top-3 right-3 bg-white/30 p-2 w-9 rounded-full shadow-md backdrop-blur-[20px]">
-              <Share2 className="w-5 h-5 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+
+            {/* Type badge */}
+            <div className="absolute top-3 left-3">
+              <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                {tournament.type || "Tournament"}
+              </span>
+            </div>
+
+            {/* Share */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = `${window.location.origin}/l/event?tournamentId=${tournament._id}`;
+                navigator.clipboard.writeText(link);
+              }}
+              className="absolute top-3 right-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white hover:text-gray-900 transition-all w-auto"
+            >
+              <Share2 className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Content Section */}
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-[20px]">
-              <h2 className="text-[#333] font-roboto text-[16px] font-semibold leading-normal">
-                {tournament.title}
-              </h2>
-              <span className="text-[#333] font-roboto text-[14px] font-semibold leading-normal">
-                ({tournament.type})
-              </span>
+          {/* Content */}
+          <div className="p-5">
+            <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1 mb-3">
+              {tournament.title}
+            </h3>
+
+            <div className="space-y-2 mb-4">
+              {tournament.organizerName && (
+                <p className="text-xs font-semibold text-gray-500">{tournament.organizerName}</p>
+              )}
+              {tournament.eventLocation && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{tournament.eventLocation}</span>
+                </div>
+              )}
             </div>
-            <div className="div">
-              <p className="text-[#333] font-roboto text-[16px] font-semibold leading-normal mb-[6px]">
-                {tournament.organizerName}
-              </p>
-              <p className="text-[#333] font-roboto text-[14px] font-semibold leading-normal">
-                {tournament.eventLocation}
-              </p>
-            </div>
-            <div className="mt-3 flex justify-between items-end">
-              <div className="div">
-                <p className="text-[#333] font-roboto text-[16px] font-semibold leading-normal mb-[6px]">
-                  {formatDate(tournament.selectedDate)}
-                </p>
-                <p className="text-[#333] font-roboto text-[14px] font-semibold leading-normal">
-                  {tournament.selectedDate && (
-                    <>
-                      Booking closes on:{" "}
-                      {formatDateBefore(tournament.selectedDate)}
-                    </>
-                  )}
-                </p>
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <Calendar className="w-3 h-3" />
+                <span>{formatDate(tournament.selectedDate || tournament.startDate)}</span>
               </div>
-              {/* Price Section */}
-              <p className="text-[#333] font-roboto text-[14px] font-semibold leading-normal">
-                ₹{" "}
-                <span className="text-[#333] font-roboto text-[16px] font-semibold leading-normal">
-                  {tournament.tournamentFee}/-
-                </span>{" "}
-                onward
-              </p>
+              <span className={`text-sm font-bold ${tournament.tournamentFee > 0 ? "text-gray-900" : "text-emerald-600"}`}>
+                {tournament.tournamentFee > 0 ? `₹${tournament.tournamentFee}` : "Free"}
+              </span>
             </div>
           </div>
         </motion.div>

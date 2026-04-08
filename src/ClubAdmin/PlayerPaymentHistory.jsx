@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useState, useEffect } from "react";
 import {
   FaSearch,
@@ -271,7 +272,7 @@ const PaymentHistoryPage = () => {
 
   // Download receipt
   const downloadReceipt = (payment) => {
-    alert(`Downloading receipt for ${payment.id}`);
+    toast.info(`Downloading receipt for ${payment.id}`);
   };
 
   // Payment method icon

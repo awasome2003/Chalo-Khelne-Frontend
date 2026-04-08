@@ -129,12 +129,10 @@ const TeamKnockoutMatches = () => {
         // Start live updates
         startLiveUpdates();
 
-        console.log("🚀 Tournament data initialized");
       };
 
       initializeTournamentData();
     } else {
-      console.log("No tournament ID available");
     }
 
     return () => {
@@ -249,14 +247,6 @@ const TeamKnockoutMatches = () => {
         const totalTeams = data.statistics.teams.total;
         const calculatedTotalRounds = Math.ceil(Math.log2(totalTeams));
 
-        console.log("📊 Tournament Statistics:");
-        console.log("- Total teams:", totalTeams);
-        console.log("- Calculated total rounds:", calculatedTotalRounds);
-        console.log(
-          "- Current round:",
-          data.statistics.tournament.currentRound
-        );
-
         setTotalRounds(calculatedTotalRounds);
 
         return calculatedTotalRounds;
@@ -347,7 +337,6 @@ const TeamKnockoutMatches = () => {
         setHasGeneratedMatches(matches.length > 0);
 
         // Don't calculate totalRounds here anymore - let statistics handle it
-        console.log("✅ Fetched", matches.length, "matches");
       }
     } catch (error) {
       console.error("Error in fetchExistingMatches:", error);
@@ -631,7 +620,7 @@ const TeamKnockoutMatches = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-xl overflow-y-auto w-[450px] flex p-[52px] flex-col items-start gap-[20px] rounded-[24px] bg-[#F2F4F6]">
+        <div className="bg-white rounded-2xl shadow-xl overflow-y-auto w-[450px] flex p-[52px] flex-col items-start gap-[20px] rounded-[24px] bg-[#F5F7FA]">
           {/* Header */}
           <div className="flex w-full justify-end">
             <button
@@ -658,7 +647,7 @@ const TeamKnockoutMatches = () => {
 
             {/* Match Date and Time */}
             <div className="space-y-2 first-popup">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Match Start Date and Time
               </label>
               <LocalizationProvider
@@ -695,7 +684,7 @@ const TeamKnockoutMatches = () => {
 
             {/* Match Interval */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Match Interval (minutes)
               </label>
               <input
@@ -714,14 +703,14 @@ const TeamKnockoutMatches = () => {
                 }}
                 min="0"
                 placeholder="Enter interval in minutes"
-                className="h-[50px] text-[#666] px-4 py-2 self-stretch rounded-lg bg-white border-none"
+                className="h-[50px] text-gray-500 px-4 py-2 self-stretch rounded-lg bg-white border-none"
                 required
               />
             </div>
 
             {/* Court Number */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#333]">
+              <label className="block text-sm font-medium text-gray-900">
                 Starting Court Number
               </label>
               <input
@@ -740,7 +729,7 @@ const TeamKnockoutMatches = () => {
                 }}
                 min="1"
                 placeholder="Enter starting court number"
-                className="w-full text-[#666] h-[50px] px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-none"
+                className="w-full text-gray-500 h-[50px] px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 border-none"
                 required
               />
             </div>
@@ -951,7 +940,7 @@ const TeamKnockoutMatches = () => {
           return {
             color: isLive
               ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-700 animate-pulse"
-              : "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-700",
+              : "bg-gradient-to-r from-orange-500 to-orange-500 text-white border-gray-700",
             text: isLive ? "LIVE" : "In Progress",
             icon: Clock,
           };
@@ -1007,9 +996,9 @@ const TeamKnockoutMatches = () => {
       "Semi Finals":
         "bg-gradient-to-r from-orange-400 to-orange-500 text-orange-900 border-orange-600 font-bold shadow-md",
       "Quarter Finals":
-        "bg-gradient-to-r from-purple-400 to-purple-500 text-purple-900 border-purple-600 font-semibold shadow-md",
+        "bg-gradient-to-r from-emerald-400 to-emerald-500 text-emerald-900 border-emerald-600 font-semibold shadow-md",
       "Round of 16":
-        "bg-gradient-to-r from-blue-400 to-blue-500 text-blue-900 border-blue-600 font-semibold",
+        "bg-gradient-to-r from-orange-400 to-orange-500 text-gray-900 border-orange-500 font-semibold",
       "Round of 32":
         "bg-gradient-to-r from-green-400 to-green-500 text-green-900 border-green-600 font-semibold",
       "First Round":
@@ -1040,7 +1029,7 @@ const TeamKnockoutMatches = () => {
     return (
       <div className="mt-3 relative overflow-hidden">
         {/* Tournament Style Header */}
-        <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white p-3 rounded-t-lg">
+        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white p-3 rounded-t-lg">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <FaTableTennis className="w-4 h-4 text-orange-300" />
@@ -1061,14 +1050,14 @@ const TeamKnockoutMatches = () => {
         </div>
 
         {/* Main Scorecard Body */}
-        <div className="bg-gradient-to-b from-gray-50 to-white border-2 border-blue-200 rounded-b-lg p-4 shadow-lg">
+        <div className="bg-gradient-to-b from-gray-50 to-white border-2 border-orange-200 rounded-b-lg p-4 shadow-lg">
           {/* Team Names Header */}
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="text-center">
-              <div className="bg-blue-100 border-2 border-blue-300 rounded-lg p-2">
-                <p className="text-xs font-medium text-blue-600 mb-1">HOME</p>
+              <div className="bg-orange-100 border-2 border-orange-300 rounded-lg p-2">
+                <p className="text-xs font-medium text-orange-500 mb-1">HOME</p>
                 <p
-                  className="font-bold text-blue-800 text-sm truncate"
+                  className="font-bold text-orange-700 text-sm truncate"
                   title={team1Name}
                 >
                   {team1Name}
@@ -1105,8 +1094,8 @@ const TeamKnockoutMatches = () => {
                 <div
                   className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-4 ${(matchStatus.setsWon.home || 0) >
                     (matchStatus.setsWon.away || 0)
-                    ? "bg-blue-500 border-blue-700 text-white shadow-lg"
-                    : "bg-blue-100 border-blue-300 text-blue-700"
+                    ? "bg-orange-500 border-gray-700 text-white shadow-lg"
+                    : "bg-orange-100 border-orange-300 text-orange-600"
                     }`}
                 >
                   <span className="text-2xl font-bold">
@@ -1158,11 +1147,11 @@ const TeamKnockoutMatches = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white border-2 border-blue-200 rounded-lg p-2">
+                <div className="bg-white border-2 border-orange-200 rounded-lg p-2">
                   <p className="text-xs text-gray-600">
                     SET {liveScore.currentSet}
                   </p>
-                  <p className="text-lg font-bold text-blue-600">
+                  <p className="text-lg font-bold text-orange-500">
                     {liveScore.currentPoints.home}
                   </p>
                 </div>
@@ -1196,7 +1185,7 @@ const TeamKnockoutMatches = () => {
           <div className="bg-gradient-to-r from-gray-100 to-gray-50 border border-gray-300 rounded-lg p-2">
             <div className="flex justify-between items-center text-xs">
               <div className="flex items-center gap-1">
-                <Target className="w-3 h-3 text-blue-500" />
+                <Target className="w-3 h-3 text-orange-500" />
                 <span className="font-medium text-gray-700">Format:</span>
                 <span className="text-gray-600">
                   {match.format || "Singles - 3 Sets"}
@@ -1304,7 +1293,7 @@ const TeamKnockoutMatches = () => {
                         return s !== 'COMPLETED' && !m.isBye;
                       }) && (
                         <button
-                          className="px-3 py-1 rounded-full text-[10px] font-semibold text-white bg-purple-500 hover:bg-purple-600 w-auto"
+                          className="px-3 py-1 rounded-full text-[10px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 w-auto"
                           onClick={(e) => {
                             e.stopPropagation();
                             const pending = roundMatches.filter(m => {
@@ -1326,7 +1315,7 @@ const TeamKnockoutMatches = () => {
                         return s !== 'COMPLETED' && !m.isBye;
                       }) && (
                         <button
-                          className="px-3 py-1 rounded-full text-[10px] font-semibold text-indigo-700 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 w-auto"
+                          className="px-3 py-1 rounded-full text-[10px] font-semibold text-orange-600 border border-orange-300 bg-orange-50 hover:bg-orange-100 w-auto"
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowCsvUpload(true);
@@ -1356,8 +1345,8 @@ const TeamKnockoutMatches = () => {
                           className={`
                             relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 border
                             ${isSelected
-                              ? "border-blue-500 shadow-blue-200 shadow-md bg-white ring-1 ring-blue-500"
-                              : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-md"
+                              ? "border-orange-500 shadow-orange-200 shadow-md bg-white ring-1 ring-orange-500"
+                              : "border-gray-200 bg-white hover:border-orange-300 hover:shadow-md"
                             } 
                             ${isBye ? "opacity-70 grayscale-[0.5]" : ""}
                           `}
@@ -1370,7 +1359,7 @@ const TeamKnockoutMatches = () => {
 
                           {/* Selection Indicator Strip */}
                           {isSelected && !isLive && (
-                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-500" />
                           )}
 
                           <div className="p-4 pl-5">
@@ -1389,7 +1378,7 @@ const TeamKnockoutMatches = () => {
                             <div className="space-y-2">
                               {/* Team 1 */}
                               <div className="flex justify-between items-center group">
-                                <span className={`font-semibold text-sm truncate max-w-[180px] transition-colors ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>
+                                <span className={`font-semibold text-sm truncate max-w-[180px] transition-colors ${isSelected ? 'text-orange-600' : 'text-gray-700 group-hover:text-orange-500'}`}>
                                   {getTeamName(match.team1Id)}
                                 </span>
                                 {isCompleted && (
@@ -1404,7 +1393,7 @@ const TeamKnockoutMatches = () => {
 
                               {/* Team 2 */}
                               <div className="flex justify-between items-center group">
-                                <span className={`font-semibold text-sm truncate max-w-[180px] transition-colors ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>
+                                <span className={`font-semibold text-sm truncate max-w-[180px] transition-colors ${isSelected ? 'text-orange-600' : 'text-gray-700 group-hover:text-orange-500'}`}>
                                   {getTeamName(match.team2Id)}
                                 </span>
                                 {isCompleted && (
@@ -1486,7 +1475,7 @@ const TeamKnockoutMatches = () => {
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10">
                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Court</p>
                     <div className="flex items-center gap-2 font-semibold">
-                      <Target className="w-4 h-4 text-blue-400" />
+                      <Target className="w-4 h-4 text-orange-400" />
                       {currentMatchDetails.courtNumber || "TBD"}
                     </div>
                   </div>
@@ -1500,7 +1489,7 @@ const TeamKnockoutMatches = () => {
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10">
                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Sets</p>
                     <div className="flex items-center gap-2 font-semibold">
-                      <Award className="w-4 h-4 text-purple-400" />
+                      <Award className="w-4 h-4 text-emerald-400" />
                       {currentMatchDetails.format?.split(" - ")[1] || "3 Sets"}
                     </div>
                   </div>
@@ -1589,21 +1578,21 @@ const TeamKnockoutMatches = () => {
               <div className="grid md:grid-cols-2 gap-6 mb-8">
                 {/* Team 1 Card */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all duration-300">
-                  <div className="bg-blue-50/50 p-4 border-b border-blue-100 flex justify-between items-center group-hover:bg-blue-50 transition-colors">
+                  <div className="bg-orange-50/50 p-4 border-b border-orange-100 flex justify-between items-center group-hover:bg-orange-50 transition-colors">
                     <div className="flex flex-col">
-                      <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-700 transition-colors">
+                      <h3 className="font-bold text-gray-800 text-lg group-hover:text-orange-600 transition-colors">
                         {currentMatchDetails.team1?.name || "Team 1"}
                       </h3>
                       <button
                         onClick={() => handleSwapPlayers(currentMatchDetails.team1?._id)}
                         disabled={getMatchStatus(currentMatchDetails).status !== "SCHEDULED"}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1 uppercase tracking-tighter disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-[10px] font-bold text-orange-500 hover:text-orange-700 flex items-center gap-1 mt-1 uppercase tracking-tighter disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <RefreshCcw className="w-3 h-3" />
                         Swap Player Order
                       </button>
                     </div>
-                    <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-wider">
+                    <span className="text-xs font-bold text-orange-500 bg-orange-100 px-2 py-1 rounded uppercase tracking-wider">
                       Home
                     </span>
                   </div>
@@ -1611,7 +1600,7 @@ const TeamKnockoutMatches = () => {
                   <div className="p-5 space-y-4">
                     {/* Player 1 (Pos A) */}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-bold text-xs">
                         A
                       </div>
                       <div>
@@ -1746,10 +1735,10 @@ const TeamKnockoutMatches = () => {
               <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border-2 border-slate-200 rounded-[24px] p-6 mb-6 shadow-xl">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-full p-2">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-500 rounded-full p-2">
                       <FaTableTennis className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                    <h3 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-gray-800 bg-clip-text text-transparent">
                       Tournament Scorecard
                     </h3>
                   </div>
@@ -1783,7 +1772,7 @@ const TeamKnockoutMatches = () => {
                       {/* Team Names */}
                       <div className="grid grid-cols-3 gap-4 mb-6">
                         <div className="text-center">
-                          <div className="bg-blue-600 text-white rounded-lg p-3 border-2 border-blue-400">
+                          <div className="bg-orange-500 text-white rounded-lg p-3 border-2 border-orange-400">
                             <p className="text-xs font-medium opacity-90 mb-1">
                               HOME TEAM
                             </p>
@@ -1825,8 +1814,8 @@ const TeamKnockoutMatches = () => {
                                 .home || 0) >
                                 (getMatchStatus(currentMatchDetails).setsWon
                                   .away || 0)
-                                ? "bg-gradient-to-br from-blue-400 to-blue-600 border-blue-300 text-white"
-                                : "bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300 text-blue-700"
+                                ? "bg-gradient-to-br from-orange-400 to-orange-500 border-orange-300 text-white"
+                                : "bg-gradient-to-br from-orange-100 to-orange-200 border-orange-300 text-orange-600"
                                 }`}
                             >
                               <span className="text-3xl font-bold">
@@ -1954,15 +1943,15 @@ const TeamKnockoutMatches = () => {
                           {/* Set History Header */}
                           <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
-                              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-full p-2 shadow-lg">
+                              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full p-2 shadow-lg">
                                 <Target className="w-5 h-5 text-white" />
                               </div>
-                              <h4 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+                              <h4 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
                                 Set History & Performance
                               </h4>
                             </div>
-                            <div className="bg-gradient-to-r from-purple-100 to-purple-200 rounded-full px-4 py-2 border-2 border-purple-300">
-                              <span className="text-purple-700 font-bold text-sm">
+                            <div className="bg-gradient-to-r from-emerald-100 to-emerald-200 rounded-full px-4 py-2 border-2 border-emerald-300">
+                              <span className="text-emerald-700 font-bold text-sm">
                                 {
                                   currentMatchDetails.sets.filter(
                                     (s) => s.status === "COMPLETED"
@@ -1989,13 +1978,13 @@ const TeamKnockoutMatches = () => {
                                   className={`relative overflow-hidden rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl ${isCompleted
                                     ? "ring-2 ring-green-300"
                                     : isInProgress
-                                      ? "ring-2 ring-blue-300 animate-pulse"
+                                      ? "ring-2 ring-orange-300 animate-pulse"
                                       : "ring-2 ring-gray-200"
                                     }`}
                                 >
                                   {/* Background Pattern */}
                                   <div className="absolute inset-0 opacity-5">
-                                    <div className="w-full h-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"></div>
+                                    <div className="w-full h-full bg-gradient-to-br from-orange-500 via-amber-500 to-amber-500"></div>
                                   </div>
 
                                   {/* Set Header */}
@@ -2003,7 +1992,7 @@ const TeamKnockoutMatches = () => {
                                     className={`relative p-6 ${isCompleted
                                       ? "bg-gradient-to-r from-green-400 via-green-500 to-emerald-500"
                                       : isInProgress
-                                        ? "bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-500 animate-gradient-x"
+                                        ? "bg-gradient-to-r from-orange-400 via-orange-500 to-orange-400 animate-gradient-x"
                                         : "bg-gradient-to-r from-gray-400 via-gray-500 to-slate-500"
                                       }`}
                                   >
@@ -2014,7 +2003,7 @@ const TeamKnockoutMatches = () => {
                                           className={`relative w-16 h-16 rounded-full flex items-center justify-center border-4 border-white shadow-xl ${isCompleted
                                             ? "bg-white text-green-600"
                                             : isInProgress
-                                              ? "bg-white text-blue-600 animate-pulse"
+                                              ? "bg-white text-orange-500 animate-pulse"
                                               : "bg-white text-gray-600"
                                             }`}
                                         >
@@ -2028,7 +2017,7 @@ const TeamKnockoutMatches = () => {
                                           )}
                                           {isInProgress && (
                                             <div className="absolute -top-1 -right-1">
-                                              <Clock className="w-6 h-6 text-blue-500 bg-white rounded-full p-1" />
+                                              <Clock className="w-6 h-6 text-orange-500 bg-white rounded-full p-1" />
                                             </div>
                                           )}
                                         </div>
@@ -2170,7 +2159,7 @@ const TeamKnockoutMatches = () => {
                                               key={gameIndex}
                                               className={`relative p-4 rounded-xl border-3 shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 ${gameCompleted
                                                 ? gameWinner === "home"
-                                                  ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300"
+                                                  ? "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-300"
                                                   : "bg-gradient-to-br from-red-50 to-red-100 border-red-300"
                                                 : gameInProgress
                                                   ? "bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-300 animate-pulse"
@@ -2182,7 +2171,7 @@ const TeamKnockoutMatches = () => {
                                                 <div
                                                   className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${gameCompleted
                                                     ? gameWinner === "home"
-                                                      ? "bg-blue-500 text-white"
+                                                      ? "bg-orange-500 text-white"
                                                       : "bg-red-500 text-white"
                                                     : gameInProgress
                                                       ? "bg-yellow-500 text-white"
@@ -2206,8 +2195,8 @@ const TeamKnockoutMatches = () => {
                                                 <div className="flex items-center justify-center gap-2">
                                                   <div
                                                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${gameWinner === "home"
-                                                      ? "bg-blue-500 text-white ring-2 ring-blue-300"
-                                                      : "bg-blue-100 text-blue-700"
+                                                      ? "bg-orange-500 text-white ring-2 ring-orange-300"
+                                                      : "bg-orange-100 text-orange-600"
                                                       }`}
                                                   >
                                                     {game.homePoints || 0}
@@ -2231,7 +2220,7 @@ const TeamKnockoutMatches = () => {
                                                 <div className="text-center">
                                                   <div
                                                     className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${gameWinner === "home"
-                                                      ? "bg-blue-200 text-blue-800"
+                                                      ? "bg-orange-200 text-orange-700"
                                                       : "bg-red-200 text-red-800"
                                                       }`}
                                                   >
@@ -2269,7 +2258,7 @@ const TeamKnockoutMatches = () => {
               {/* Player Order Section */}
               {!isByeMatch(currentMatchDetails) && (
                 <div className="bg-gray-100 p-4 rounded-[24px] mb-6">
-                  <h3 className="text-lg font-semibold text-blue-600 mb-3">
+                  <h3 className="text-lg font-semibold text-orange-500 mb-3">
                     Player Match Order
                   </h3>
                   <div className="space-y-3">
@@ -2303,13 +2292,13 @@ const TeamKnockoutMatches = () => {
                       if (type === "Single" && sets === 3) {
                         return (
                           <>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-50">
+                            <div className="bg-white p-3 rounded-lg shadow-sm border border-orange-50">
                               <p className="font-bold text-gray-800 text-xs uppercase mb-1 flex justify-between">
                                 <span>Set 1: Singles A-X</span>
-                                <span className="text-blue-500">First Match</span>
+                                <span className="text-orange-500">First Match</span>
                               </p>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-blue-700 font-medium">
+                                <span className="text-orange-600 font-medium">
                                   {players.teamA.player1} (A)
                                 </span>
                                 <span className="text-gray-400 font-bold px-2">
@@ -2320,13 +2309,13 @@ const TeamKnockoutMatches = () => {
                                 </span>
                               </div>
                             </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-50">
+                            <div className="bg-white p-3 rounded-lg shadow-sm border border-orange-50">
                               <p className="font-bold text-gray-800 text-xs uppercase mb-1 flex justify-between">
                                 <span>Set 2: Singles B-Y</span>
-                                <span className="text-blue-500">Second Match</span>
+                                <span className="text-orange-500">Second Match</span>
                               </p>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-blue-700 font-medium">
+                                <span className="text-orange-600 font-medium">
                                   {players.teamA.player2} (B)
                                 </span>
                                 <span className="text-gray-400 font-bold px-2">
@@ -2337,13 +2326,13 @@ const TeamKnockoutMatches = () => {
                                 </span>
                               </div>
                             </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-50">
+                            <div className="bg-white p-3 rounded-lg shadow-sm border border-orange-50">
                               <p className="font-bold text-gray-800 text-xs uppercase mb-1 flex justify-between">
                                 <span>Set 3: Singles A-Y</span>
                                 <span className="text-orange-500 font-bold">Decider</span>
                               </p>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-blue-700 font-medium">
+                                <span className="text-orange-600 font-medium">
                                   {players.teamA.player1} (A)
                                 </span>
                                 <span className="text-gray-400 font-bold px-2">
@@ -2413,7 +2402,7 @@ const TeamKnockoutMatches = () => {
                           const matchStatus = getMatchStatus(currentMatchDetails);
                           return matchStatus.status === "IN_PROGRESS"
                             ? "bg-orange-600 hover:bg-orange-700"
-                            : "bg-blue-600 hover:bg-blue-700";
+                            : "bg-orange-500 hover:bg-orange-600";
                         })()}
     `}
                     >

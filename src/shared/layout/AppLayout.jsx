@@ -25,7 +25,9 @@ export default function AppLayout({ role = "manager" }) {
         <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
 
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <div className="max-w-[1400px] mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

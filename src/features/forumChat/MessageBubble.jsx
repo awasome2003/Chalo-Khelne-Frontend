@@ -10,14 +10,14 @@ export default function MessageBubble({ message, isOwn }) {
         {!isOwn && (
           <div className="flex items-center gap-1.5 mb-1 px-1">
             <span className="text-xs font-bold text-gray-700">{message.senderName}</span>
-            <span className="text-[9px] font-medium text-[#004E93] bg-[#004E93]/10 px-1 py-0.5 rounded">{message.senderRole}</span>
+            <span className="text-[9px] font-medium text-orange-500 bg-orange-500/10 px-1 py-0.5 rounded">{message.senderRole}</span>
           </div>
         )}
 
         {/* Bubble */}
         <div className={`px-4 py-2.5 rounded-2xl ${
           isOwn
-            ? "bg-[#004E93] text-white rounded-br-md"
+            ? "bg-orange-500 text-white rounded-br-md"
             : "bg-white border border-gray-200 text-gray-800 rounded-bl-md"
         }`}>
           {message.text && (

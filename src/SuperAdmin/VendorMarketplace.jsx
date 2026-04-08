@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -85,7 +86,7 @@ export default function VendorMarketplace() {
   const handleSaveVendorLink = async (e) => {
     e.preventDefault();
     if (!vendorForm.vendor_link) {
-      alert("Vendor URL is required");
+      toast.info("Vendor URL is required");
       return;
     }
     setSaving(true);
@@ -100,7 +101,7 @@ export default function VendorMarketplace() {
       setSelectedItem(null);
       fetchListings();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -112,7 +113,7 @@ export default function VendorMarketplace() {
       await axios.delete(`/api/equipment/vendor-link/${id}`);
       fetchListings();
     } catch (err) {
-      alert("Failed: " + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
