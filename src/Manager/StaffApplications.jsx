@@ -155,7 +155,7 @@ export default function StaffApplications({ tournamentId, managerId }) {
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {expLabel}</span>
-                      {app.rateAmount > 0 && <span>Rs {app.rateAmount}/{(app.rateType || "").replace("per_", "")}</span>}
+                      {app.rateAmount > 0 && <span>₹{app.rateAmount}/{(app.rateType || "").replace("per_", "")}</span>}
                       {app.sports?.length > 0 && <span>{app.sports.slice(0, 3).join(", ")}</span>}
                     </div>
                   </div>
@@ -294,7 +294,7 @@ export default function StaffApplications({ tournamentId, managerId }) {
                           : profileData.application?.experienceLevel === "fresher" ? "Fresher" : "—"}
                       </span></div>
                       {profileData.application?.rateAmount > 0 && (
-                        <div><span className="text-gray-400">Rate:</span> <span className="font-bold text-gray-700">Rs {profileData.application.rateAmount} / {(profileData.application.rateType || "").replace("per_", "")}</span></div>
+                        <div><span className="text-gray-400">Rate:</span> <span className="font-bold text-gray-700">₹{profileData.application.rateAmount} / {(profileData.application.rateType || "").replace("per_", "")}</span></div>
                       )}
                       {profileData.application?.sports?.length > 0 && (
                         <div className="col-span-2"><span className="text-gray-400">Sports:</span> <span className="font-bold text-gray-700">{profileData.application.sports.join(", ")}</span></div>
@@ -337,7 +337,7 @@ export default function StaffApplications({ tournamentId, managerId }) {
                       {profileData.serviceProfile.fees?.perSession > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">Session Fee:</span>
-                          <span className="text-xs font-bold text-gray-700">Rs {profileData.serviceProfile.fees.perSession}</span>
+                          <span className="text-xs font-bold text-gray-700">₹{profileData.serviceProfile.fees.perSession}</span>
                         </div>
                       )}
 

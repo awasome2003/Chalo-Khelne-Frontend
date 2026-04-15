@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Star,
   ChevronRight,
+  ChevronLeft,
   X,
   LogIn,
   UserPlus,
@@ -571,37 +572,43 @@ const TurfContent = () => {
   const [turfs, setTurfs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTurfs, setTotalTurfs] = useState(0);
 
   // New state for modals
   const [selectedTurf, setSelectedTurf] = useState(null);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [signInMessage, setSignInMessage] = useState("");
 
-  useEffect(() => {
-    // Fetch turfs
-    const fetchTurfs = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/turfs`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch turfs");
-        }
-        const data = await response.json();
-
-        // Determine the correct data structure
-        const turfsData = data.turfs || data;
-
-        setTurfs(turfsData);
-      } catch (err) {
-        console.error("Error fetching turfs:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchTurfs = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/turfs?page=${page}&limit=10`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch turfs");
       }
-    };
+      const data = await response.json();
 
-    fetchTurfs();
-  }, []);
+      const turfsData = data.turfs || data;
+      setTurfs(turfsData);
+
+      if (data.pagination) {
+        setCurrentPage(data.pagination.page);
+        setTotalPages(data.pagination.pages);
+        setTotalTurfs(data.pagination.total);
+      }
+    } catch (err) {
+      console.error("Error fetching turfs:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTurfs(currentPage);
+  }, [currentPage]);
 
   useEffect(() => {
     // When any modal is open, disable browser scrolling
@@ -784,6 +791,40 @@ const TurfContent = () => {
     setSelectedTurf(turf);
   };
 
+  // Handle page change
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+
+      if (currentPage <= 3) {
+        end = 4;
+      }
+      if (currentPage >= totalPages - 2) {
+        start = totalPages - 3;
+      }
+
+      if (start > 2) pages.push("...");
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   // Handle sign in prompt
   const handleSignInPrompt = (message) => {
     setSignInMessage(
@@ -816,20 +857,75 @@ const TurfContent = () => {
             Error loading sports facilities: {error}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-[24px] gap-y-[20px] mb-[20px]">
-            {displayTurfs.map((turf) => (
-              <motion.div
-                key={turf.id || turf._id}
-                whileHover={{
-                  y: -5,
-                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                }}
-                transition={{ duration: 0.2 }}
-              >
-                <TurfCards turf={turf} onTurfClick={handleTurfClick}/>
-              </motion.div>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-[24px] gap-y-[20px] mb-[20px]">
+              {displayTurfs.map((turf) => (
+                <motion.div
+                  key={turf.id || turf._id}
+                  whileHover={{
+                    y: -5,
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TurfCards turf={turf} onTurfClick={handleTurfClick}/>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 my-8">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-lg border w-auto ${
+                    currentPage === 1
+                      ? "border-gray-200 text-gray-300 cursor-not-allowed bg-transparent"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-100 bg-transparent"
+                  }`}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {getPageNumbers().map((page, index) =>
+                  page === "..." ? (
+                    <span key={`dots-${index}`} className="px-2 text-gray-400">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`min-w-[40px] h-10 rounded-lg font-medium text-sm w-auto ${
+                        currentPage === page
+                          ? "bg-[#F97316] text-white hover:bg-orange-500"
+                          : "bg-transparent border border-gray-300 text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-lg border w-auto ${
+                    currentPage === totalPages
+                      ? "border-gray-200 text-gray-300 cursor-not-allowed bg-transparent"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-100 bg-transparent"
+                  }`}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+
+                <span className="ml-4 text-sm text-gray-500">
+                  Showing {(currentPage - 1) * 10 + 1}-{Math.min(currentPage * 10, totalTurfs)} of {totalTurfs}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -845,7 +941,7 @@ const TurfContent = () => {
           />
         )}
       </AnimatePresence>
-,env
+
       {/* Sign In Modal */}
       <AnimatePresence>
         {showSignInModal && (

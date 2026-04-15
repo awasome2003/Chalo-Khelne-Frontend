@@ -254,9 +254,10 @@ const MPayments = ({ tournamentId }) => {
                                         className="relative aspect-square group"
                                     >
                                         <img
-                                            src={`/${qr.imageUrl}`}
+                                            src={`/uploads/${qr.imageUrl.replace(/^.*?uploads[\\/]?/i, "")}`}
                                             alt="uploaded qr"
                                             className="w-full h-full object-cover rounded-xl ring-1 ring-gray-100"
+                                            onError={(e) => { e.currentTarget.style.opacity = "0.3"; }}
                                         />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
                                             <button

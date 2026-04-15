@@ -97,6 +97,8 @@ export const SIDEBAR_SECTIONS = [
       { key: "pending", label: "Pending Users", icon: ClipboardCheck, path: "/pending", roles: ["superadmin"] },
       { key: "approved", label: "Approved Users", icon: CheckCircle, path: "/approved", roles: ["superadmin"] },
       { key: "inquiries", label: "Inquiries", icon: HelpCircle, path: "/inquiries", roles: ["superadmin"] },
+      { key: "create-club", label: "Create Club Admin", icon: Building2, path: "/create-club-admin", roles: ["superadmin"] },
+      { key: "manage-clubs", label: "Manage Clubs", icon: Store, path: "/manage-clubs", roles: ["superadmin"] },
       { key: "sports", label: "Sports", icon: Dumbbell, path: "/sports", roles: ["superadmin"] },
       { key: "rule-books", label: "Rule Books", icon: BookOpen, path: "/rule-books", roles: ["superadmin"] },
       { key: "rbac", label: "Roles & Permissions", icon: ShieldCheck, path: "/rbac", roles: ["superadmin"] },

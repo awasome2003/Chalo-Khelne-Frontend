@@ -26,7 +26,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [inquiryForm, setInquiryForm] = useState({
-    name: "", email: "", phone: "", inquiryType: "Product", message: "",
+    name: "", email: "", phone: "", inquiryType: "Product", message: "", clubName: "", city: "", sports: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -75,8 +75,8 @@ const Navbar = () => {
     try {
       await axios.post("/api/inquiries", inquiryForm);
       setSubmitStatus("success");
-      setInquiryForm({ name: "", email: "", phone: "", inquiryType: "Product", message: "" });
-      setTimeout(() => { setShowInquiry(false); setSubmitStatus(null); }, 2000);
+      setInquiryForm({ name: "", email: "", phone: "", inquiryType: "Product", message: "", clubName: "", city: "", sports: "" });
+      setTimeout(() => { setShowInquiry(false); setSubmitStatus(null); }, 4000); // give them 4 seconds to read the confirmation
     } catch { setSubmitStatus("error"); }
     finally { setIsSubmitting(false); }
   };
@@ -411,7 +411,7 @@ const Navbar = () => {
                       <Send className="w-7 h-7 text-green-400" />
                     </div>
                     <p className="text-lg font-bold text-white">Message Sent!</p>
-                    <p className="text-sm text-gray-300/40 mt-1.5">Our team will get back to you soon.</p>
+                    <p className="text-sm text-gray-300/40 mt-1.5">Our team will get back to you shortly. A confirmation email has been sent to your provided email address.</p>
                   </div>
                 ) : (
                   <form onSubmit={submitInquiry} className="space-y-3">
@@ -437,8 +437,42 @@ const Navbar = () => {
                       <option value="Product" className="bg-gray-950">General Inquiry</option>
                       <option value="Service" className="bg-gray-950">Booking Support</option>
                       <option value="Partnership" className="bg-gray-950">Partnership</option>
+                      <option value="Register Club" className="bg-gray-950">Register Club / Corporate</option>
                       <option value="Other" className="bg-gray-950">Other</option>
                     </select>
+
+                    <AnimatePresence>
+                      {inquiryForm.inquiryType === "Register Club" && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-3 overflow-hidden"
+                        >
+                          <input
+                            type="text" name="clubName" required placeholder="Club / Company Name"
+                            value={inquiryForm.clubName}
+                            onChange={(e) => setInquiryForm({ ...inquiryForm, clubName: e.target.value })}
+                            className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all"
+                          />
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="text" name="city" required placeholder="City"
+                              value={inquiryForm.city}
+                              onChange={(e) => setInquiryForm({ ...inquiryForm, city: e.target.value })}
+                              className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all"
+                            />
+                            <input
+                              type="text" name="sports" required placeholder="Sports (e.g. Cricket)"
+                              value={inquiryForm.sports}
+                              onChange={(e) => setInquiryForm({ ...inquiryForm, sports: e.target.value })}
+                              className="px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-white placeholder:text-gray-300/30 outline-none focus:border-orange-500/30 focus:bg-white/[0.05] transition-all"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <textarea
                       name="message" rows="3" placeholder="How can we help?"
                       value={inquiryForm.message}

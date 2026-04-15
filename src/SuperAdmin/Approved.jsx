@@ -1,652 +1,236 @@
-import { toast } from "react-toastify";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import { SlidersHorizontal, Pencil, Eye } from "lucide-react";
-
-// export default function Approved() {
-//   const [approvedUsers, setApprovedUsers] = useState([]);
-//   const [filteredUsers, setFilteredUsers] = useState([]);
-//   const [selectedRole, setSelectedRole] = useState("All");
-
-//   useEffect(() => {
-//     fetchApprovedUsers();
-//   }, []);
-
-//   const fetchApprovedUsers = async () => {
-//     try {
-//       const response = await axios.get(
-//         `${import.meta.env.VITE_API_BASE_URL}/update/approved-users`
-//       );
-//       setApprovedUsers(response.data);
-//       setFilteredUsers(response.data);
-//     } catch (error) {
-//       console.error("Error fetching approved users:", error);
-//     }
-//   };
-
-//   const handleFilterChange = (role) => {
-//     setSelectedRole(role);
-//     setFilteredUsers(
-//       role === "All"
-//         ? approvedUsers
-//         : approvedUsers.filter((user) => user.role === role)
-//     );
-//   };
-
-//   const roles = ["All", "Player", "Trainer", "ClubAdmin"];
-
-//   return (
-
-//     <div className="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
-//       {/* Header */}
-//       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-//         <h3 className="text-2xl font-bold text-gray-800">
-//           Approved Requests
-//           <span className="ml-2 text-blue-600 text-[22px]">
-//             ({filteredUsers.length})
-//           </span>
-//         </h3>
-
-//         {/* Filter Dropdown */}
-//         <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-700 shadow-sm transition">
-//           <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-//           <select
-//             value={selectedRole}
-//             onChange={(e) => handleFilterChange(e.target.value)}
-//             className="bg-transparent outline-none cursor-pointer"
-//           >
-//             {roles.map((role) => (
-//               <option key={role} value={role} className="text-gray-800">
-//                 {role}
-//               </option>
-//             ))}
-//           </select>
-//         </div>
-//       </div>
-
-//       {/* Table */}
-//       <div className="overflow-x-auto max-h-[70vh] rounded-lg border border-gray-200">
-//         <table className="min-w-full divide-y divide-gray-200 text-sm">
-//           <thead className="bg-gray-100 text-gray-700 font-semibold">
-//             <tr className="sticky top-0 bg-gray-100 text-gray-700">
-//               <th className="px-4 py-3 border text-left">Sr.No</th>
-//               <th className="px-4 py-3 border text-left">Name</th>
-//               <th className="px-4 py-3 border text-left">Email</th>
-//               <th className="px-4 py-3 border text-left">Role</th>
-//               <th className="px-4 py-3 border text-center">Actions</th>
-//             </tr>
-//           </thead>
-//           <tbody className="divide-y divide-gray-100">
-//             {filteredUsers.map((user,index) => (
-//               <tr key={user._id} className="hover:bg-gray-50 transition">
-//                 <td className="px-4 py-3 border">{index + 1}</td>
-//                 <td className="px-4 py-3 border">{user.name}</td>
-//                 <td className="px-4 py-3 border">{user.email}</td>
-//                 <td className="px-4 py-3 border capitalize">{user.role}</td>
-//                 <td className="px-4 py-3 border text-center">
-//                   <div className="flex justify-center gap-2">
-//                     {/* Edit Button */}
-//                     <button className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition">
-//                       <Pencil className="w-4 h-4" />
-//                     </button>
-
-//                     {/* View Button */}
-//                     <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition">
-//                       <Eye className="w-5 h-5" />
-//                     </button>
-//                   </div>
-//                 </td>
-//               </tr>
-//             ))}
-//             {filteredUsers.length === 0 && (
-//               <tr>
-//                 <td colSpan="4" className="text-center py-6 text-gray-400">
-//                   No approved users found.
-//                 </td>
-//               </tr>
-//             )}
-//           </tbody>
-//         </table>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import { SlidersHorizontal, Pencil, Eye,Check, X  } from "lucide-react";
-
-// export default function Approved() {
-//   const [approvedUsers, setApprovedUsers] = useState([]);
-//   const [filteredUsers, setFilteredUsers] = useState([]);
-//   const [selectedRole, setSelectedRole] = useState("All");
-//   const [selectedUser, setSelectedUser] = useState(null); // ✅ New state for view
-
-//   useEffect(() => {
-//     fetchApprovedUsers();
-//   }, []);
-
-//   const fetchApprovedUsers = async () => {
-//     try {
-//       const response = await axios.get(
-//         `${import.meta.env.VITE_API_BASE_URL}/update/approved-users`
-//       );
-//       setApprovedUsers(response.data);
-//       setFilteredUsers(response.data);
-//     } catch (error) {
-//       console.error("Error fetching approved users:", error);
-//     }
-//   };
-
-//   const handleFilterChange = (role) => {
-//     setSelectedRole(role);
-//     setFilteredUsers(
-//       role === "All"
-//         ? approvedUsers
-//         : approvedUsers.filter((user) => user.role === role)
-//     );
-//   };
-//   const handleStatusChange = async (newStatus) => {
-//     try {
-//       const response = await axios.put(
-//         `${import.meta.env.VITE_API_BASE_URL}/update/user-status/${
-//           selectedUser._id
-//         }`,
-//         {
-//           isApproved: newStatus,
-//         }
-//       );
-
-//       // ✅ Update local selectedUser after successful update
-//       setSelectedUser((prevUser) => ({
-//         ...prevUser,
-//         isApproved: newStatus,
-//       }));
-
-//       // Optional: Update list also
-//       setApprovedUsers((prevUsers) =>
-//         prevUsers.map((u) =>
-//           u._id === selectedUser._id ? { ...u, isApproved: newStatus } : u
-//         )
-//       );
-//       setFilteredUsers((prevUsers) =>
-//         prevUsers.map((u) =>
-//           u._id === selectedUser._id ? { ...u, isApproved: newStatus } : u
-//         )
-//       );
-//     } catch (error) {
-//       toast.error("Failed to update status");
-//       console.error("Status update error:", error);
-//     }
-//   };
-
-//   const roles = ["All", "Player", "Trainer", "ClubAdmin"];
-
-//   return (
-//     <div className="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
-//       {/* ✅ IF user is selected show DETAILS */}
-//       {selectedUser ? (
-//         <div className="">
-//           {/* 🔙 Back Button */}
-//           <div className="mb-4">
-//             <button
-//               onClick={() => setSelectedUser(null)}
-//               className="px-4 py-2 border text-black rounded-lg hover:bg-blue-500 hover:text-white"
-//             >
-//               ←
-//             </button>
-//           </div>
-
-//           {/* 👤 User Details */}
-//           <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-6">
-//             User Details
-//           </h2>
-
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             {/* Name */}
-//             <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-//               <span className="font-semibold text-gray-700">Name:</span>
-//               <span className="text-gray-800">{selectedUser.name}</span>
-//             </div>
-
-//             {/* Email */}
-//             <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-//               <span className="font-semibold text-gray-700">Email:</span>
-//               <span className="text-gray-800">{selectedUser.email}</span>
-//             </div>
-
-//             {/* Role */}
-//             <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-//               <span className="font-semibold text-gray-700">Role:</span>
-//               <span className="capitalize text-gray-800">
-//                 {selectedUser.role}
-//               </span>
-//               <button className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition">
-//                 <Pencil className="w-4 h-4" />
-//               </button>
-//             </div>
-
-//             {/* Mobile No */}
-//             <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-//               <span className="w-auto font-semibold text-gray-700">
-//                 Mobile No:
-//               </span>
-//               <span className="text-gray-800">{selectedUser.mobile}</span>
-//             </div>
-
-//             {/* Status + Button */}
-//             <div className="flex flex-col md:flex-row md:items-center md:col-span-2 gap-[5px]">
-//               <span className="font-semibold text-gray-700">Status:</span>
-//               <div className="flex items-center gap-4 mt-1 md:mt-0">
-//                 <span
-//                   className={`py-1 rounded-full capitalize ${
-//                     selectedUser.isApproved ? "" : ""
-//                   }`}
-//                 >
-//                   {selectedUser.isApproved ? "Active" : "Inactive"}
-//                 </span>
-
-//                 <button
-//                   onClick={() => handleStatusChange(!selectedUser.isApproved)}
-//                   className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-200 shadow-sm ${
-//                     selectedUser.isApproved
-//                       ? "bg-red-600 text-white hover:bg-red-700"
-//                       : "bg-green-600 text-white hover:bg-green-700"
-//                   }`}
-//                 >
-//                   {selectedUser.isApproved ? "Deactivate" : "Activate"}
-//                 </button>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       ) : (
-//         <>
-//           {/* Header */}
-//           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-//             <h3 className="text-2xl font-bold text-gray-800">
-//               Approved Requests
-//               <span className="ml-2 text-blue-600 text-[22px]">
-//                 ({filteredUsers.length})
-//               </span>
-//             </h3>
-
-//             {/* Filter Dropdown */}
-//             <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-700 shadow-sm transition">
-//               <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-//               <select
-//                 value={selectedRole}
-//                 onChange={(e) => handleFilterChange(e.target.value)}
-//                 className="bg-transparent outline-none cursor-pointer"
-//               >
-//                 {roles.map((role) => (
-//                   <option key={role} value={role} className="text-gray-800">
-//                     {role}
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-//           </div>
-
-//           {/* Table */}
-//           <div className="overflow-x-auto max-h-[70vh] rounded-lg border border-gray-200">
-//             <table className="min-w-full divide-y divide-gray-200 text-sm">
-//               <thead className="bg-gray-100 text-gray-700 font-semibold">
-//                 <tr className="sticky top-0 bg-gray-100 text-gray-700">
-//                   <th className="px-4 py-3 border text-left">Sr.No</th>
-//                   <th className="px-4 py-3 border text-left">Name</th>
-//                   <th className="px-4 py-3 border text-left">Email</th>
-//                   <th className="px-4 py-3 border text-left">Role</th>
-//                   <th className="px-4 py-3 border text-center">Actions</th>
-//                 </tr>
-//               </thead>
-//               <tbody className="divide-y divide-gray-100">
-//                 {filteredUsers.map((user, index) => (
-//                   <tr key={user._id} className="hover:bg-gray-50 transition">
-//                     <td className="px-4 py-3 border">{index + 1}</td>
-//                     <td className="px-4 py-3 border">{user.name}</td>
-//                     <td className="px-4 py-3 border">{user.email}</td>
-//                     <td className="px-4 py-3 border capitalize">{user.role}</td>
-//                     <td className="px-4 py-3 border text-center">
-//                       <div className="flex justify-center gap-2">
-//                         {/* Edit Button */}
-//                         <button className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition">
-//                           <Pencil className="w-4 h-4" />
-//                         </button>
-
-//                         {/* ✅ View Button */}
-//                         <button
-//                           onClick={() => setSelectedUser(user)}
-//                           className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition"
-//                         >
-//                           <Eye className="w-5 h-5" />
-//                         </button>
-//                       </div>
-//                     </td>
-//                   </tr>
-//                 ))}
-//                 {filteredUsers.length === 0 && (
-//                   <tr>
-//                     <td colSpan="5" className="text-center py-6 text-gray-400">
-//                       No approved users found.
-//                     </td>
-//                   </tr>
-//                 )}
-//               </tbody>
-//             </table>
-//           </div>
-//         </>
-//       )}
-//     </div>
-//   );
-// }
-
-
-
-
 import { useEffect, useState } from "react";
 import axios from "axios";
-import {
-  SlidersHorizontal,
-  Pencil,
-  Eye,
-  Check,
-  X,
-} from "lucide-react";
+import { toast } from "react-toastify";
+import { Search, CheckCircle, Eye, ArrowLeft, Pencil, Check, X, Shield, Mail, Phone, User, Loader2 } from "lucide-react";
+
+const ROLES = ["All", "Player", "Trainer", "ClubAdmin", "corporate_admin"];
+const EDITABLE_ROLES = ["Player", "Trainer", "ClubAdmin", "corporate_admin", "Manager"];
 
 export default function Approved() {
-  const [approvedUsers, setApprovedUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState("All");
+  const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [editingRole, setEditingRole] = useState(false);
   const [newRole, setNewRole] = useState("");
 
-  const roles = ["All", "Player", "Trainer", "ClubAdmin"];
+  useEffect(() => { fetchUsers(); }, []);
 
-  useEffect(() => {
-    fetchApprovedUsers();
-  }, []);
-
-  const fetchApprovedUsers = async () => {
+  const fetchUsers = async () => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/update/approved-users`
-      );
-      setApprovedUsers(response.data);
-      setFilteredUsers(response.data);
-    } catch (error) {
-      console.error("Error fetching approved users:", error);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/update/approved-users`);
+      setUsers(res.data);
+    } catch (err) {
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleFilterChange = (role) => {
-    setSelectedRole(role);
-    setFilteredUsers(
-      role === "All"
-        ? approvedUsers
-        : approvedUsers.filter((user) => user.role === role)
-    );
-  };
+  const filtered = users.filter((u) => {
+    const matchesRole = selectedRole === "All" || u.role === selectedRole;
+    const matchesSearch = !search || (u.name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase());
+    return matchesRole && matchesSearch;
+  });
 
-  const handleStatusChange = async (newStatus) => {
+  const handleStatusToggle = async () => {
+    const newStatus = !selectedUser.isApproved;
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/update/user-status/${selectedUser._id}`,
-        { isApproved: newStatus }
-      );
-
-      setSelectedUser((prev) => ({ ...prev, isApproved: newStatus }));
-
-      // Update list also
-      setApprovedUsers((prev) =>
-        prev.map((u) =>
-          u._id === selectedUser._id ? { ...u, isApproved: newStatus } : u
-        )
-      );
-      setFilteredUsers((prev) =>
-        prev.map((u) =>
-          u._id === selectedUser._id ? { ...u, isApproved: newStatus } : u
-        )
-      );
-    } catch (error) {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/update/user-status/${selectedUser._id}`, { isApproved: newStatus });
+      setSelectedUser((p) => ({ ...p, isApproved: newStatus }));
+      setUsers((p) => p.map((u) => u._id === selectedUser._id ? { ...u, isApproved: newStatus } : u));
+      toast.success(newStatus ? "User activated" : "User deactivated");
+    } catch (err) {
       toast.error("Failed to update status");
-      console.error("Status update error:", error);
     }
   };
-const handleRoleUpdate = async () => {
 
-  try {
-    const res = await axios.put(
-      `${import.meta.env.VITE_API_BASE_URL}/update/user-role/${selectedUser._id}`,
-      { role: newRole }
+  const handleRoleUpdate = async () => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/update/user-role/${selectedUser._id}`, { role: newRole });
+      setSelectedUser((p) => ({ ...p, role: newRole }));
+      setUsers((p) => p.map((u) => u._id === selectedUser._id ? { ...u, role: newRole } : u));
+      setEditingRole(false);
+      toast.success("Role updated");
+    } catch (err) {
+      toast.error("Failed to update role");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      </div>
     );
-
-
-    // ✅ Update UI locally with new role
-    setSelectedUser((prevUser) => ({
-      ...prevUser,
-      role: newRole,
-    }));
-
-    setApprovedUsers((prevUsers) =>
-      prevUsers.map((u) =>
-        u._id === selectedUser._id ? { ...u, role: newRole } : u
-      )
-    );
-
-    setFilteredUsers((prevUsers) =>
-      prevUsers.map((u) =>
-        u._id === selectedUser._id ? { ...u, role: newRole } : u
-      )
-    );
-
-    setIsEditingRole(false);
-  } catch (err) {
-    console.error("Role update failed", err);
-    toast.info("Role update failed");
   }
-};
 
+  // Detail View
+  if (selectedUser) {
+    return (
+      <div className="p-6 lg:p-8 max-w-3xl mx-auto">
+        <button onClick={() => { setSelectedUser(null); setEditingRole(false); }}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 w-auto">
+          <ArrowLeft className="w-4 h-4" /> Back to users
+        </button>
 
-
-
-  return (
-    <div className="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
-      {selectedUser ? (
-        <div>
-          {/* 🔙 Back Button */}
-          <div className="mb-4">
-            <button
-              onClick={() => {
-                setSelectedUser(null);
-                setIsEditingRole(false);
-              }}
-              className="px-4 py-2 border text-black rounded-lg hover:bg-blue-500 hover:text-white"
-            >
-              ←
-            </button>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          {/* Profile Header */}
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-bold">
+              {(selectedUser.name || "?").charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">{selectedUser.name}</h2>
+              <p className="text-white/70 text-sm">{selectedUser.email}</p>
+            </div>
           </div>
 
-          {/* 👤 User Details */}
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-6">
-            User Details
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Name */}
-            <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-              <span className="font-semibold text-gray-700">Name:</span>
-              <span className="text-gray-800">{selectedUser.name}</span>
-            </div>
-
-            {/* Email */}
-            <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-              <span className="font-semibold text-gray-700">Email:</span>
-              <span className="text-gray-800">{selectedUser.email}</span>
-            </div>
-
-            {/* ✅ Editable Role */}
-            <div className="flex flex-col md:flex-row md:items-center gap-2">
-              <span className="font-semibold text-gray-700">Role:</span>
-              {isEditingRole ? (
-                <>
-                  <select
-                    className="border rounded px-2 py-1 text-sm capitalize"
-                    value={newRole}
-                    onChange={(e) => setNewRole(e.target.value)}
-                  >
-                    {["Player", "Manager", "Club", "Organization"].map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
+          <div className="p-6 space-y-5">
+            {/* Role */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-500">Role</span>
+              </div>
+              {editingRole ? (
+                <div className="flex items-center gap-2">
+                  <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
+                    className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none">
+                    {EDITABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
-                  <div className="flex gap-1">
-                    <button
-                      className="bg-green-600 text-white p-1 rounded hover:bg-green-700"
-                      onClick={handleRoleUpdate}
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      className="bg-gray-300 text-gray-700 p-1 rounded hover:bg-gray-400"
-                      onClick={() => setIsEditingRole(false)}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </>
+                  <button onClick={handleRoleUpdate} className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 w-auto"><Check className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingRole(false)} className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 w-auto"><X className="w-4 h-4" /></button>
+                </div>
               ) : (
-                <>
-                  <span className="capitalize text-gray-800">
-                    {selectedUser.role}
-                  </span>
-                  <button
-                    className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition"
-                    onClick={() => {
-                      setIsEditingRole(true);
-                      setNewRole(selectedUser.role);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4" />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-900 capitalize">{selectedUser.role}</span>
+                  <button onClick={() => { setEditingRole(true); setNewRole(selectedUser.role); }}
+                    className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition w-auto">
+                    <Pencil className="w-3.5 h-3.5" />
                   </button>
-                </>
+                </div>
               )}
             </div>
 
-            {/* Mobile */}
-            <div className="flex flex-col md:flex-row md:items-center gap-[5px]">
-              <span className="font-semibold text-gray-700">Mobile No:</span>
-              <span className="text-gray-800">{selectedUser.mobile}</span>
+            {/* Email */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-500">Email</span>
+              </div>
+              <span className="text-sm text-gray-900">{selectedUser.email}</span>
+            </div>
+
+            {/* Phone */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-500">Mobile</span>
+              </div>
+              <span className="text-sm text-gray-900">{selectedUser.mobile || "N/A"}</span>
             </div>
 
             {/* Status */}
-            <div className="flex flex-col md:flex-row md:items-center md:col-span-2 gap-[5px]">
-              <span className="font-semibold text-gray-700">Status:</span>
-              <div className="flex items-center gap-4 mt-1 md:mt-0">
-                <span className="py-1 rounded-full capitalize
-                  ${
-                    selectedUser.isApproved
-                      ? ''
-                      : ''
-                  }">
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-500">Status</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${selectedUser.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
                   {selectedUser.isApproved ? "Active" : "Inactive"}
                 </span>
-
-                <button
-                  onClick={() => handleStatusChange(!selectedUser.isApproved)}
-                  className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-200 shadow-sm ${
+                <button onClick={handleStatusToggle}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition w-auto ${
                     selectedUser.isApproved
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-green-600 text-white hover:bg-green-700"
-                  }`}
-                >
+                      ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                      : "bg-emerald-500 text-white hover:bg-emerald-600"
+                  }`}>
                   {selectedUser.isApproved ? "Deactivate" : "Activate"}
                 </button>
               </div>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // List View
+  return (
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Approved Users</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{filtered.length} of {users.length} users</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition w-48" />
+          </div>
+          <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none appearance-none cursor-pointer">
+            {ROLES.map((r) => <option key={r} value={r}>{r === "All" ? "All Roles" : r}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+          <CheckCircle className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-gray-700">No users found</h3>
+          <p className="text-sm text-gray-400 mt-1">{search ? "Try a different search" : "No approved users yet"}</p>
+        </div>
       ) : (
-        <>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h3 className="text-2xl font-bold text-gray-800">
-              Approved Requests
-              <span className="ml-2 text-blue-600 text-[22px]">
-                ({filteredUsers.length})
-              </span>
-            </h3>
-
-            {/* Filter */}
-            <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-700 shadow-sm transition">
-              <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-              <select
-                value={selectedRole}
-                onChange={(e) => handleFilterChange(e.target.value)}
-                className="bg-transparent outline-none cursor-pointer"
-              >
-                {roles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto max-h-[70vh] rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="px-4 py-3 border text-left">Sr.No</th>
-                  <th className="px-4 py-3 border text-left">Name</th>
-                  <th className="px-4 py-3 border text-left">Email</th>
-                  <th className="px-4 py-3 border text-left">Role</th>
-                  <th className="px-4 py-3 border text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredUsers.map((user, index) => (
-                  <tr key={user._id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 border">{index + 1}</td>
-                    <td className="px-4 py-3 border">{user.name}</td>
-                    <td className="px-4 py-3 border">{user.email}</td>
-                    <td className="px-4 py-3 border capitalize">{user.role}</td>
-                    <td className="px-4 py-3 border text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsEditingRole(false);
-                          }}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">User</th>
+                <th className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Role</th>
+                <th className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Status</th>
+                <th className="text-center px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((user) => (
+                <tr key={user._id} className="hover:bg-orange-50/30 transition cursor-pointer" onClick={() => { setSelectedUser(user); setEditingRole(false); }}>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {(user.name || "?").charAt(0).toUpperCase()}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center py-6 text-gray-400">
-                      No approved users found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                        <p className="text-xs text-gray-400">{user.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full capitalize">{user.role}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                      {user.isApproved ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-center">
+                    <button className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition w-auto"
+                      onClick={(e) => { e.stopPropagation(); setSelectedUser(user); setEditingRole(false); }}>
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
 }
-

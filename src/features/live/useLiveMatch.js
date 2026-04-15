@@ -94,8 +94,35 @@ export default function useLiveMatch(matchId) {
   });
   if (winner) timeline.push({ type: "match", winner, p1Sets, p2Sets });
 
+  // Sport-specific derived data for scoreboard display
+  const result = match.result || {};
+  const finalScore = result.finalScore || {};
+
+  // For single-result sports (Chess, Carrom): extract the actual result
+  const singleResult = config.scoringType === "single" ? (result.result || finalScore.result || null) : null;
+  const singleResultLabel = singleResult && config.scoring?.resultLabels?.[singleResult];
+
+  // For Cricket/innings: extract runs, wickets, overs
+  const innings = {
+    p1Runs: finalScore.player1Runs ?? finalScore.player1 ?? result.player1Score ?? null,
+    p2Runs: finalScore.player2Runs ?? finalScore.player2 ?? result.player2Score ?? null,
+    p1Wickets: finalScore.player1Wickets ?? null,
+    p2Wickets: finalScore.player2Wickets ?? null,
+    p1Overs: finalScore.player1Overs ?? null,
+    p2Overs: finalScore.player2Overs ?? null,
+  };
+
+  // For time-based (Football, Basketball): extract goals/points
+  const timeScore = {
+    p1Score: finalScore.player1Goals ?? finalScore.player1Points ?? finalScore.player1 ?? p1Sets,
+    p2Score: finalScore.player2Goals ?? finalScore.player2Points ?? finalScore.player2 ?? p2Sets,
+  };
+
   return {
     match, isLoading, error, config, matchFormat, lastUpdated: dataUpdatedAt, isRealtime,
-    derived: { p1, p2, p1Sets, p2Sets, sets, status, isLive, isCompleted, winner, timeline, sportName },
+    derived: {
+      p1, p2, p1Sets, p2Sets, sets, status, isLive, isCompleted, winner, timeline, sportName,
+      singleResult, singleResultLabel, innings, timeScore,
+    },
   };
 }

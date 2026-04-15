@@ -34,6 +34,8 @@ const PAGE_META = {
   "/pending": { title: "Pending Users", crumbs: [] },
   "/approved": { title: "Approved Users", crumbs: [] },
   "/inquiries": { title: "Inquiries", crumbs: [] },
+  "/create-club-admin": { title: "Create Club Admin", crumbs: [] },
+  "/manage-clubs": { title: "Manage Clubs", crumbs: [] },
   "/sports": { title: "Sports Management", crumbs: [] },
   "/rule-books": { title: "Rule Books", crumbs: [] },
   "/rbac": { title: "Roles & Permissions", crumbs: [] },

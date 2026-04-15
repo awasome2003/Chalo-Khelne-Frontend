@@ -217,7 +217,7 @@ const Dashboard = () => {
                     <img
                       src={
                         tournament.tournamentLogo
-                          ? `/uploads/${tournament.tournamentLogo}`
+                          ? `/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}`
                           : tournamentImage
                       }
                       alt={tournament.title}

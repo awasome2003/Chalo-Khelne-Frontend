@@ -10,6 +10,9 @@ import {
   Trophy,
   Plus,
   Activity,
+  X,
+  Loader2,
+  Copy,
 } from "lucide-react";
 
 export default function Home() {
@@ -30,6 +33,13 @@ export default function Home() {
   const [success, setSuccess] = useState("");
   const [sports, setSports] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Create Club modal
+  const [showCreateClub, setShowCreateClub] = useState(false);
+  const [clubType, setClubType] = useState("club"); // "club" | "corporate"
+  const [clubForm, setClubForm] = useState({ name: "", email: "", phone: "", clubName: "", city: "", address: "", companyName: "", industryType: "", companySize: "", location: "" });
+  const [creatingClub, setCreatingClub] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,23 +93,52 @@ export default function Home() {
     }
   };
 
+  const handleCreateClub = async () => {
+    if (!clubForm.name || !clubForm.email) { toast.warn("Name and email are required"); return; }
+    if (clubType === "club" && !clubForm.clubName) { toast.warn("Club name is required"); return; }
+    if (clubType === "corporate" && !clubForm.companyName) { toast.warn("Company name is required"); return; }
+
+    setCreatingClub(true);
+    try {
+      const endpoint = clubType === "corporate" ? "/api/corporate/onboard" : "/api/clubadminprofile/onboard";
+      const payload = clubType === "corporate"
+        ? { name: clubForm.name, email: clubForm.email, phone: clubForm.phone, companyName: clubForm.companyName, industryType: clubForm.industryType, companySize: clubForm.companySize, location: clubForm.location, designation: "Admin" }
+        : { name: clubForm.name, email: clubForm.email, phone: clubForm.phone, clubName: clubForm.clubName, city: clubForm.city, address: clubForm.address, designation: "Admin" };
+
+      const res = await axios.post(endpoint, payload);
+      setCreatedCredentials({ email: res.data.email || clubForm.email, password: res.data.password || res.data.generatedPassword || "Check email" });
+      toast.success(`${clubType === "corporate" ? "Corporate" : "Club"} account created!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create account");
+    } finally {
+      setCreatingClub(false);
+    }
+  };
+
+  const resetClubModal = () => {
+    setShowCreateClub(false);
+    setCreatedCredentials(null);
+    setClubForm({ name: "", email: "", phone: "", clubName: "", city: "", address: "", companyName: "", industryType: "", companySize: "", location: "" });
+    setClubType("club");
+  };
+
   if (loading && !overview.totalRequests) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
       </div>
     );
   }
 
   const statCards = [
-    { label: "Total Users", value: overview.totalRequests, icon: Users, color: "bg-blue-50 text-blue-600" },
-    { label: "Pending Approvals", value: overview.pending, icon: UserLock, color: "bg-yellow-50 text-yellow-600" },
-    { label: "Approved Users", value: overview.approved, icon: UserCheck, color: "bg-green-50 text-green-600" },
-    { label: "Players", value: overview.stats?.players || 0, icon: Trophy, color: "bg-purple-50 text-purple-600" },
-    { label: "Club Admins", value: overview.stats?.clubAdmins || 0, icon: Building2, color: "bg-indigo-50 text-indigo-600" },
-    { label: "Corporate Admins", value: overview.stats?.corporateAdmins || 0, icon: Activity, color: "bg-orange-50 text-orange-600" },
-    { label: "Total Inquiries", value: overview.stats?.totalInquiries || 0, icon: MessageSquare, color: "bg-teal-50 text-teal-600" },
-    { label: "Pending Inquiries", value: overview.stats?.pendingInquiries || 0, icon: MessageSquare, color: "bg-pink-50 text-pink-600" },
+    { label: "Total Users", value: overview.totalRequests, icon: Users, color: "bg-orange-50 text-orange-600" },
+    { label: "Pending Approvals", value: overview.pending, icon: UserLock, color: "bg-amber-50 text-amber-600" },
+    { label: "Approved Users", value: overview.approved, icon: UserCheck, color: "bg-emerald-50 text-emerald-600" },
+    { label: "Players", value: overview.stats?.players || 0, icon: Trophy, color: "bg-blue-50 text-blue-600" },
+    { label: "Club Admins", value: overview.stats?.clubAdmins || 0, icon: Building2, color: "bg-orange-50 text-orange-600" },
+    { label: "Corporate Admins", value: overview.stats?.corporateAdmins || 0, icon: Activity, color: "bg-emerald-50 text-emerald-600" },
+    { label: "Total Inquiries", value: overview.stats?.totalInquiries || 0, icon: MessageSquare, color: "bg-amber-50 text-amber-600" },
+    { label: "Pending Inquiries", value: overview.stats?.pendingInquiries || 0, icon: MessageSquare, color: "bg-red-50 text-red-600" },
   ];
 
   return (

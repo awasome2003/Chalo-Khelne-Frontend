@@ -176,7 +176,7 @@ export default function AllStaffApplicationsPage() {
                       {sportType && <><span>·</span><span>{sportType}</span></>}
                       <span>·</span>
                       <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {expLabel}</span>
-                      {app.rateAmount > 0 && <><span>·</span><span>Rs {app.rateAmount}/{(app.rateType || "").replace("per_", "")}</span></>}
+                      {app.rateAmount > 0 && <><span>·</span><span>₹{app.rateAmount}/{(app.rateType || "").replace("per_", "")}</span></>}
                     </div>
                   </div>
                   <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExp ? "rotate-180" : ""}`} />
@@ -293,7 +293,7 @@ export default function AllStaffApplicationsPage() {
                         : "Fresher"}
                     </span></div>
                     {profileData.application?.rateAmount > 0 && (
-                      <div><span className="text-gray-400">Rate:</span> <span className="font-bold">Rs {profileData.application.rateAmount}/{(profileData.application.rateType || "").replace("per_", "")}</span></div>
+                      <div><span className="text-gray-400">Rate:</span> <span className="font-bold">₹{profileData.application.rateAmount}/{(profileData.application.rateType || "").replace("per_", "")}</span></div>
                     )}
                     {profileData.application?.sports?.length > 0 && (
                       <div className="col-span-2"><span className="text-gray-400">Sports:</span> <span className="font-bold">{profileData.application.sports.join(", ")}</span></div>

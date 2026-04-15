@@ -65,7 +65,7 @@ const CorporateTournaments = () => {
                             <div className="h-40 bg-gray-100 relative">
                                 {tournament.tournamentLogo ? (
                                     <img
-                                        src={`http://localhost:3003/${tournament.tournamentLogo.replace(/\\/g, '/')}`}
+                                        src={`/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}`}
                                         alt={tournament.title}
                                         className="w-full h-full object-cover"
                                         onError={(e) => {

@@ -43,7 +43,7 @@ const PTurfdetails = () => {
             {turf.photos.map((photo, index) => (
               <img
                 key={index}
-                src={`${import.meta.env.VITE_API_BASE_URL}/uploads/${photo.replace(/\\/g, "/").split("/").pop()}`}
+                src={`/uploads/${photo.replace(/\\/g, "/").split("/").pop()}`}
                 alt={`Turf ${index + 1}`}
                 className="w-full h-48 object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-200"
               />

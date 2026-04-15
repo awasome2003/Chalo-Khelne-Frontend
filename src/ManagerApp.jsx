@@ -16,6 +16,7 @@ import MPayments from "./Manager/MPayments";
 import MNews from "./Manager/MNews";
 import MCoupons from "./Manager/MCoupons";
 import InviteEmployees from "./Manager/InviteEmployees";
+import BulkBookingUpload from "./Manager/BulkBookingUpload";
 import NotificationPage from "./Manager/Notification";
 
 // Tournament — legacy (still works, kept for backward compat)
@@ -71,6 +72,7 @@ const ManagerApp = () => {
           <Route path="/mtournament-management" element={<MTournamentManagement />} />
           <Route path="/staff-applications" element={<AllStaffApplicationsPage />} />
           <Route path="/invite-employees" element={<InviteEmployees />} />
+          <Route path="/bulk-booking" element={<BulkBookingUpload />} />
 
           {/* Facility */}
           <Route path="/mslot-Bookingt" element={<MSlot_Booking />} />

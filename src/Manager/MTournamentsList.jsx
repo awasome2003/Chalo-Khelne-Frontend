@@ -242,7 +242,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       setEditingTournament(tournamentData);
 
       if (tournamentData.tournamentLogo) {
-        setEditImage(`/uploads/${tournamentData.tournamentLogo}`);
+        setEditImage(`/uploads/tournaments/${tournamentData.tournamentLogo.split("\\").pop()}`);
       } else {
         setEditImage(null);
       }
@@ -498,26 +498,43 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
               }}
             >
               <div className="flex justify-between items-start mb-2">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedTournament === tournament._id
-                  ? "bg-orange-100 text-orange-600"
-                  : "bg-gray-100 text-gray-500"
-                  }`}>
-                  {tournament.type === "knockout + group stage" ? "Group + Knockout" : tournament.type}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedTournament === tournament._id
+                    ? "bg-orange-100 text-orange-600"
+                    : "bg-gray-100 text-gray-500"
+                    }`}>
+                    {tournament.type === "knockout + group stage" ? "Group + Knockout" : tournament.type}
+                  </span>
+                  {tournament.isPrivate && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Private
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   {user?.isCorporate && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/invite-employees?tournamentId=${tournament._id}`);
-                        }}
-                        className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Invite Employee"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                      </button>
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/invite-employees?tournamentId=${tournament._id}`);
+                      }}
+                      className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      title="Invite Employees"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  )}
+                  {tournament.isPrivate && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/bulk-booking?tournamentId=${tournament._id}`);
+                      }}
+                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Bulk Register Players"
+                    >
+                      <Users className="w-4 h-4" />
+                    </button>
                   )}
                   <button
                     onClick={(e) => handleEditClick(tournament._id, e)}

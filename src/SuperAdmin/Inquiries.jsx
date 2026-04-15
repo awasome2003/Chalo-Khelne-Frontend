@@ -51,14 +51,14 @@ export default function Inquiries() {
             name: inquiry.name,
             email: inquiry.email,
             phone: inquiry.phone,
-            companyName: inquiry.companyName || "",
+            companyName: inquiry.clubName || inquiry.companyName || "",
             industryType: "",
             companySize: "",
-            location: "",
+            location: inquiry.city || "",
             designation: "Admin",
             clubName: inquiry.clubName || inquiry.name + " Club",
-            sports: "",
-            city: "",
+            sports: inquiry.sports || "",
+            city: inquiry.city || "",
         });
         setOnboardType(inquiry.inquiryType === "Partnership" ? "corporate" : "club");
         setGeneratedCredentials(null);
@@ -80,6 +80,12 @@ export default function Inquiries() {
             const res = await axios.post(endpoint, formData);
             setGeneratedCredentials(res.data.credentials);
             toast.info(`${onboardType === "corporate" ? "Corporate" : "Club"} Account Created Successfully!`);
+
+            // Auto-resolve the inquiry
+            if (selectedInquiry) {
+                await axios.put(`/api/inquiries/${selectedInquiry._id}/status`, { status: "Resolved" });
+                fetchInquiries(); // Fetch updated list
+            }
         } catch (error) {
             console.error(error);
             toast.info(error.response?.data?.message || "Error creating account");
@@ -131,13 +137,17 @@ export default function Inquiries() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 flex gap-2">
-                                        <button
-                                            onClick={() => handleOpenModal(inquiry)}
-                                            className="text-blue-600 hover:text-blue-900 border border-blue-600 rounded px-2 py-1 hover:bg-blue-50 transition"
-                                            title="Onboard Corporate Admin"
-                                        >
-                                            Onboard
-                                        </button>
+                                        {inquiry.status !== "Resolved" ? (
+                                            <button
+                                                onClick={() => handleOpenModal(inquiry)}
+                                                className="text-blue-600 hover:text-blue-900 border border-blue-600 rounded px-2 py-1 hover:bg-blue-50 transition"
+                                                title="Onboard Corporate Admin"
+                                            >
+                                                Onboard
+                                            </button>
+                                        ) : (
+                                            <span className="text-gray-400 italic text-sm">Completed</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

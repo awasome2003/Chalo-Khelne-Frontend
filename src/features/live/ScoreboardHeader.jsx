@@ -1,7 +1,156 @@
 import { Trophy, Radio } from "lucide-react";
 
 export default function ScoreboardHeader({ config, derived, matchFormat }) {
-  const { p1, p2, p1Sets, p2Sets, status, isLive, isCompleted, winner, sportName } = derived;
+  const { p1, p2, p1Sets, p2Sets, status, isLive, isCompleted, winner, sportName, singleResult, singleResultLabel, innings, timeScore } = derived;
+  const scoringType = config.scoringType;
+
+  // Determine what to show in the center based on sport type
+  const renderCenterScore = () => {
+    // Single-result sports (Chess, Carrom, Snooker)
+    if (scoringType === "single") {
+      if (singleResult && isCompleted) {
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-4xl lg:text-5xl font-black text-white leading-none">
+              {singleResult}
+            </span>
+            {singleResultLabel && (
+              <span className="text-sm font-bold text-gray-400 mt-2">{singleResultLabel}</span>
+            )}
+            <span className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+              {config.labels.matchResult || "Result"}
+            </span>
+          </div>
+        );
+      }
+      // Manual score sports (Carrom) — show point totals
+      const s1 = innings.p1Runs ?? p1Sets;
+      const s2 = innings.p2Runs ?? p2Sets;
+      if (s1 !== null && s2 !== null && (s1 > 0 || s2 > 0)) {
+        return (
+          <div className="flex flex-col items-center">
+            <div className="flex items-baseline gap-4">
+              <span className={`text-5xl lg:text-6xl font-black tabular-nums leading-none ${winner === p1 ? "text-emerald-400" : "text-white"}`}>{s1}</span>
+              <span className="text-2xl font-bold text-gray-600">-</span>
+              <span className={`text-5xl lg:text-6xl font-black tabular-nums leading-none ${winner === p2 ? "text-emerald-400" : "text-white"}`}>{s2}</span>
+            </div>
+            <span className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+              {config.labels.matchResult || "Points"}
+            </span>
+          </div>
+        );
+      }
+      // Awaiting result
+      return (
+        <div className="flex flex-col items-center">
+          <span className="text-3xl font-black text-gray-600">VS</span>
+          <span className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+            {isLive ? "In Progress" : "Awaiting Result"}
+          </span>
+        </div>
+      );
+    }
+
+    // Innings-based sports (Cricket)
+    if (scoringType === "innings") {
+      const hasRuns = innings.p1Runs !== null || innings.p2Runs !== null;
+      if (hasRuns) {
+        const formatInnings = (runs, wickets, overs) => {
+          let str = `${runs ?? 0}`;
+          if (wickets !== null && wickets !== undefined) str += `/${wickets}`;
+          if (overs !== null && overs !== undefined) str += ` (${overs})`;
+          return str;
+        };
+        return (
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <span className={`text-4xl lg:text-5xl font-black tabular-nums leading-none ${winner === p1 ? "text-emerald-400" : "text-white"}`}>
+                  {innings.p1Runs ?? 0}
+                </span>
+                {innings.p1Wickets !== null && (
+                  <span className="text-lg font-bold text-gray-500">/{innings.p1Wickets}</span>
+                )}
+                {innings.p1Overs !== null && (
+                  <div className="text-xs text-gray-500 mt-1">({innings.p1Overs} ov)</div>
+                )}
+              </div>
+              <span className="text-xl font-bold text-gray-600">vs</span>
+              <div className="text-center">
+                <span className={`text-4xl lg:text-5xl font-black tabular-nums leading-none ${winner === p2 ? "text-emerald-400" : "text-white"}`}>
+                  {innings.p2Runs ?? 0}
+                </span>
+                {innings.p2Wickets !== null && (
+                  <span className="text-lg font-bold text-gray-500">/{innings.p2Wickets}</span>
+                )}
+                {innings.p2Overs !== null && (
+                  <div className="text-xs text-gray-500 mt-1">({innings.p2Overs} ov)</div>
+                )}
+              </div>
+            </div>
+            <span className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+              {config.labels.matchResult || "Runs"}
+            </span>
+          </div>
+        );
+      }
+      // No data yet
+      return (
+        <div className="flex flex-col items-center">
+          <span className="text-3xl font-black text-gray-600">VS</span>
+          <span className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+            {isLive ? "Match in progress" : "Yet to bat"}
+          </span>
+        </div>
+      );
+    }
+
+    // Time-based sports (Football, Basketball, Hockey, Kabaddi)
+    if (scoringType === "time") {
+      return (
+        <div className="flex flex-col items-center">
+          <div className="flex items-baseline gap-4">
+            <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${winner === p1 ? "text-emerald-400" : "text-white"}`}>
+              {timeScore.p1Score}
+            </span>
+            <span className="text-2xl font-bold text-gray-600">:</span>
+            <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${winner === p2 ? "text-emerald-400" : "text-white"}`}>
+              {timeScore.p2Score}
+            </span>
+          </div>
+          <span className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+            {config.labels.matchResult || "Score"}
+          </span>
+        </div>
+      );
+    }
+
+    // Default: Set-based sports (Table Tennis, Badminton, Tennis, Volleyball, Pickleball)
+    return (
+      <div className="flex flex-col items-center">
+        <div className="flex items-baseline gap-4">
+          <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${winner === p1 ? "text-emerald-400" : "text-white"}`}>
+            {p1Sets}
+          </span>
+          <span className="text-2xl font-bold text-gray-600">:</span>
+          <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${winner === p2 ? "text-emerald-400" : "text-white"}`}>
+            {p2Sets}
+          </span>
+        </div>
+        <div className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
+          {config.labels.matchResult || "Sets"} · Best of {matchFormat.totalSets}
+        </div>
+      </div>
+    );
+  };
+
+  // Determine winner banner text based on sport
+  const renderWinnerScore = () => {
+    if (scoringType === "single" && singleResult) return `(${singleResult})`;
+    if (scoringType === "innings") return `(${innings.p1Runs ?? 0} - ${innings.p2Runs ?? 0})`;
+    if (scoringType === "time") return `(${timeScore.p1Score} - ${timeScore.p2Score})`;
+    return `(${p1Sets} - ${p2Sets})`;
+  };
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-[#0B1220]">
@@ -11,7 +160,6 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
           style={{ background: `radial-gradient(circle, ${config.color}, transparent)` }} />
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-[0.03]"
           style={{ background: `radial-gradient(circle, ${config.color}, transparent)` }} />
-        {/* Grid lines */}
         <div className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
       </div>
@@ -46,34 +194,9 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
 
         {/* Players + Score */}
         <div className="flex items-center justify-between">
-          {/* Player 1 */}
-          <PlayerSide name={p1} setsWon={p1Sets} isWinner={winner === p1} isCompleted={isCompleted} />
-
-          {/* Center Score */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-baseline gap-4">
-              <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${
-                winner === p1 ? "text-emerald-400" : "text-white"
-              }`}>
-                {p1Sets}
-              </span>
-              <span className="text-2xl font-bold text-gray-600">:</span>
-              <span className={`text-6xl lg:text-7xl font-black tabular-nums leading-none ${
-                winner === p2 ? "text-emerald-400" : "text-white"
-              }`}>
-                {p2Sets}
-              </span>
-            </div>
-            <div className="mt-3 text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">
-              {matchFormat.scoringType === "time" ? `${config.labels.matchResult || "Score"}`
-                : matchFormat.scoringType === "innings" ? `${config.labels.matchResult || "Score"}`
-                : matchFormat.scoringType === "single" ? `${config.labels.matchResult || "Result"}`
-                : `${config.labels.matchResult || "Sets"} · Best of ${matchFormat.totalSets}`}
-            </div>
-          </div>
-
-          {/* Player 2 */}
-          <PlayerSide name={p2} setsWon={p2Sets} isWinner={winner === p2} isCompleted={isCompleted} align="right" />
+          <PlayerSide name={p1} isWinner={winner === p1} isCompleted={isCompleted} config={config} scoringType={scoringType} />
+          {renderCenterScore()}
+          <PlayerSide name={p2} isWinner={winner === p2} isCompleted={isCompleted} config={config} scoringType={scoringType} align="right" />
         </div>
 
         {/* Winner Banner */}
@@ -83,7 +206,7 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
               <Trophy className="w-4 h-4 text-yellow-900" />
             </div>
             <span className="font-black text-lg text-white">{winner} wins!</span>
-            <span className="text-sm text-gray-500 font-bold">({p1Sets}-{p2Sets})</span>
+            <span className="text-sm text-gray-500 font-bold">{renderWinnerScore()}</span>
           </div>
         )}
       </div>
@@ -91,7 +214,7 @@ export default function ScoreboardHeader({ config, derived, matchFormat }) {
   );
 }
 
-function PlayerSide({ name, setsWon, isWinner, isCompleted, align = "left" }) {
+function PlayerSide({ name, isWinner, isCompleted, config, scoringType, align = "left" }) {
   const initial = name?.charAt(0)?.toUpperCase() || "?";
   return (
     <div className={`flex flex-col ${align === "right" ? "items-end" : "items-start"} flex-1 ${isCompleted && !isWinner ? "opacity-30" : ""}`}>

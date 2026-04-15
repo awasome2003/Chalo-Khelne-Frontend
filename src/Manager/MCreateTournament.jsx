@@ -155,6 +155,8 @@ function mapTournamentToForm(t, defaults, auth) {
     registrationDeadline: t.registrationDeadline || "",
     qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
     managerId: t.managerId || [auth?._id || ""],
+    isPrivate: t.isPrivate || false,
+    clientId: t.clientId || "",
   };
 }
 
@@ -203,6 +205,8 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     qualifyPerGroup: "2",
     drawSize: 16,
     davisCupFormatId: "",
+    isPrivate: false,
+    clientId: "",
   };
 
   const [formData, setFormData] = useState(() => {
@@ -558,6 +562,10 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       if (formData.category?.length) tournamentFormData.append("category", JSON.stringify(formData.category));
       if (formData.managerId?.length) tournamentFormData.append("managerId", JSON.stringify(formData.managerId));
       if (formData.eventLocation) tournamentFormData.append("eventLocation", formData.eventLocation);
+      tournamentFormData.append("isPrivate", formData.isPrivate ? "true" : "false");
+      if (formData.isPrivate && formData.clientId) {
+        tournamentFormData.append("clientId", formData.clientId.trim());
+      }
 
       if (isEditMode && initialData?._id) {
         // EDIT MODE — update existing tournament
@@ -810,6 +818,45 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
               placeholder="Describe your tournament..."
             />
           </div>
+
+          {/* Private / Public Toggle */}
+          <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${formData.isPrivate ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200"}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.isPrivate ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500"}`}>
+                {formData.isPrivate ? <Lock className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-800">{formData.isPrivate ? "Private Tournament" : "Public Tournament"}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {formData.isPrivate
+                    ? "Hidden from public listing. Only you can manage registrations via bulk upload."
+                    : "Visible to everyone. Players can self-register via the app."}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={formData.isPrivate}
+              onChange={(e) => setFormData(prev => ({ ...prev, isPrivate: e.target.checked }))}
+              color="warning"
+              size="small"
+            />
+          </div>
+
+          {/* Client ID — shown only for private tournaments */}
+          {formData.isPrivate && (
+            <div className="mt-4 p-4 bg-amber-50/50 rounded-xl border border-amber-100">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Client ID</label>
+              <input
+                type="text"
+                name="clientId"
+                value={formData.clientId}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all uppercase placeholder:normal-case placeholder:text-gray-400 font-mono tracking-wider"
+                placeholder="Leave empty to auto-generate (e.g. CK-TEN-A3F8X2)"
+              />
+              <p className="text-xs text-gray-400 mt-1.5">A unique identifier for this corporate client. Auto-generated if left blank.</p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 //Manager/TeamKnockouts.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaUsers, FaCrown, FaUser, FaSyncAlt } from "react-icons/fa";
-import { Star, StarIcon, Loader2, Trophy, RefreshCcw } from "lucide-react";
+import { Star, StarIcon, Loader2, Trophy, RefreshCcw, Play, CheckCircle2, Clock } from "lucide-react";
 import TeamKnockoutMatches from "./TeamKnockoutMatches";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -12,6 +13,7 @@ import { TextField } from "@mui/material";
 import dayjs from "dayjs";
 
 const TeamKnockouts = () => {
+  const navigate = useNavigate();
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [hasGeneratedMatches, setHasGeneratedMatches] = useState(false);
   const [showStructureAlert, setShowStructureAlert] = useState(false);
@@ -34,7 +36,6 @@ const TeamKnockouts = () => {
   const [currentSchedulingRound, setCurrentSchedulingRound] = useState(1);
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("Registered Teams");
-  const [activeTab, setActiveTab] = useState("Live");
   const [teams, setTeams] = useState([]);
   const [showSubstituteModal, setShowSubstituteModal] = useState(false);
   const [currentMatchForSub, setCurrentMatchForSub] = useState(null);
@@ -42,6 +43,8 @@ const TeamKnockouts = () => {
   const [showDoublesNominationModal, setShowDoublesNominationModal] = useState(false);
   const [matchesToConfigure, setMatchesToConfigure] = useState([]);
   const [configuringIndex, setConfiguringIndex] = useState(0);
+  // NEW: Knockout vs Round Robin generation choice modal
+  const [showGenerationChoiceModal, setShowGenerationChoiceModal] = useState(false);
   const tournamentId = new URLSearchParams(location.search).get("tournamentId");
 
   // Round Robin state
@@ -92,7 +95,8 @@ const TeamKnockouts = () => {
       });
       if (res.data?.success) {
         toast.success(res.data.message);
-        fetchRoundRobin();
+        await fetchRoundRobin();
+        setSelectedTab("Round Robin");
       } else {
         toast.error(res.data?.message || "Failed to generate");
       }
@@ -101,6 +105,32 @@ const TeamKnockouts = () => {
     } finally {
       setRrLoading(false);
     }
+  };
+
+  // Open the scoreboard for any team-knockout match (works for round 0 = round robin
+   // and round >= 1 = knockout). Mirrors the navigation pattern used in TeamKnockoutMatches.
+  const openMatchScoreboard = (match) => {
+    if (!match?._id) return;
+    const team1 = match.team1Id || {};
+    const team2 = match.team2Id || {};
+    navigate(
+      `/tournament-management/team-knockouts/${match._id}/scoreboard`,
+      {
+        state: {
+          matchId: match._id,
+          teamAName: team1.teamName || team1.name || "Team 1",
+          teamBName: team2.teamName || team2.name || "Team 2",
+          matchData: match,
+          matchType: match.format?.split(" - ")[0] || "Singles",
+          setCount: match.format?.split(" - ")[1]?.split(" ")[0] || "3",
+          team1Captain: team1.playerPositions?.A,
+          team1Players: [team1.playerPositions?.A, team1.playerPositions?.B].filter(Boolean),
+          team2Captain: team2.playerPositions?.A,
+          team2Players: [team2.playerPositions?.A, team2.playerPositions?.B].filter(Boolean),
+          resuming: match.status !== "PENDING" && match.status !== "SCHEDULED",
+        },
+      }
+    );
   };
 
   const handleDeleteRoundRobin = async () => {
@@ -305,7 +335,6 @@ const TeamKnockouts = () => {
     : 0;
 
   const handleGenerateButtonClick = () => {
-
     if (selectedTeams.length < 2) {
       toast.error("Please select at least 2 teams", {
         position: "top-center",
@@ -313,6 +342,12 @@ const TeamKnockouts = () => {
       });
       return;
     }
+    // Show the choice modal so the user can pick Knockout or Round Robin
+    setShowGenerationChoiceModal(true);
+  };
+
+  const proceedWithKnockout = () => {
+    setShowGenerationChoiceModal(false);
 
     // Calculate the next power of 2
     const nextPowerOf2 = Math.pow(
@@ -321,20 +356,20 @@ const TeamKnockouts = () => {
     );
     const byesNeeded = nextPowerOf2 - selectedTeams.length;
 
-
     if (byeTeams.length !== byesNeeded) {
       setShowStructureAlert(true); // Show modal instead of toast
       return;
     }
 
     const rounds = calculateTotalRounds(selectedTeams.length);
-
-    // Update these states with useEffect to ensure they're processed in order
     setTotalRounds(rounds);
     setCurrentSchedulingRound(1);
-
-    // Add a console.log before setting modal visibility
     setShowSchedulingModal(true);
+  };
+
+  const proceedWithRoundRobin = () => {
+    setShowGenerationChoiceModal(false);
+    setSelectedTab("Round Robin");
   };
 
   const handleGenerateMatches = async () => {
@@ -544,41 +579,36 @@ const TeamKnockouts = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-xl overflow-y-auto w-[450px] flex p-[52px] flex-col items-start gap-[20px] rounded-[24px] bg-[#F5F7FA]">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
           {/* Header */}
-          <div className="flex w-full justify-end">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold text-white">Schedule Round {currentSchedulingRound}</h2>
+              <p className="text-xs text-white/80 mt-0.5">Set the date, time and court details</p>
+            </div>
             <button
               onClick={() => setShowSchedulingModal(false)}
-              className="text-black-500 hover:bg-transparent bg-transparent text-black w-auto text-[25px] p-0"
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition w-auto text-white text-lg leading-none"
             >
-              X
+              ×
             </button>
           </div>
 
           {/* Schedule Form */}
-          <div className="space-y-6 w-full">
-            <div className="items-center text-center gap-2 mb-4">
-              <h2 className="text-black text-center mb-0 font-roboto text-[18px] font-semibold leading-normal">
-                Round {currentSchedulingRound} Schedule Details
-              </h2>
-            </div>
-
+          <div className="p-6 space-y-5">
             {/* Match Date and Time */}
-            <div className="space-y-2 first-popup">
-              <label className="block text-sm font-medium text-gray-900">
-                Match Start Date and Time
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Match Start Date & Time
               </label>
-              <LocalizationProvider
-                className=" rounded-lg border-none hover:border-none datafield"
-                dateAdapter={AdapterDayjs}
-              >
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DateTimePicker
                   value={
                     roundSchedules?.[currentSchedulingRound]?.matchDateTime ||
                     null
                   }
-                  className="w-full bg-white rounded-2xl hover:border-none datafield"
+                  className="w-full bg-gray-50 rounded-xl"
                   onChange={(newValue) => {
                     setRoundSchedules((prev) => ({
                       ...prev,
@@ -589,74 +619,80 @@ const TeamKnockouts = () => {
                     }));
                   }}
                   renderInput={(props) => (
-                    <div className="relative">
-                      <TextField
-                        {...props}
-                        fullWidth
-                        className="border-none hover:border-none bg-white rounded-lg datafield"
-                      />
-                    </div>
+                    <TextField
+                      {...props}
+                      fullWidth
+                      className="bg-gray-50 rounded-xl"
+                    />
                   )}
                 />
               </LocalizationProvider>
             </div>
 
-            {/* Match Interval */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-900">
-                Match Interval (minutes)
-              </label>
-              <input
-                type="number"
-                value={
-                  roundSchedules?.[currentSchedulingRound]?.matchInterval || ""
-                }
-                onChange={(e) => {
-                  setRoundSchedules((prev) => ({
-                    ...prev,
-                    [currentSchedulingRound]: {
-                      ...prev[currentSchedulingRound],
-                      matchInterval: e.target.value,
-                    },
-                  }));
-                }}
-                min="0"
-                placeholder="Enter interval in minutes"
-                className="w-full h-[50px] text-gray-500 px-4 py-2 self-stretch rounded-lg bg-white border-none"
-                required
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Match Interval */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Interval (min)
+                </label>
+                <input
+                  type="number"
+                  value={
+                    roundSchedules?.[currentSchedulingRound]?.matchInterval || ""
+                  }
+                  onChange={(e) => {
+                    setRoundSchedules((prev) => ({
+                      ...prev,
+                      [currentSchedulingRound]: {
+                        ...prev[currentSchedulingRound],
+                        matchInterval: e.target.value,
+                      },
+                    }));
+                  }}
+                  min="0"
+                  placeholder="30"
+                  className="w-full h-12 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
+                  required
+                />
+              </div>
 
-            {/* Court Number */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-900">
-                Starting Court Number
-              </label>
-              <input
-                type="number"
-                value={
-                  roundSchedules?.[currentSchedulingRound]?.courtNumber || ""
-                }
-                onChange={(e) => {
-                  setRoundSchedules((prev) => ({
-                    ...prev,
-                    [currentSchedulingRound]: {
-                      ...prev[currentSchedulingRound],
-                      courtNumber: e.target.value,
-                    },
-                  }));
-                }}
-                min="1"
-                placeholder="Enter starting court number"
-                className="w-full text-gray-500 h-[50px] px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 border-none"
-                required
-              />
+              {/* Court Number */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Starting Court
+                </label>
+                <input
+                  type="number"
+                  value={
+                    roundSchedules?.[currentSchedulingRound]?.courtNumber || ""
+                  }
+                  onChange={(e) => {
+                    setRoundSchedules((prev) => ({
+                      ...prev,
+                      [currentSchedulingRound]: {
+                        ...prev[currentSchedulingRound],
+                        courtNumber: e.target.value,
+                      },
+                    }));
+                  }}
+                  min="1"
+                  placeholder="1"
+                  className="w-full h-12 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
+                  required
+                />
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 pt-6">
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button
-                className="flex h-[50px] px-6 py-2 justify-center items-center gap-[10px] rounded-[25px] bg-[#FF5500] hover:bg-[#CC4400] text-white"
+                onClick={() => setShowSchedulingModal(false)}
+                className="px-5 py-2.5 text-gray-600 font-semibold text-sm hover:bg-gray-100 rounded-xl transition w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm shadow-orange-200 transition active:scale-[0.98] w-auto"
                 onClick={handleMatchGeneration}
               >
                 Generate Matches
@@ -720,48 +756,59 @@ const TeamKnockouts = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-xl w-[450px] p-6 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">Edit Doubles Lineup</h3>
-            <button onClick={() => setShowSubstituteModal(false)} className="bg-transparent hover:bg-transparent text-gray-500 hover:text-gray-700">✕</button>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+            <h3 className="text-base font-bold text-white">Edit Doubles Lineup</h3>
+            <button
+              onClick={() => setShowSubstituteModal(false)}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition w-auto text-white text-lg leading-none"
+            >
+              ×
+            </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {currentMatchForSub?.team1Id?.teamName} - Doubles Partner
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                {currentMatchForSub?.team1Id?.teamName} – Doubles Partner
               </label>
               <input
                 type="text"
                 value={subData.homePlayerB}
                 onChange={(e) => setSubData(prev => ({ ...prev, homePlayerB: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-black"
+                className="w-full h-11 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
                 placeholder="Enter player name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {currentMatchForSub?.team2Id?.teamName} - Doubles Partner
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                {currentMatchForSub?.team2Id?.teamName} – Doubles Partner
               </label>
               <input
                 type="text"
                 value={subData.awayPlayerZ}
                 onChange={(e) => setSubData(prev => ({ ...prev, awayPlayerZ: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-black"
+                className="w-full h-11 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
                 placeholder="Enter player name"
               />
             </div>
-          </div>
 
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-[#FF5500] hover:bg-[#CC4400] text-white rounded-full font-medium"
-            >
-              Save Lineup
-            </button>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                onClick={() => setShowSubstituteModal(false)}
+                className="px-5 py-2.5 text-gray-600 font-semibold text-sm hover:bg-gray-100 rounded-xl transition w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm shadow-orange-200 transition active:scale-[0.98] w-auto"
+              >
+                Save Lineup
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -844,68 +891,76 @@ const TeamKnockouts = () => {
     if (!currentMatch) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-xl w-[500px] p-8 flex flex-col gap-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-800">Doubles Lineup Configuration</h3>
-            <p className="text-gray-500 text-sm mt-1">Match {configuringIndex + 1} of {matchesToConfigure.length}</p>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5">
+            <h3 className="text-base font-bold text-white">Doubles Lineup Configuration</h3>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-white/80">Match {configuringIndex + 1} of {matchesToConfigure.length}</p>
+              <div className="w-32 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full transition-all"
+                  style={{ width: `${((configuringIndex + 1) / matchesToConfigure.length) * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-center justify-center gap-4">
-            <span className="font-bold text-orange-700">{team1Name}</span>
-            <span className="text-sm font-bold text-gray-400">VS</span>
-            <span className="font-bold text-red-800">{team2Name}</span>
-          </div>
+          <div className="p-6 space-y-5">
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-center gap-3">
+              <span className="font-bold text-gray-800 text-sm truncate">{team1Name}</span>
+              <span className="text-[10px] font-bold text-gray-400 bg-white px-2 py-1 rounded-full border border-gray-200">VS</span>
+              <span className="font-bold text-gray-800 text-sm truncate">{team2Name}</span>
+            </div>
 
-          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                {team1Name} - Doubles Partner
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                {team1Name} – Doubles Partner
               </label>
               <div className="relative">
-                <FaUser className="absolute left-3 top-3 text-gray-400" />
+                <FaUser className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input
                   type="text"
                   value={nominationData.homePlayerB}
                   onChange={(e) => setNominationData(prev => ({ ...prev, homePlayerB: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                  className="w-full h-11 pl-10 pr-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
                   placeholder="Enter partner name"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                {team2Name} - Doubles Partner
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                {team2Name} – Doubles Partner
               </label>
               <div className="relative">
-                <FaUser className="absolute left-3 top-3 text-gray-400" />
+                <FaUser className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input
                   type="text"
                   value={nominationData.awayPlayerZ}
                   onChange={(e) => setNominationData(prev => ({ ...prev, awayPlayerZ: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                  className="w-full h-11 pl-10 pr-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
                   placeholder="Enter partner name"
                 />
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between pt-4 border-t border-gray-100">
-            <button
-              onClick={handleSkip}
-              className="px-6 py-2 text-gray-500 hover:bg-gray-100 rounded-full font-medium transition-colors"
-            >
-              Skip
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={saving}
-              className="px-8 py-2 bg-[#FF5500] hover:bg-[#CC4400] text-white rounded-full font-bold shadow-lg transform active:scale-95 transition-all flex items-center gap-2"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {configuringIndex === matchesToConfigure.length - 1 ? 'Finish & Save' : 'Next Match'}
-            </button>
+            <div className="flex justify-between gap-3 pt-4 border-t border-gray-100">
+              <button
+                onClick={handleSkip}
+                className="px-5 py-2.5 text-gray-500 font-semibold text-sm hover:bg-gray-100 rounded-xl transition w-auto"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm shadow-orange-200 disabled:opacity-50 transition active:scale-[0.98] flex items-center gap-2 w-auto"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {configuringIndex === matchesToConfigure.length - 1 ? 'Finish & Save' : 'Next Match'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -922,225 +977,251 @@ const TeamKnockouts = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-200">
-      <div className="p-5">
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-5 max-w-[1400px] mx-auto">
         {/* Main Tabs - Always visible */}
-        <div className="flex w-full justify-center space-x-3 mb-4">
-          {["Registered Teams", "Round Robin", "Matches"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab)}
-              className={`flex h-[50px] px-6 py-2 justify-center w-auto items-center gap-[10px] rounded-[25px] 
-      ${selectedTab === tab
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-200 text-black hover:bg-gray-300"
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex gap-1 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+            {["Registered Teams", "Round Robin", "Matches"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                className={`h-10 px-5 inline-flex justify-center items-center text-sm font-semibold rounded-xl whitespace-nowrap transition-all w-auto
+                  ${selectedTab === tab
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "bg-transparent text-gray-500 hover:bg-gray-100"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content based on selected tab */}
         {selectedTab === "Registered Teams" ? (
           // Teams View
-          <div className="flex gap-8">
-            {/* Left Section: Tournament List */}
-            <div className="">
-              {/* Live, Upcoming, Recent Tabs */}
-              <div className="flex p-1 bg-white items-center justify-center gap-2 rounded-[25px] bg-gray mb-[20px]">
-                {["Live", "Upcoming", "Recent"].map((tab, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex h-[42px] px-4 mt-0 py-2 justify-center items-center gap-2 rounded-[25px] 
-                    transition-colors duration-200 ease-in-out 
-                    ${activeTab === tab
-                        ? "bg-orange-500 text-white" // Active tab styles
-                        : "bg-transparent text-black" // Non-active tab styles
-                      }`}
-                  >
-                    {tab}
-                    <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
-                      {index === 0 ? 12 : index === 1 ? 8 : 6}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tournament List */}
-              <div className="div">
-                {/* Select All / Deselect All */}
-                {teams?.length >= 2 && (
-                  <div className="flex items-center justify-between mb-2 px-1">
-                    <button
-                      onClick={() => {
-                        if (selectedTeams.length === teams.length) {
-                          setSelectedTeams([]);
-                        } else {
-                          setSelectedTeams([...teams]);
-                        }
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all w-auto
-                        bg-orange-500 text-white hover:bg-[#003D75]"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedTeams.length === teams.length && teams.length > 0}
-                        readOnly
-                        className="w-4 h-4 rounded cursor-pointer accent-white"
-                      />
-                      {selectedTeams.length === teams.length ? "Deselect All" : "Select All"}
-                    </button>
-                    <span className="text-sm text-gray-500 font-medium">
-                      {selectedTeams.length}/{teams.length} selected
-                    </span>
-                  </div>
-                )}
-                <div className="flex flex-col bg-white gap-[20px] overflow-y-auto h-[450px] p-4 border border-gray-300 rounded-[24px] scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-200 scrollbar-hide">
-                  {teams?.map((booking) => (
-                    <div
-                      key={booking._id}
-                      className={`flex h-16 p-2 w-auto items-center justify-between gap-3 w-80 bg-white rounded-2xl shadow-md border cursor-pointer
-                      ${selectedTournament?._id === booking._id
-                          ? "border-orange-500 border-2"
-                          : "border-gray-200"
-                        }`}
-                      onClick={() => {
-                        setSelectedTournament(booking);
-                      }}
-                    >
-                      {/* Left Section */}
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          {booking.team.name.charAt(0)}
-                        </div>
-                        <span className="text-gray-800 font-medium">
-                          {booking.team.name}
-                        </span>
-                      </div>
-
-                      <div className="team-actions flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectFavorite(booking);
-                          }}
-                          className="focus:outline-none hover:bg-transparent bg-transparent transition-none mt-0 flex items-center justify-center"
-                        >
-                          {byeTeams.some(
-                            (byeTeam) => byeTeam._id === booking._id
-                          ) ? (
-                            <StarIcon className="text-yellow-500 w-5 h-5" />
-                          ) : (
-                            <Star className="text-gray-400 w-5 h-5" />
-                          )}
-                        </button>
-
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedTeams.some(
-                              (t) => t._id === booking._id
-                            )}
-                            onChange={(e) => handleTeamSelection(e, booking)}
-                            className="w-6 h-6 p-[7px_6px] rounded bg-transparent cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ))}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left Section: Team List */}
+            <div className="w-full lg:w-[380px] flex-shrink-0">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Registered Teams</h2>
+                  <p className="text-xs text-gray-400">{teams?.length || 0} teams available</p>
                 </div>
-                {selectedTeams.length >= 2 && (
+                {teams?.length >= 2 && (
                   <button
-                    onClick={handleGenerateButtonClick}
-                    className="flex h-[50px] px-6 py-2 justify-center items-center gap-[10px] rounded-[25px] bg-[#FF5500] hover:bg-[#CC4400] text-white mt-4"
+                    onClick={() => {
+                      if (selectedTeams.length === teams.length) {
+                        setSelectedTeams([]);
+                      } else {
+                        setSelectedTeams([...teams]);
+                      }
+                    }}
+                    className="text-xs font-semibold text-orange-500 hover:text-orange-600 transition w-auto bg-transparent"
                   >
-                    Generate Matches
+                    {selectedTeams.length === teams.length ? "Deselect All" : "Select All"}
                   </button>
                 )}
               </div>
+
+              {/* Selection counter */}
+              {selectedTeams.length > 0 && (
+                <div className="mb-3 px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-between">
+                  <span className="text-xs font-semibold text-orange-700">
+                    {selectedTeams.length} of {teams.length} selected
+                  </span>
+                  {byeTeams.length > 0 && (
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                      {byeTeams.length} BYE
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Team list */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex flex-col divide-y divide-gray-50 overflow-y-auto max-h-[480px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                  {teams?.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
+                        <FaUsers className="w-6 h-6 text-orange-300" />
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700">No teams yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Teams will appear here once registered</p>
+                    </div>
+                  ) : (
+                    teams?.map((booking) => {
+                      const isSelected = selectedTeams.some((t) => t._id === booking._id);
+                      const isFocused = selectedTournament?._id === booking._id;
+                      const isBye = byeTeams.some((b) => b._id === booking._id);
+                      return (
+                        <div
+                          key={booking._id}
+                          className={`flex items-center justify-between gap-3 px-4 py-3 cursor-pointer transition
+                            ${isFocused ? "bg-orange-50/60" : "hover:bg-gray-50"}
+                          `}
+                          onClick={() => setSelectedTournament(booking)}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0
+                              ${isSelected ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500"}`}>
+                              {booking.team.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-sm font-semibold text-gray-800 truncate">
+                              {booking.team.name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectFavorite(booking);
+                              }}
+                              title={isSelected ? "Mark as bye" : "Select team first"}
+                              className="focus:outline-none bg-transparent hover:bg-amber-50 p-1.5 rounded-lg transition w-auto mt-0"
+                            >
+                              {isBye ? (
+                                <StarIcon className="text-amber-500 w-4 h-4 fill-amber-500" />
+                              ) : (
+                                <Star className="text-gray-300 w-4 h-4" />
+                              )}
+                            </button>
+
+                            <label className="flex items-center cursor-pointer p-1.5">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => handleTeamSelection(e, booking)}
+                                className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500/20 cursor-pointer accent-orange-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {selectedTeams.length >= 2 && (
+                <button
+                  onClick={handleGenerateButtonClick}
+                  className="w-full mt-4 h-12 px-6 py-2 flex justify-center items-center gap-2 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-orange-200 transition active:scale-[0.98]"
+                >
+                  <Trophy className="w-4 h-4" />
+                  Generate Matches
+                </button>
+              )}
             </div>
 
             {/* Team Details */}
-            {selectedTournament && (
+            {selectedTournament ? (
               <div className="flex-1">
-                <div className="bg-white rounded-[24px] p-6 shadow-md text-black">
-                  <div className="flex justify-between items-start mb-3">
-                    <h2 className="text-lg font-semibold">Team Details</h2>
-                    <div className="text-right text-sm">
-                      <p className="font-medium">Registration Date</p>
-                      <p className="text-gray-500">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-black">
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-lg font-bold shadow-sm shadow-orange-200">
+                        {selectedTournament.team.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">{selectedTournament.team.name}</h2>
+                        <p className="text-xs text-gray-400">Team details</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Registered</p>
+                      <p className="text-xs text-gray-600 font-semibold mt-0.5">
                         {new Date(
                           selectedTournament.createdAt
                         ).toLocaleDateString("en-US", {
                           day: "numeric",
-                          month: "long",
+                          month: "short",
                           year: "numeric",
                         })}
                       </p>
                     </div>
                   </div>
 
-                  {/* Team Name */}
-                  <div className="flex items-center bg-gray-100 px-4 py-2 rounded-lg w-max text-orange-500 font-medium">
-                    <FaUsers className="mr-2" />
-                    <span>{selectedTournament.team.name}</span>
-                  </div>
-
                   {/* Cards Section */}
-                  <div className="flex gap-6 mt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Captain & Players */}
-                    <div className="bg-gray-100 rounded-lg p-4 flex-1">
-                      <h3 className="font-semibold text-orange-500 items-center">
-                        Captain:
-                      </h3>
-                      <p className="flex items-center mt-1">
-                        <FaCrown className="mr-2 text-gray-500" />
+                    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
+                          <FaCrown className="w-3 h-3 text-orange-500" />
+                        </div>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Captain</h3>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-800 mb-4 pl-1">
                         {selectedTournament.team.captain}
                       </p>
 
-                      <h3 className="font-semibold text-orange-500 mt-4">
-                        Players:
-                      </h3>
-                      {selectedTournament.team.players.map((player, index) => {
-                        return (
-                          <p key={index} className="flex items-center mt-1">
-                            <FaUser className="mr-2 text-gray-500" />
+                      <div className="flex items-center gap-2 mb-3 pt-3 border-t border-gray-100">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                          <FaUser className="w-3 h-3 text-emerald-600" />
+                        </div>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          Players ({selectedTournament.team.players?.length || 0})
+                        </h3>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {selectedTournament.team.players.map((player, index) => (
+                          <li key={index} className="text-sm text-gray-700 flex items-center gap-2 pl-1">
+                            <span className="w-1 h-1 rounded-full bg-gray-300" />
                             {player.name}
-                          </p>
-                        );
-                      })}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
 
                     {/* Substitutes */}
-                    <div className="bg-gray-100 rounded-lg p-4 flex-1">
-                      <h3 className="font-semibold text-orange-500">
-                        Substitutes:
-                      </h3>
-                      {selectedTournament.team.substitutes.map(
-                        (substitute, index) => {
-                          return (
-                            <p key={index} className="flex items-center mt-1">
-                              <FaSyncAlt className="mr-2 text-gray-500" />
+                    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                          <FaSyncAlt className="w-3 h-3 text-amber-600" />
+                        </div>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          Substitutes ({selectedTournament.team.substitutes?.length || 0})
+                        </h3>
+                      </div>
+                      {selectedTournament.team.substitutes?.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {selectedTournament.team.substitutes.map((substitute, index) => (
+                            <li key={index} className="text-sm text-gray-700 flex items-center gap-2 pl-1">
+                              <span className="w-1 h-1 rounded-full bg-gray-300" />
                               {substitute.name}
-                            </p>
-                          );
-                        }
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic pl-1">No substitutes</p>
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 hidden lg:flex items-center justify-center bg-white rounded-2xl border border-dashed border-gray-200 min-h-[400px]">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                    <FaUsers className="w-7 h-7 text-gray-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-500">Select a team</p>
+                  <p className="text-xs text-gray-400 mt-1">Click on a team to see its details</p>
                 </div>
               </div>
             )}
           </div>
         ) : selectedTab === "Round Robin" ? (
           // Round Robin View
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-[1400px] mx-auto">
             {!rrGenerated ? (
               // Generate Round Robin Form
-              <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 max-w-2xl mx-auto">
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Trophy className="w-8 h-8 text-orange-500" />
@@ -1186,7 +1267,7 @@ const TeamKnockouts = () => {
                 <button
                   onClick={handleGenerateRoundRobin}
                   disabled={rrLoading || teams.length < 2}
-                  className="w-full py-3 bg-orange-500 hover:bg-[#003d75] text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-sm shadow-orange-200 transition disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   {rrLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trophy className="w-5 h-5" />}
                   {rrLoading ? "Generating..." : "Generate Round Robin Matches"}
@@ -1199,119 +1280,207 @@ const TeamKnockouts = () => {
                 )}
               </div>
             ) : (
-              // Round Robin Results
-              <div className="space-y-6">
+              // Round Robin Results — split into 2 columns to reduce vertical scroll
+              <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Round Robin</h3>
-                    <p className="text-gray-500 text-sm">
-                      {rrMatches.length} matches • {rrMatches.filter((m) => m.status === "COMPLETED").length} completed
+                    <h3 className="text-lg font-bold text-gray-900">Round Robin League</h3>
+                    <p className="text-xs text-gray-500">
+                      {rrMatches.length} matches • {rrMatches.filter((m) => m.status === "COMPLETED").length} completed • {rrMatches.filter((m) => m.status !== "COMPLETED").length} pending
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={fetchRoundRobin}
-                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"
+                      className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition w-auto border border-gray-200"
                     >
-                      <RefreshCcw className="w-4 h-4" /> Refresh
+                      <RefreshCcw className="w-3.5 h-3.5" /> Refresh
                     </button>
                     <button
                       onClick={handleDeleteRoundRobin}
-                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-medium transition-colors"
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-semibold transition w-auto border border-red-100"
                     >
                       Reset
                     </button>
                   </div>
                 </div>
 
-                {/* Points Table */}
-                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h4 className="font-bold text-gray-900">Points Table</h4>
+                {/* 2-column split: Standings (left, sticky) + Matches grid (right) */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                  {/* LEFT — Points Table (sticky on desktop) */}
+                  <div className="lg:col-span-2">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden lg:sticky lg:top-4">
+                      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-gray-900">Points Table</h4>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{rrStandings.length} teams</span>
+                      </div>
+                      <div className="overflow-x-auto max-h-[70vh]">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                              <th className="text-left px-3 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">#</th>
+                              <th className="text-left px-2 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Team</th>
+                              <th className="text-center px-1.5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider" title="Played">P</th>
+                              <th className="text-center px-1.5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider" title="Won">W</th>
+                              <th className="text-center px-1.5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider" title="Lost">L</th>
+                              <th className="text-center px-1.5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider" title="Sets Won">SW</th>
+                              <th className="text-center px-1.5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider" title="Sets Lost">SL</th>
+                              <th className="text-center px-2 py-2.5 text-[10px] font-bold text-orange-500 uppercase tracking-wider">Pts</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {rrStandings.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-400">
+                                  Standings will appear once matches are played
+                                </td>
+                              </tr>
+                            ) : (
+                              rrStandings.map((team, i) => (
+                                <tr key={team.teamId} className={`hover:bg-orange-50/30 transition ${i < 2 ? "bg-emerald-50/40" : ""}`}>
+                                  <td className="px-3 py-2.5">
+                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
+                                      i === 0 ? "bg-amber-100 text-amber-700" :
+                                      i === 1 ? "bg-gray-200 text-gray-700" :
+                                      i === 2 ? "bg-orange-100 text-orange-700" :
+                                      "text-gray-400"
+                                    }`}>
+                                      {i + 1}
+                                    </span>
+                                  </td>
+                                  <td className="px-2 py-2.5">
+                                    <div className="font-semibold text-gray-900 text-xs truncate max-w-[120px]" title={team.teamName}>{team.teamName}</div>
+                                  </td>
+                                  <td className="text-center px-1.5 py-2.5 text-gray-600">{team.played}</td>
+                                  <td className="text-center px-1.5 py-2.5 font-semibold text-emerald-600">{team.won}</td>
+                                  <td className="text-center px-1.5 py-2.5 font-semibold text-red-400">{team.lost}</td>
+                                  <td className="text-center px-1.5 py-2.5 text-gray-500">{team.setsWon}</td>
+                                  <td className="text-center px-1.5 py-2.5 text-gray-500">{team.setsLost}</td>
+                                  <td className="text-center px-2 py-2.5 font-black text-orange-500 text-sm">{team.points}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-[10px] text-gray-400">
+                        <span className="font-semibold">P</span> Played · <span className="font-semibold">W</span> Won · <span className="font-semibold">L</span> Lost · <span className="font-semibold">SW/SL</span> Sets · <span className="font-semibold">Pts</span> Points
+                      </div>
+                    </div>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">#</th>
-                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Team</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">P</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">W</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">L</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">SW</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">SL</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">GW</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">GL</th>
-                          <th className="text-center px-3 py-3 text-xs font-bold text-brand-600 uppercase tracking-wider font-black">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {rrStandings.map((team, i) => (
-                          <tr key={team.teamId} className={`hover:bg-gray-50 ${i < 2 ? "bg-green-50/50" : ""}`}>
-                            <td className="px-6 py-3 font-bold text-gray-400">{i + 1}</td>
-                            <td className="px-4 py-3">
-                              <div className="font-semibold text-gray-900">{team.teamName}</div>
-                            </td>
-                            <td className="text-center px-3 py-3 text-gray-600">{team.played}</td>
-                            <td className="text-center px-3 py-3 font-semibold text-green-600">{team.won}</td>
-                            <td className="text-center px-3 py-3 font-semibold text-red-500">{team.lost}</td>
-                            <td className="text-center px-3 py-3 text-gray-600">{team.setsWon}</td>
-                            <td className="text-center px-3 py-3 text-gray-600">{team.setsLost}</td>
-                            <td className="text-center px-3 py-3 text-gray-600">{team.gamesWon}</td>
-                            <td className="text-center px-3 py-3 text-gray-600">{team.gamesLost}</td>
-                            <td className="text-center px-3 py-3 font-black text-orange-500 text-base">{team.points}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
 
-                {/* Match List */}
-                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h4 className="font-bold text-gray-900">All Matches</h4>
-                  </div>
-                  <div className="divide-y divide-gray-50">
-                    {rrMatches.map((match) => {
-                      const t1 = match.team1Id?.teamName || "Team 1";
-                      const t2 = match.team2Id?.teamName || "Team 2";
-                      const isCompleted = match.status === "COMPLETED";
-                      return (
-                        <div key={match._id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                              isCompleted ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                            }`}>
-                              {isCompleted ? "Done" : "Pending"}
-                            </span>
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <span className={`font-semibold text-sm truncate ${isCompleted && match.matchWinner === "home" ? "text-green-600" : "text-gray-900"}`}>
-                                {t1}
-                              </span>
-                              {isCompleted && (
-                                <span className="text-xs font-bold text-gray-400">
-                                  {match.setsWon?.home || 0} - {match.setsWon?.away || 0}
-                                </span>
-                              )}
-                              <span className="text-xs text-gray-300">vs</span>
-                              {isCompleted && (
-                                <span className="text-xs font-bold text-gray-400">
-                                  {match.setsWon?.away || 0} - {match.setsWon?.home || 0}
-                                </span>
-                              )}
-                              <span className={`font-semibold text-sm truncate ${isCompleted && match.matchWinner === "away" ? "text-green-600" : "text-gray-900"}`}>
-                                {t2}
-                              </span>
-                            </div>
+                  {/* RIGHT — Matches grid */}
+                  <div className="lg:col-span-3 space-y-4">
+                    {/* Pending matches */}
+                    {rrMatches.filter((m) => m.status !== "COMPLETED").length > 0 && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-500" />
+                            <h4 className="text-sm font-bold text-gray-900">Pending Matches</h4>
                           </div>
-                          <div className="text-xs text-gray-400 shrink-0">
-                            {match.courtNumber !== "TBD" && `Court ${match.courtNumber}`}
-                          </div>
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                            {rrMatches.filter((m) => m.status !== "COMPLETED").length}
+                          </span>
                         </div>
-                      );
-                    })}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-gray-50 max-h-[35vh] overflow-y-auto">
+                          {rrMatches.filter((m) => m.status !== "COMPLETED").map((match) => {
+                            const t1 = match.team1Id?.teamName || "Team 1";
+                            const t2 = match.team2Id?.teamName || "Team 2";
+                            return (
+                              <div key={match._id} className="bg-white p-3 hover:bg-orange-50/30 transition group">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Pending
+                                  </span>
+                                  {match.courtNumber && match.courtNumber !== "TBD" && (
+                                    <span className="text-[10px] text-gray-400 font-medium">Court {match.courtNumber}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <span className="font-semibold text-xs text-gray-900 truncate flex-1" title={t1}>{t1}</span>
+                                  <span className="text-[10px] text-gray-300 font-bold">VS</span>
+                                  <span className="font-semibold text-xs text-gray-900 truncate flex-1 text-right" title={t2}>{t2}</span>
+                                </div>
+                                <button
+                                  onClick={() => openMatchScoreboard(match)}
+                                  className="w-full mt-1 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 transition active:scale-[0.97]"
+                                >
+                                  <Play className="w-3 h-3 fill-white" /> Play Match
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Completed matches */}
+                    {rrMatches.filter((m) => m.status === "COMPLETED").length > 0 && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <h4 className="text-sm font-bold text-gray-900">Completed</h4>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {rrMatches.filter((m) => m.status === "COMPLETED").length}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-gray-50 max-h-[35vh] overflow-y-auto">
+                          {rrMatches.filter((m) => m.status === "COMPLETED").map((match) => {
+                            const t1 = match.team1Id?.teamName || "Team 1";
+                            const t2 = match.team2Id?.teamName || "Team 2";
+                            const homeWon = match.matchWinner === "home";
+                            const awayWon = match.matchWinner === "away";
+                            return (
+                              <div
+                                key={match._id}
+                                onClick={() => openMatchScoreboard(match)}
+                                className="bg-white p-3 hover:bg-emerald-50/30 transition cursor-pointer"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Completed
+                                  </span>
+                                  {match.courtNumber && match.courtNumber !== "TBD" && (
+                                    <span className="text-[10px] text-gray-400 font-medium">Court {match.courtNumber}</span>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={`font-semibold text-xs truncate flex-1 ${homeWon ? "text-emerald-600" : "text-gray-700"}`} title={t1}>
+                                      {t1}
+                                    </span>
+                                    <span className={`text-xs font-black ${homeWon ? "text-emerald-600" : "text-gray-400"}`}>
+                                      {match.setsWon?.home || 0}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={`font-semibold text-xs truncate flex-1 ${awayWon ? "text-emerald-600" : "text-gray-700"}`} title={t2}>
+                                      {t2}
+                                    </span>
+                                    <span className={`text-xs font-black ${awayWon ? "text-emerald-600" : "text-gray-400"}`}>
+                                      {match.setsWon?.away || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {rrMatches.length === 0 && (
+                      <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                          <Trophy className="w-6 h-6 text-gray-300" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-500">No matches yet</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1333,35 +1502,155 @@ const TeamKnockouts = () => {
 
       {showDoublesNominationModal && <DoublesNominationModal />}
 
+      {showGenerationChoiceModal && (() => {
+        const allSelected = teams.length > 0 && selectedTeams.length === teams.length;
+        const totalRR = (selectedTeams.length * (selectedTeams.length - 1)) / 2;
+        const isPowerOf2 = selectedTeams.length >= 2 &&
+          Math.log2(selectedTeams.length) === Math.floor(Math.log2(selectedTeams.length));
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Choose Match Format</h2>
+                  <p className="text-xs text-white/80 mt-0.5">
+                    {selectedTeams.length} teams selected
+                    {allSelected && " (all teams)"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowGenerationChoiceModal(false)}
+                  className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition w-auto text-white text-lg leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Knockout Card */}
+                <button
+                  onClick={proceedWithKnockout}
+                  className="text-left bg-white border-2 border-gray-100 hover:border-orange-500 hover:shadow-lg rounded-2xl p-5 transition-all group w-auto"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 group-hover:bg-orange-100 flex items-center justify-center mb-3 transition">
+                    <Trophy className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-base mb-1">Knockout Tournament</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                    Single elimination bracket. Loser is out, winner advances to next round.
+                  </p>
+                  <div className="space-y-1 pt-3 border-t border-gray-100">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Rounds</span>
+                      <span className="font-semibold text-gray-700">{calculateTotalRounds(selectedTeams.length)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Byes needed</span>
+                      <span className="font-semibold text-gray-700">{byesNeeded}</span>
+                    </div>
+                    {!isPowerOf2 && (
+                      <p className="text-[10px] text-amber-600 mt-2 font-medium">
+                        ⚠ Assign {byesNeeded} bye{byesNeeded > 1 ? "s" : ""} first
+                      </p>
+                    )}
+                  </div>
+                </button>
+
+                {/* Round Robin Card */}
+                <button
+                  onClick={proceedWithRoundRobin}
+                  className={`text-left bg-white border-2 rounded-2xl p-5 transition-all group w-auto ${
+                    allSelected
+                      ? "border-emerald-500 shadow-md hover:shadow-lg ring-2 ring-emerald-100"
+                      : "border-gray-100 hover:border-emerald-500 hover:shadow-lg"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition">
+                      <FaUsers className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    {allSelected && (
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full uppercase tracking-wider">
+                        Recommended
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-base mb-1">Round Robin League</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                    Every team plays every other team. Points table decides the winner.
+                  </p>
+                  <div className="space-y-1 pt-3 border-t border-gray-100">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Total matches</span>
+                      <span className="font-semibold text-gray-700">{totalRR}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">No byes needed</span>
+                      <span className="font-semibold text-emerald-600">✓</span>
+                    </div>
+                    {!allSelected && (
+                      <p className="text-[10px] text-amber-600 mt-2 font-medium">
+                        ⚠ Works best with all teams selected
+                      </p>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              <div className="px-6 pb-5">
+                <button
+                  onClick={() => setShowGenerationChoiceModal(false)}
+                  className="w-full py-2.5 text-gray-500 hover:text-gray-700 text-sm font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showSubstituteModal && <SubstituteModal />}
       {showStructureAlert && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 relative">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
-              Tournament Structure Recommendation
-            </h2>
-
-            <div className="space-y-4 text-center">
-              <p className="text-lg font-normal text-gray-700">
-                You have selected {selectedTeams.length} teams
-              </p>
-
-              <p className="text-xl font-medium text-gray-900">
-                Please assigned exactly {byesNeeded} bye
-                {byesNeeded > 1 ? "s" : ""} to balance the tournament
-              </p>
-
-              <p className="text-lg font-normal text-gray-700">
-                Currently assigned: {String(byeTeams.length).padStart(2, "0")}
-              </p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5">
+              <h2 className="text-base font-bold text-white">Bye Assignment Required</h2>
+              <p className="text-xs text-white/80 mt-0.5">Balance the bracket before generating</p>
             </div>
 
-            <div className="flex justify-center mt-4">
+            <div className="p-6">
+              <p className="text-sm text-gray-600 text-center mb-5">
+                You have selected <strong className="text-gray-900">{selectedTeams.length}</strong> teams.
+                A knockout bracket needs exactly{" "}
+                <strong className="text-orange-600">
+                  {byesNeeded} bye{byesNeeded > 1 ? "s" : ""}
+                </strong>{" "}
+                to be balanced.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <div className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Required</p>
+                  <p className="text-2xl font-black text-orange-500 mt-1">{byesNeeded}</p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assigned</p>
+                  <p className={`text-2xl font-black mt-1 ${byeTeams.length === byesNeeded ? "text-emerald-500" : "text-gray-700"}`}>
+                    {String(byeTeams.length).padStart(2, "0")}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-gray-400 text-center mb-5">
+                Tap the <Star className="w-3 h-3 inline -mt-0.5 text-amber-500" /> star next to a selected team to mark it as a bye.
+              </p>
+
               <button
                 onClick={() => setShowStructureAlert(false)}
-                className="h-[50px] px-6 py-2 rounded-[25px] bg-[#FF5500] hover:bg-[#CC4400] text-white"
+                className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm shadow-orange-200 transition active:scale-[0.98]"
               >
-                OK
+                Got it
               </button>
             </div>
           </div>
