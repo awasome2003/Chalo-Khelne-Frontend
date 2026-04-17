@@ -662,16 +662,15 @@ const GroupStageManagement = () => {
   // 🔥 HANDLE DIRECT KNOCKOUT PLAYER SELECTION
   const handleDirectKnockoutPlayerSelection = () => {
     const count = selectedDirectKnockoutPlayers.length;
-    const validSizes = [16, 32, 64];
+    const validSizes = [4, 8, 16, 32, 64, 128];
 
-    if (count < 16) {
-      toast.warn(`Minimum 16 players required for knockout. Currently selected: ${count}`);
+    if (count < 3) {
+      toast.warn(`Minimum 3 players required for knockout. Currently selected: ${count}`);
       return;
     }
 
-    if (!validSizes.includes(count)) {
-      const nearest = validSizes.find(d => d >= count) || 64;
-      toast.warn(`Knockout draw must be exactly 16, 32, or 64 players. Currently: ${count}. ${count < nearest ? `Need ${nearest - count} more.` : `Remove ${count - 64} players.`}`);
+    if (count > 128) {
+      toast.warn(`Maximum 128 players supported for knockout. Currently selected: ${count}`);
       return;
     }
 
@@ -1499,14 +1498,12 @@ const GroupStageManagement = () => {
                         <button
                           onClick={() => {
                             const count = superPlayers.length;
-                            const validDraws = [16, 32, 64];
-                            if (count < 16) {
-                              toast.warn(`Minimum 16 Super Players required for knockout. Currently: ${count}`);
+                            if (count < 3) {
+                              toast.warn(`Minimum 3 Super Players required for knockout. Currently: ${count}`);
                               return;
                             }
-                            if (!validDraws.includes(count)) {
-                              const nearest = validDraws.find(d => d >= count) || 64;
-                              toast.warn(`Knockout requires exactly 16, 32, or 64 players. Currently: ${count}. ${count < nearest ? `Need ${nearest - count} more players for a ${nearest}-draw.` : `Remove ${count - validDraws[validDraws.length - 1]} players or select fewer.`}`);
+                            if (count > 128) {
+                              toast.warn(`Maximum 128 players supported for knockout. Currently: ${count}`);
                               return;
                             }
                             setShowKnockoutModal(true);
@@ -2313,14 +2310,17 @@ const GroupStageManagement = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                {[16, 32, 64].map((size) => {
-                  const isAvailable = topPlayers.length >= size;
+                {[4, 8, 16, 32, 64, 128].map((size) => {
+                  const minForSize = Math.ceil(size / 2) + 1;
+                  const isAvailable = topPlayers.length >= minForSize;
+                  const actualPlayers = Math.min(topPlayers.length, size);
+                  const byes = size - actualPlayers;
                   return (
                     <button
                       key={size}
                       onClick={() => {
                         if (isAvailable) {
-                          const newSelection = topPlayers.slice(0, size);
+                          const newSelection = topPlayers.slice(0, Math.min(topPlayers.length, size));
                           setSelectedDirectKnockoutPlayers(newSelection);
                           setShowDirectKnockoutPlayerModal(false);
                           setShowDirectKnockoutScheduleModal(true);

@@ -27,17 +27,18 @@ export default function TopPlayersPanel({ onOpenMatchModal, onOpenBulkScore, onO
       setValidationStatus({ isValid: false, message: "Select players for Direct Knockout" });
       return;
     }
-    const validSizes = [16, 32, 64];
-    if (validSizes.includes(count)) {
+    const validSizes = [4, 8, 16, 32, 64, 128];
+    if (count < 3) {
+      setValidationStatus({ isValid: false, message: "Need at least 3 players for knockout" });
+    } else if (count > 128) {
+      setValidationStatus({ isValid: false, message: "Maximum 128 players supported" });
+    } else {
+      const drawSize = validSizes.find((s) => s >= count) || 128;
+      const byes = drawSize - count;
+      const byeMsg = byes > 0 ? ` (${byes} BYEs will be given)` : "";
       setValidationStatus({
         isValid: true,
-        message: `${count} players selected — ${Math.log2(count)} rounds, ${count - 1} matches`,
-      });
-    } else {
-      const nearest = validSizes.find((s) => s >= count) || 64;
-      setValidationStatus({
-        isValid: false,
-        message: `${count} is not a valid draw size. Valid: ${validSizes.join(", ")}. Need ${nearest - count} more players for ${nearest}-draw.`,
+        message: `${count} players → ${drawSize}-draw, ${Math.log2(drawSize)} rounds, ${drawSize - 1} matches${byeMsg}`,
       });
     }
   };

@@ -55,7 +55,20 @@ export default function BulkScoreUploadModal({
     }
   }, [isOpen, matches, maxSets]);
 
-  if (!isOpen || matches.length === 0) return null;
+  if (!isOpen) return null;
+
+  if (matches.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md p-6 text-center">
+          <p className="text-gray-500 text-sm mb-4">No matches are ready for scoring. All matches are either completed or waiting for players.</p>
+          <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 w-auto">
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Name resolvers
   const getName = (match, side) => {

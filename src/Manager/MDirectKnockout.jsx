@@ -9,7 +9,21 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
 
-const DRAW_SIZES = [16, 32, 64];
+const DRAW_SIZES = [4, 8, 16, 32, 64, 128];
+
+// Standard seeding order algorithm (same as backend getSeedOrder)
+const getSeedOrder = (size) => {
+  let seeds = [1, 2];
+  while (seeds.length < size) {
+    let next = [];
+    for (let i = 0; i < seeds.length; i++) {
+      next.push(seeds[i]);
+      next.push(2 * seeds.length + 1 - seeds[i]);
+    }
+    seeds = next;
+  }
+  return seeds;
+};
 
 export default function MDirectKnockout() {
   const [searchParams] = useSearchParams();
@@ -30,6 +44,10 @@ export default function MDirectKnockout() {
   const [drawSize, setDrawSize] = useState(16);
   const [searchQuery, setSearchQuery] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [drawMethod, setDrawMethod] = useState("standard"); // standard | random | hybrid | custom
+  const [numberOfSeeds, setNumberOfSeeds] = useState(16); // how many top players get fixed seeding positions (defaults to drawSize for standard)
+  const [customSlots, setCustomSlots] = useState([]); // array of drawSize, each slot = player object or null
+  const [activeSlot, setActiveSlot] = useState(null); // which slot index is selected for placement
 
   // Scoring state
   const [activeMatch, setActiveMatch] = useState(null);
@@ -98,7 +116,7 @@ export default function MDirectKnockout() {
       setSelectedPlayers((prev) => prev.filter((p) => (p.playerId || p._id) !== id));
     } else {
       if (selectedPlayers.length >= drawSize) {
-        toast.info(`You can only select exactly ${drawSize} players for a ${drawSize}-draw. Remove a player first or change draw size.`);
+        toast.info(`Maximum ${drawSize} players for a ${drawSize}-draw. Remove a player first or change draw size.`);
         return;
       }
       setSelectedPlayers((prev) => [...prev, player]);
@@ -107,22 +125,77 @@ export default function MDirectKnockout() {
 
   const selectAll = () => {
     const filtered = getFilteredPlayers();
-    if (selectedPlayers.length === filtered.length && filtered.length === drawSize) {
+    if (selectedPlayers.length === filtered.length) {
       setSelectedPlayers([]);
-    } else if (filtered.length === drawSize) {
-      setSelectedPlayers(filtered);
-    } else if (filtered.length > drawSize) {
-      toast.info(`Can only select exactly ${drawSize} players. ${filtered.length} available — adjust draw size or filter.`);
-      setSelectedPlayers(filtered.slice(0, drawSize));
     } else {
-      setSelectedPlayers(filtered);
+      const toSelect = filtered.slice(0, drawSize);
+      setSelectedPlayers(toSelect);
     }
   };
 
+  const movePlayer = (fromIndex, toIndex) => {
+    setSelectedPlayers((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+  };
+
+  // Custom placement helpers
+  const initCustomSlots = (size) => {
+    setCustomSlots(Array.from({ length: size }, () => null));
+    setActiveSlot(null);
+  };
+
+  const placePlayerInSlot = (player) => {
+    if (activeSlot === null) {
+      // Find first empty slot
+      const firstEmpty = customSlots.findIndex((s) => s === null);
+      if (firstEmpty === -1) { toast.info("All slots are filled"); return; }
+      setCustomSlots((prev) => { const u = [...prev]; u[firstEmpty] = player; return u; });
+    } else {
+      setCustomSlots((prev) => { const u = [...prev]; u[activeSlot] = player; return u; });
+      setActiveSlot(null);
+    }
+  };
+
+  const removeFromSlot = (slotIndex) => {
+    setCustomSlots((prev) => { const u = [...prev]; u[slotIndex] = null; return u; });
+  };
+
+  const getCustomPlayerIds = () => {
+    return new Set(customSlots.filter(Boolean).map((p) => String(p.playerId || p._id || "")));
+  };
+
+  // Get IDs of players already in the bracket
+  const getPlayersInBracket = () => {
+    if (matches.length === 0) return new Set();
+    const ids = new Set();
+    matches.forEach((m) => {
+      const p1Id = m.player1?.playerId?._id || m.player1?.playerId;
+      const p2Id = m.player2?.playerId?._id || m.player2?.playerId;
+      if (p1Id) ids.add(p1Id.toString());
+      if (p2Id) ids.add(p2Id.toString());
+    });
+    return ids;
+  };
+
   const getFilteredPlayers = () => {
-    if (!searchQuery.trim()) return registeredPlayers;
+    const inBracket = getPlayersInBracket();
+    let available = registeredPlayers;
+
+    // Exclude players already in the bracket
+    if (inBracket.size > 0) {
+      available = available.filter((p) => {
+        const id = (p.playerId || p._id || "").toString();
+        return !inBracket.has(id);
+      });
+    }
+
+    if (!searchQuery.trim()) return available;
     const q = searchQuery.toLowerCase();
-    return registeredPlayers.filter(
+    return available.filter(
       (p) =>
         (p.userName || p.playerName || p.name || "").toLowerCase().includes(q)
     );
@@ -130,27 +203,49 @@ export default function MDirectKnockout() {
 
   // Generate bracket
   const handleGenerate = async () => {
-    if (selectedPlayers.length < 2) {
-      toast.warn("Select at least 2 players");
-      return;
-    }
+    let players;
 
-    if (selectedPlayers.length !== drawSize) {
-      toast.info(`You must select exactly ${drawSize} players for a ${drawSize}-draw. Currently selected: ${selectedPlayers.length}`);
-      return;
+    if (drawMethod === "custom") {
+      const placed = customSlots.filter(Boolean);
+      if (placed.length < 2) { toast.warn("Place at least 2 players"); return; }
+      const minNeeded = Math.ceil(drawSize / 2) + 1;
+      if (placed.length < minNeeded) { toast.info(`Need at least ${minNeeded} players for a ${drawSize}-draw`); return; }
+
+      // Convert from bracket-line order to seed-rank order
+      // customSlots[i] is at bracket line i, which has seed number seedOrder[i]
+      // Backend expects: index 0 = Seed 1 (rank 1), index 1 = Seed 2 (rank 2), etc.
+      const seedOrder = getSeedOrder(drawSize);
+      const bySeedRank = new Array(drawSize).fill(null);
+      for (let i = 0; i < drawSize; i++) {
+        if (customSlots[i]) {
+          bySeedRank[seedOrder[i] - 1] = customSlots[i]; // seedOrder[i] is 1-based
+        }
+      }
+      players = bySeedRank.filter(Boolean).map((p) => ({
+        playerId: p.playerId || p._id,
+        userName: p.userName || p.playerName || p.name,
+      }));
+    } else {
+      if (selectedPlayers.length < 2) { toast.warn("Select at least 2 players"); return; }
+      if (selectedPlayers.length > drawSize) { toast.info(`Too many players for a ${drawSize}-draw`); return; }
+      const minNeeded = Math.ceil(drawSize / 2) + 1;
+      if (selectedPlayers.length < minNeeded) { toast.info(`Need at least ${minNeeded} players for a ${drawSize}-draw`); return; }
+
+      players = selectedPlayers.map((p) => ({
+        playerId: p.playerId || p._id,
+        userName: p.userName || p.playerName || p.name,
+      }));
     }
 
     setGenerating(true);
     try {
-      const players = selectedPlayers.map((p) => ({
-        playerId: p.playerId || p._id,
-        userName: p.userName || p.playerName || p.name,
-      }));
-
+      // For custom mode: send players in seed-slot order, backend treats as standard (input order = seed order)
       const res = await axios.post("/api/tournaments/direct-knockout/standalone/create", {
         tournamentId,
         players,
         drawSize,
+        drawMethod: drawMethod === "custom" ? "standard" : drawMethod,
+        numberOfSeeds: drawMethod === "random" ? 0 : drawMethod === "standard" || drawMethod === "custom" ? players.length : numberOfSeeds,
         schedule: {
           startDate: new Date().toISOString().split("T")[0],
           startTime: "10:00",
@@ -160,7 +255,11 @@ export default function MDirectKnockout() {
       });
 
       if (res.data.success) {
-        toast.info(`Bracket created! ${res.data.bracket.totalMatches} matches across ${res.data.bracket.totalRounds} rounds`);
+        const byeCount = res.data.bracket?.byeCount || 0;
+        const byeMsg = byeCount > 0 ? ` (${byeCount} auto-BYEs given)` : "";
+        toast.info(`Bracket created! ${res.data.bracket.totalMatches} matches across ${res.data.bracket.totalRounds} rounds${byeMsg}`);
+        setSelectedPlayers([]);
+        setCustomSlots([]);
         setActiveTab("bracket");
         fetchMatches();
       } else {
@@ -231,10 +330,12 @@ export default function MDirectKnockout() {
   // Round display helpers
   const getRoundDisplayName = (roundName) => {
     const names = {
+      "round-of-128": "Round of 128",
       "round-of-64": "Round of 64",
       "round-of-32": "Round of 32",
       "round-of-16": "Round of 16",
-      "round-of-8": "Quarter-Finals",
+      "round-of-8": "Round of 8",
+      "round-of-4": "Round of 4",
       "quarter-final": "Quarter-Finals",
       "semi-final": "Semi-Finals",
       final: "Final",
@@ -278,7 +379,7 @@ export default function MDirectKnockout() {
   };
 
   const hasBracket = matches.length > 0;
-  const pendingMatches = matches.filter((m) => m.status !== "COMPLETED" && m.player1?.playerId && m.player2?.playerId);
+  const pendingMatches = matches.filter((m) => m.status !== "COMPLETED" && m.player1?.playerName && m.player1.playerName !== "TBD" && m.player2?.playerName && m.player2.playerName !== "TBD");
   const completedCount = matches.filter((m) => m.status === "COMPLETED").length;
   const champion = matches.find((m) => m.round === "final" && m.status === "COMPLETED")?.result?.winner;
 
@@ -402,7 +503,7 @@ export default function MDirectKnockout() {
                         key={match._id}
                         className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-md ${match.status === "COMPLETED"
                             ? "border-green-200 bg-green-50/30"
-                            : match.player1?.playerId && match.player2?.playerId
+                            : match.player1?.playerName && match.player1.playerName !== "TBD" && match.player2?.playerName && match.player2.playerName !== "TBD"
                               ? "border-orange-200 bg-orange-50/30"
                               : "border-gray-200 bg-gray-50/30 opacity-60"
                           }`}
@@ -431,7 +532,7 @@ export default function MDirectKnockout() {
                                 {match.result?.finalScore?.player1Sets || 0}
                               </span>
                             )}
-                            {match.status !== "COMPLETED" && match.player1?.playerId && match.player2?.playerId && (
+                            {match.status !== "COMPLETED" && match.player1?.playerName && match.player1.playerName !== "TBD" && match.player2?.playerName && match.player2.playerName !== "TBD" && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -462,7 +563,7 @@ export default function MDirectKnockout() {
                                 {match.result?.finalScore?.player2Sets || 0}
                               </span>
                             )}
-                            {match.status !== "COMPLETED" && match.player1?.playerId && match.player2?.playerId && (
+                            {match.status !== "COMPLETED" && match.player1?.playerName && match.player1.playerName !== "TBD" && match.player2?.playerName && match.player2.playerName !== "TBD" && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -511,13 +612,13 @@ export default function MDirectKnockout() {
           {/* Draw Size Selector */}
           <div className="mb-6">
             <label className="text-sm font-medium text-gray-600 mb-2 block">Draw Size</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {DRAW_SIZES.map((size) => {
                 const tooSmall = selectedPlayers.length > size;
                 return (
                   <button
                     key={size}
-                    onClick={() => !tooSmall && setDrawSize(size)}
+                    onClick={() => { if (!tooSmall) { setDrawSize(size); if (drawMethod === "custom") initCustomSlots(size); } }}
                     disabled={tooSmall}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all w-auto ${tooSmall
                         ? "bg-red-50 text-red-300 border-2 border-red-200 cursor-not-allowed"
@@ -527,115 +628,401 @@ export default function MDirectKnockout() {
                       }`}
                   >
                     {size} Draw
-                    {tooSmall && (
-                      <span className="block text-[9px] font-normal mt-0.5">
-                        Max {size} players
-                      </span>
-                    )}
                   </button>
                 );
               })}
             </div>
             <p className="text-xs mt-1">
-              <span className={selectedPlayers.length === drawSize ? "text-green-600 font-semibold" : "text-gray-400"}>
-                {selectedPlayers.length}/{drawSize} players selected
-              </span>
-              {selectedPlayers.length !== drawSize && selectedPlayers.length > 0 && (
-                <span className="text-orange-500 font-semibold">
-                  {" "}— Need exactly {drawSize} players ({drawSize - selectedPlayers.length > 0 ? `${drawSize - selectedPlayers.length} more` : `remove ${selectedPlayers.length - drawSize}`})
-                </span>
-              )}
-              {selectedPlayers.length === drawSize && " ✓ Ready to generate"}
+              {(() => {
+                const count = drawMethod === "custom" ? customSlots.filter(Boolean).length : selectedPlayers.length;
+                const minNeeded = Math.ceil(drawSize / 2) + 1;
+                const byes = drawSize - count;
+                if (count > drawSize) {
+                  return <span className="text-red-500 font-semibold">{count}/{drawSize} players — too many, remove {count - drawSize}</span>;
+                }
+                if (count < minNeeded) {
+                  return <span className="text-orange-500 font-semibold">{count}/{drawSize} players — need at least {minNeeded} (missing {minNeeded - count})</span>;
+                }
+                if (count === drawSize) {
+                  return <span className="text-green-600 font-semibold">{count}/{drawSize} players placed ✓ Ready to generate</span>;
+                }
+                return <span className="text-green-600 font-semibold">{count}/{drawSize} players placed ✓ Ready ({byes} BYEs will be given automatically)</span>;
+              })()}
             </p>
           </div>
 
-          {/* Search + Select All */}
-          <div className="flex gap-3 mb-4">
-            <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search players..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-              />
+          {/* Draw Method Selector */}
+          <div className="mb-6">
+            <label className="text-sm font-medium text-gray-600 mb-2 block">Draw Method</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: "standard", label: "Standard Seeding", desc: "All players placed by seed rank. Top seeds separated.", icon: "🏆" },
+                { value: "random", label: "Random Draw", desc: "All players placed randomly. No seeding advantage.", icon: "🎲" },
+                { value: "hybrid", label: "Seeded + Random", desc: "Top N seeded, rest random.", icon: "⚡" },
+                { value: "custom", label: "Custom Placement", desc: "Manually place each player into bracket positions.", icon: "🎯" },
+              ].map((method) => (
+                <button
+                  key={method.value}
+                  onClick={() => {
+                    setDrawMethod(method.value);
+                    if (method.value === "standard") setNumberOfSeeds(selectedPlayers.length || drawSize);
+                    else if (method.value === "random") setNumberOfSeeds(0);
+                    else if (method.value === "hybrid") setNumberOfSeeds(Math.min(Math.floor(drawSize / 2), selectedPlayers.length));
+                    else if (method.value === "custom") { initCustomSlots(drawSize); setNumberOfSeeds(Math.floor(drawSize / 4)); }
+                  }}
+                  className={`p-4 rounded-xl border-2 text-left transition-all w-auto ${drawMethod === method.value
+                      ? "border-orange-500 bg-orange-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
+                    }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">{method.icon}</span>
+                    <span className={`text-sm font-bold ${drawMethod === method.value ? "text-orange-700" : "text-gray-800"}`}>{method.label}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-tight">{method.desc}</p>
+                </button>
+              ))}
             </div>
-            <button
-              onClick={selectAll}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 w-auto"
-            >
-              {selectedPlayers.length === getFilteredPlayers().length ? "Deselect All" : "Select All"}
-            </button>
           </div>
 
-          {/* Player Grid */}
-          <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-xl">
-            {getFilteredPlayers().length === 0 ? (
-              <div className="p-8 text-center text-gray-400">
-                <Users size={32} className="mx-auto mb-2" />
-                <p>No registered players found</p>
+          {/* Number of Seeded Players — for Hybrid and Custom modes */}
+          {(drawMethod === "hybrid" || drawMethod === "custom") && (
+            <div className="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Number of Seeded Players</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={drawMethod === "custom" ? drawSize : Math.min(selectedPlayers.length, drawSize)}
+                    value={numberOfSeeds}
+                    onChange={(e) => {
+                      const maxVal = drawMethod === "custom" ? drawSize : Math.min(selectedPlayers.length, drawSize);
+                      const val = Math.max(0, Math.min(parseInt(e.target.value) || 0, maxVal));
+                      setNumberOfSeeds(val);
+                    }}
+                    className="w-20 text-center text-lg font-bold border-2 border-orange-300 rounded-lg py-1.5 focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                  />
+                  <span className="text-sm text-gray-500">/ {drawMethod === "custom" ? drawSize : Math.min(selectedPlayers.length, drawSize)}</span>
+                </div>
               </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {getFilteredPlayers().map((player, idx) => {
-                  const id = player.playerId || player._id;
-                  const isSelected = selectedPlayers.some((p) => (p.playerId || p._id) === id);
-                  const name = player.userName || player.playerName || player.name || `Player ${idx + 1}`;
+              <div className="flex gap-2 flex-wrap">
+                {[0, 2, 4, 8, 16, 32].filter(n => n <= (drawMethod === "custom" ? drawSize : Math.min(selectedPlayers.length, drawSize))).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setNumberOfSeeds(n)}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all w-auto ${numberOfSeeds === n
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-600 border border-gray-300 hover:border-orange-300"
+                      }`}
+                  >
+                    {n === 0 ? "None" : n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                {numberOfSeeds === 0
+                  ? "No seeding — all players placed randomly."
+                  : `Top ${numberOfSeeds} players (by order in list) get fixed bracket positions. ${selectedPlayers.length > numberOfSeeds ? `Remaining ${selectedPlayers.length - numberOfSeeds} placed randomly.` : ""}`
+                }
+              </p>
+            </div>
+          )}
 
-                  return (
-                    <div
-                      key={id || idx}
-                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? "bg-orange-50" : "hover:bg-gray-50"
-                        }`}
-                      onClick={() => togglePlayer(player)}
-                    >
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"
-                        }`}>
-                        {isSelected && <Check size={14} color="white" />}
+          {/* Custom Placement Mode */}
+          {drawMethod === "custom" ? (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left: Available Players */}
+              <div>
+                <div className="flex gap-3 mb-3">
+                  <div className="flex-1 relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input type="text" placeholder="Search players..." value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" />
+                  </div>
+                </div>
+                <h4 className="text-sm font-bold text-gray-700 mb-2">Available Players</h4>
+                <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-xl">
+                  {(() => {
+                    const placedIds = getCustomPlayerIds();
+                    const available = getFilteredPlayers().filter((p) => !placedIds.has(String(p.playerId || p._id || "")));
+                    if (available.length === 0) return (
+                      <div className="p-6 text-center text-gray-400 text-sm">
+                        {getFilteredPlayers().length === 0 ? "No registered players found" : "All players have been placed"}
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                        {name.charAt(0).toUpperCase()}
+                    );
+                    return (
+                      <div className="divide-y divide-gray-100">
+                        {available.map((player, idx) => {
+                          const name = player.userName || player.playerName || player.name || `Player ${idx + 1}`;
+                          return (
+                            <div key={player.playerId || player._id}
+                              className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-orange-50 transition-colors"
+                              onClick={() => placePlayerInSlot(player)}>
+                              <Plus size={16} className="text-orange-500 flex-shrink-0" />
+                              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                {name.charAt(0).toUpperCase()}
+                              </div>
+                              <p className="text-sm font-medium text-gray-800 flex-1">{name}</p>
+                              {activeSlot !== null && (
+                                <span className="text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold">
+                                  → Seed {activeSlot + 1}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800">{name}</p>
+                    );
+                  })()}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  {activeSlot !== null
+                    ? `Click a player to place in Seed ${activeSlot + 1} position`
+                    : "Click a slot on the right first, then click a player to place. Or click a player to fill the next empty slot."
+                  }
+                </p>
+              </div>
+
+              {/* Right: Bracket Slots */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-bold text-gray-700">Bracket Positions</h4>
+                  <span className="text-[10px] font-bold text-gray-400">{customSlots.filter(Boolean).length}/{drawSize} placed</span>
+                </div>
+                <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-xl">
+                  {(() => {
+                    const seedOrder = getSeedOrder(drawSize);
+                    const matchPairs = [];
+                    for (let i = 0; i < drawSize; i += 2) {
+                      matchPairs.push({ m: Math.floor(i / 2) + 1, s1: { idx: i, seed: seedOrder[i] }, s2: { idx: i + 1, seed: seedOrder[i + 1] } });
+                    }
+                    return (
+                      <div className="divide-y divide-gray-200">
+                        {matchPairs.map((pair) => (
+                          <div key={pair.m} className="px-3 py-2">
+                            <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Match {pair.m}</p>
+                            {[pair.s1, pair.s2].map((slot) => {
+                              const player = customSlots[slot.idx];
+                              const isActive = activeSlot === slot.idx;
+                              const name = player ? (player.userName || player.playerName || player.name) : null;
+                              const isSeededPos = slot.seed <= numberOfSeeds;
+                              return (
+                                <div key={slot.idx}
+                                  className={`flex items-center gap-2 px-2 py-2 rounded-lg mb-1 cursor-pointer transition-all ${
+                                    isActive ? "bg-orange-100 border-2 border-orange-500"
+                                    : player ? (isSeededPos ? "bg-orange-50 border border-orange-200" : "bg-green-50 border border-green-200")
+                                    : isSeededPos ? "bg-yellow-50 border border-dashed border-yellow-300 hover:border-orange-400"
+                                    : "bg-gray-50 border border-dashed border-gray-300 hover:border-gray-400"
+                                  }`}
+                                  onClick={() => setActiveSlot(isActive ? null : slot.idx)}>
+                                  {isSeededPos ? (
+                                    <span className={`px-1.5 h-6 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
+                                      player ? "bg-orange-500 text-white" : "bg-yellow-400 text-yellow-900"
+                                    }`}>
+                                      S{slot.seed}
+                                    </span>
+                                  ) : (
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                                      player ? "bg-gray-500 text-white" : "bg-gray-200 text-gray-400"
+                                    }`}>
+                                      {slot.seed}
+                                    </span>
+                                  )}
+                                  {player ? (
+                                    <>
+                                      <p className="text-sm font-medium text-gray-800 flex-1 truncate">{name}</p>
+                                      {isSeededPos && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">SEED {slot.seed}</span>}
+                                      <button onClick={(e) => { e.stopPropagation(); removeFromSlot(slot.idx); }}
+                                        className="text-red-300 hover:text-red-500 w-auto p-0">
+                                        <X size={14} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <p className={`text-sm flex-1 italic ${isActive ? "text-orange-600 font-medium" : "text-gray-400"}`}>
+                                      {isActive ? "← Click a player to place here"
+                                        : isSeededPos ? `Seed ${slot.seed} position — place seeded player here`
+                                        : "Open slot — click to select"
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
-                      {isSelected && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
-                          Seed {selectedPlayers.findIndex((p) => (p.playerId || p._id) === id) + 1}
-                        </span>
-                      )}
+                    );
+                  })()}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  <span className="inline-block w-4 h-3 bg-yellow-400 rounded mr-1 align-middle"></span> Seeded positions (S1, S2...) — place your ranked players here.
+                  Other slots are open positions. Empty slots become BYEs.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Standard / Random / Hybrid Mode */
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left: Player Selection */}
+              <div>
+                <div className="flex gap-3 mb-3">
+                  <div className="flex-1 relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input type="text" placeholder="Search players..." value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" />
+                  </div>
+                  <button onClick={selectAll}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 w-auto">
+                    {selectedPlayers.length === getFilteredPlayers().length ? "Deselect All" : "Select All"}
+                  </button>
+                </div>
+                <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-xl">
+                  {getFilteredPlayers().length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">
+                      <Users size={32} className="mx-auto mb-2" />
+                      <p>No registered players found</p>
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {getFilteredPlayers().map((player, idx) => {
+                        const id = player.playerId || player._id;
+                        const isSelected = selectedPlayers.some((p) => (p.playerId || p._id) === id);
+                        const name = player.userName || player.playerName || player.name || `Player ${idx + 1}`;
+                        return (
+                          <div key={id || idx}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? "bg-orange-50" : "hover:bg-gray-50"}`}
+                            onClick={() => togglePlayer(player)}>
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
+                              {isSelected && <Check size={14} color="white" />}
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                            <p className="text-sm font-medium text-gray-800 flex-1">{name}</p>
+                            {isSelected && (
+                              <span className="text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold">
+                                #{selectedPlayers.findIndex((p) => (p.playerId || p._id) === id) + 1}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Right: Seed Order / Ranking */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-gray-700">
+                    {drawMethod === "random" ? "Selected Players" : "Player Order (use arrows to reorder)"}
+                  </h4>
+                  {selectedPlayers.length > 0 && (
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">
+                      {selectedPlayers.length} player{selectedPlayers.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-xl">
+                  {selectedPlayers.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">
+                      <Target size={32} className="mx-auto mb-2" />
+                      <p className="text-sm">Select players from the left</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {selectedPlayers.map((player, idx) => {
+                        const id = player.playerId || player._id;
+                        const name = player.userName || player.playerName || player.name || `Player ${idx + 1}`;
+                        const isSeeded = drawMethod === "standard" || (drawMethod === "hybrid" && idx < numberOfSeeds);
+                        const showDivider = drawMethod === "hybrid" && numberOfSeeds > 0 && idx === numberOfSeeds;
+                        return (
+                          <div key={id || idx}>
+                            {showDivider && (
+                              <div className="bg-gray-100 px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <div className="h-px bg-gray-300 flex-1" />Unseeded — placed randomly<div className="h-px bg-gray-300 flex-1" />
+                              </div>
+                            )}
+                            <div className={`flex items-center gap-2 px-3 py-2.5 ${isSeeded ? "bg-orange-50/50" : ""}`}>
+                              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${isSeeded ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400"}`}>
+                                {idx + 1}
+                              </span>
+                              <p className="text-sm font-medium text-gray-800 flex-1 truncate">{name}</p>
+                              {isSeeded && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">SEED {idx + 1}</span>}
+                              {isSeeded && (
+                                <div className="flex flex-col gap-0.5">
+                                  <button onClick={() => idx > 0 && movePlayer(idx, idx - 1)} disabled={idx === 0}
+                                    className="text-gray-400 hover:text-gray-700 disabled:opacity-20 w-auto p-0">
+                                    <ChevronRight size={14} className="rotate-[-90deg]" />
+                                  </button>
+                                  <button onClick={() => { const max = drawMethod === "standard" ? selectedPlayers.length - 1 : numberOfSeeds - 1; if (idx < max) movePlayer(idx, idx + 1); }}
+                                    disabled={idx >= (drawMethod === "standard" ? selectedPlayers.length - 1 : numberOfSeeds - 1)}
+                                    className="text-gray-400 hover:text-gray-700 disabled:opacity-20 w-auto p-0">
+                                    <ChevronRight size={14} className="rotate-90" />
+                                  </button>
+                                </div>
+                              )}
+                              <button onClick={() => togglePlayer(player)} className="text-red-300 hover:text-red-500 w-auto p-0"><X size={14} /></button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {selectedPlayers.length > 0 && drawMethod === "standard" && (
+                  <p className="text-[11px] text-gray-400 mt-2">All players get fixed seeding positions. BYEs go to top seeds. Reorder with arrows.</p>
+                )}
+                {selectedPlayers.length > 0 && drawMethod === "hybrid" && numberOfSeeds > 0 && (
+                  <p className="text-[11px] text-gray-400 mt-2">Top {numberOfSeeds} seeded. {selectedPlayers.length > numberOfSeeds ? `${selectedPlayers.length - numberOfSeeds} placed randomly.` : ""}</p>
+                )}
+                {selectedPlayers.length > 0 && drawMethod === "random" && (
+                  <p className="text-[11px] text-gray-400 mt-2">All players placed randomly. No seeding advantage.</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={selectedPlayers.length !== drawSize || generating}
-            className="mt-6 w-full py-3 bg-gradient-to-r from-orange-500 to-[#0071d2] text-white rounded-xl font-bold text-sm hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {generating ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Generating...
-              </>
-            ) : (
-              <>
-                <Zap size={18} />
-                {selectedPlayers.length === drawSize
-                  ? `Generate ${drawSize}-Draw Bracket (${selectedPlayers.length} players)`
-                  : `Select exactly ${drawSize} players (${drawSize - selectedPlayers.length} more needed)`
-                }
-              </>
-            )}
-          </button>
+          {(() => {
+            const count = drawMethod === "custom" ? customSlots.filter(Boolean).length : selectedPlayers.length;
+            const minNeeded = Math.ceil(drawSize / 2) + 1;
+            const canGenerate = count >= minNeeded && count <= drawSize;
+            const byes = drawSize - count;
+            return (
+              <button
+                onClick={handleGenerate}
+                disabled={!canGenerate || generating}
+                className="mt-6 w-full py-3 bg-gradient-to-r from-orange-500 to-[#0071d2] text-white rounded-xl font-bold text-sm hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {generating ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Generating...
+                  </>
+                ) : canGenerate ? (
+                  <>
+                    <Zap size={18} />
+                    Generate {drawSize}-Draw ({count} players{byes > 0 ? `, ${byes} BYEs` : ""}) — {
+                      drawMethod === "standard" ? "Full Seeding" : drawMethod === "random" ? "Random" : drawMethod === "custom" ? "Custom Placement" : `Top ${numberOfSeeds} Seeded`
+                    }
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={18} />
+                    {count < minNeeded ? `Need at least ${minNeeded} players (${minNeeded - count} more)` : `Too many players (remove ${count - drawSize})`}
+                  </>
+                )}
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -905,7 +1292,7 @@ export default function MDirectKnockout() {
         isOpen={showBulkUpload}
         onClose={() => setShowBulkUpload(false)}
         onSuccess={() => fetchMatches()}
-        matches={matches.filter((m) => m.status !== "COMPLETED" && m.player1?.playerId && m.player2?.playerId)}
+        matches={matches.filter((m) => m.status !== "COMPLETED" && m.player1?.playerName && m.player1.playerName !== "TBD" && m.player2?.playerName && m.player2.playerName !== "TBD")}
         tournamentId={tournamentId}
         matchType="player"
         maxSets={tournament?.matchFormat?.totalSets || 5}
@@ -1103,7 +1490,7 @@ export default function MDirectKnockout() {
 
               {/* Footer Actions */}
               <div className="border-t border-gray-200 px-6 py-3 flex justify-between items-center bg-gray-50">
-                {!isCompleted && dm.player1?.playerId && dm.player2?.playerId && (
+                {!isCompleted && !isBye && dm.player1?.playerName && dm.player1.playerName !== "TBD" && dm.player2?.playerName && dm.player2.playerName !== "TBD" && (
                   <button
                     onClick={() => {
                       setDetailMatch(null);
