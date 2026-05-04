@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { TrophyIcon, CalendarIcon, UserGroupIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { getSportName, getTournamentType } from '../utils/sportTrack';
 
 const CorporateTournaments = () => {
     const { user } = useContext(AuthContext);
@@ -79,7 +80,7 @@ const CorporateTournaments = () => {
                                     </div>
                                 )}
                                 <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-xs font-semibold shadow-sm uppercase">
-                                    {tournament.sportsType}
+                                    {getSportName(tournament)}
                                 </div>
                             </div>
                             <div className="p-5">
@@ -97,7 +98,10 @@ const CorporateTournaments = () => {
                                     </div>
                                     <div className="flex items-center">
                                         <UserGroupIcon className="w-4 h-4 mr-2" />
-                                        {tournament.type === 'knockout + group stage' ? 'Group + Knockout' : tournament.type === 'knockout' ? 'Knockout' : 'Group Stage'}
+                                        {(() => {
+                                            const _t = getTournamentType(tournament);
+                                            return _t === 'knockout + group stage' ? 'Group + Knockout' : _t === 'knockout' ? 'Knockout' : 'Group Stage';
+                                        })()}
                                     </div>
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">

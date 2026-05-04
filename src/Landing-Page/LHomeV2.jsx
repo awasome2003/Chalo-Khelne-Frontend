@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import Carousel from "./LCarousel";
+import { getSportName } from "../utils/sportTrack";
 
 // ─── Animation helpers ──────────────────────────────────────────
 const fadeUp = {
@@ -295,7 +296,7 @@ const Tournaments = ({ tournaments, navigate }) => (
                     {t.title}
                   </h3>
                   <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold uppercase shrink-0">
-                    {t.sportsType || "Sport"}
+                    {getSportName(t) || "Sport"}
                   </span>
                 </div>
                 <div className="mt-1.5 flex items-center gap-4 text-xs text-slate-400">

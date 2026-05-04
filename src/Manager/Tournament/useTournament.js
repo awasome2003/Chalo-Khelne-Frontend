@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import keys from "../../config/queryKeys";
+import {
+  getSportName,
+  getCurrentStage,
+  getCategories,
+  getMatchFormat,
+} from "../../utils/sportTrack";
 
 const fetchTournament = async (tournamentId) => {
   const res = await axios.get(`/api/tournaments/${tournamentId}`);
@@ -14,15 +20,18 @@ export default function useTournament(tournamentId) {
     enabled: !!tournamentId,
   });
 
+  // STEP 17b.ii — read normalized fields off sports[0]. Hook callers
+  // currently don't pass sportId; defaulting to first sport matches
+  // existing behavior.
   return {
     tournament,
     loading,
     error: error?.response?.data?.message || error?.message || null,
     title: tournament?.title || "Tournament",
-    sportsType: tournament?.sportsType || "Unknown",
-    currentStage: tournament?.currentStage || "registration",
-    categories: tournament?.category || [],
-    matchFormat: tournament?.matchFormat || {},
+    sportsType: getSportName(tournament) || "Unknown",
+    currentStage: getCurrentStage(tournament) || "registration",
+    categories: getCategories(tournament),
+    matchFormat: getMatchFormat(tournament) || {},
     refresh: refetch,
   };
 }

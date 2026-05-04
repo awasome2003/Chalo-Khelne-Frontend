@@ -31,6 +31,15 @@ import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import MCreateTournament from "./MCreateTournament";
+import {
+  getSportName,
+  getTournamentType,
+  getCategories,
+  getQualifyPerGroup,
+  getGroupStageFormat,
+  getKnockoutFormat,
+  getCurrentStage,
+} from "../utils/sportTrack";
 
 const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
   const { user } = useContext(AuthContext);
@@ -208,12 +217,17 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
       const response = await axios.get(`/api/tournaments/${tournamentId}`);
       const tournamentData = response.data.tournament;
 
-      const tType = (tournamentData.type || "group stage").toLowerCase();
+      // STEP 17b.ii — load form fields from sports[0] (single-sport edit
+      // modal). type / sportName / categories / formats / qualifyPerGroup
+      // all read off the active sport-track. Multi-sport edit on the
+      // list page is out of scope for v1 (use Manager UI instead).
+      const tType = (getTournamentType(tournamentData) || "group stage").toLowerCase();
+      const _cats = getCategories(tournamentData);
       const formData = {
         title: tournamentData.title || "",
         hasGroupStage: tType.includes("group stage"),
         hasKnockout: tType.includes("knockout"),
-        sportsType: tournamentData.sportsType || "",
+        sportsType: getSportName(tournamentData) || "",
         description: tournamentData.description || "",
         organizerName: tournamentData.organizerName || "",
         cancellationPolicy: tournamentData.cancellationPolicy || "NO",
@@ -224,18 +238,18 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
         endDate: tournamentData.endDate ? tournamentData.endDate.split('T')[0] : "",
         termsAndConditions: tournamentData.termsAndConditions || "",
         tournamentLevel: tournamentData.tournamentLevel || "",
-        groupStageFormat: tournamentData.groupStageFormat || "Singles",
-        knockoutFormat: tournamentData.knockoutFormat || "Singles",
+        groupStageFormat: getGroupStageFormat(tournamentData) || "Singles",
+        knockoutFormat: getKnockoutFormat(tournamentData) || "Singles",
         setsFormat: tournamentData.setFormat === 3 ? "bestOf3" :
           tournamentData.setFormat === 5 ? "bestOf5" :
             tournamentData.setFormat === 7 ? "bestOf7" : "",
-        category: tournamentData.category || [{ name: "Open Category", fee: 0 }],
+        category: _cats.length > 0 ? _cats : [{ name: "Open Category", fee: 0 }],
         selectedTime: tournamentData.selectedTime || { startTime: "10:00", endTime: "18:00" },
         numTeams: tournamentData.numTeams || "",
         playerNoValue: tournamentData.playerNoValue || "2",
         setNo: tournamentData.setNo || "3",
         tournamentFee: tournamentData.tournamentFee || "0",
-        qualifyPerGroup: tournamentData.qualifyPerGroup?.toString() || "2"
+        qualifyPerGroup: getQualifyPerGroup(tournamentData).toString()
       };
 
       setEditFormData(formData);
@@ -477,7 +491,10 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 }`}
               onClick={() => {
                 onTournamentSelect(tournament._id);
-                const t = tournament.type?.toLowerCase() || "";
+                // STEP 17b.ii — read tournament type / knockoutFormat per
+                // sports[0]. List view has no sport-switcher; sports[0]
+                // is the headline.
+                const t = (getTournamentType(tournament) || "").toLowerCase();
                 if (t.includes("group stage") && t.includes("knockout")) {
                   // Combined tournament: show flow chooser
                   setFlowChooserTournamentId(tournament._id);
@@ -486,7 +503,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                   navigate(`/tournament-management/group-stage?tournamentId=${tournament._id}`);
                 } else if (t.includes("knockout")) {
                   // Check if it's Davis Cup / team knockout or singles knockout
-                  const kf = (tournament.knockoutFormat || "").toLowerCase();
+                  const kf = (getKnockoutFormat(tournament) || "").toLowerCase();
                   if (kf.includes("team") || kf.includes("davis")) {
                     navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
                   } else {
@@ -503,7 +520,10 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                     ? "bg-orange-100 text-orange-600"
                     : "bg-gray-100 text-gray-500"
                     }`}>
-                    {tournament.type === "knockout + group stage" ? "Group + Knockout" : tournament.type}
+                    {(() => {
+                      const _t = getTournamentType(tournament);
+                      return _t === "knockout + group stage" ? "Group + Knockout" : _t;
+                    })()}
                   </span>
                   {tournament.isPrivate && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 flex items-center gap-1">
@@ -580,7 +600,7 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
               <div className="space-y-1.5">
                 <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-gray-900/80" : "text-gray-500"}`}>
                   <Trophy className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>{tournament.sportsType || "Sport"}</span>
+                  <span>{getSportName(tournament) || "Sport"}</span>
                 </div>
                 {tournament.eventLocation && (
                   <div className="text-xs flex items-center gap-2 text-gray-400">
@@ -606,28 +626,31 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
                 )}
               </div>
 
-              {/* Current Stage Badge */}
-              {tournament.currentStage && tournament.currentStage !== "registration" && (
+              {/* Current Stage Badge — STEP 17b.ii: per-sport (sports[0]) */}
+              {(() => {
+                const _stage = getCurrentStage(tournament);
+                return _stage && _stage !== "registration" && (
                 <div className="mt-2">
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide ${
-                    tournament.currentStage === "group_stage"
+                    _stage === "group_stage"
                       ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                      : tournament.currentStage === "group_completed"
+                      : _stage === "group_completed"
                       ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : tournament.currentStage === "knockout"
+                      : _stage === "knockout"
                       ? "bg-orange-50 text-orange-600 border border-orange-200"
-                      : tournament.currentStage === "completed"
+                      : _stage === "completed"
                       ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                       : "bg-gray-800 text-gray-500 border border-gray-700"
                   }`}>
-                    {tournament.currentStage === "group_stage" ? "Group Stage"
-                      : tournament.currentStage === "group_completed" ? "Groups Done"
-                      : tournament.currentStage === "knockout" ? "Knockout"
-                      : tournament.currentStage === "completed" ? "Completed"
-                      : tournament.currentStage.replace(/_/g, " ")}
+                    {_stage === "group_stage" ? "Group Stage"
+                      : _stage === "group_completed" ? "Groups Done"
+                      : _stage === "knockout" ? "Knockout"
+                      : _stage === "completed" ? "Completed"
+                      : _stage.replace(/_/g, " ")}
                   </span>
                 </div>
-              )}
+                );
+              })()}
             </div>
           ))
         ) : (

@@ -2,17 +2,32 @@ import { useState } from "react";
 import { Check, RefreshCcw } from "lucide-react";
 
 /**
+ * Detects whether the match format uses nested games (Tennis) or flat sets (TT, Badminton).
+ * Mirror of server/factories/MatchFactory.js → hasNestedGames.
+ * Kept inline because the React app has no shared utils with the Express server.
+ */
+function hasNestedGames(fmt) {
+  if (!fmt || typeof fmt !== "object") return false;
+  if (fmt.gamesPerSet != null && Number(fmt.gamesPerSet) > 0) return true;
+  const tg = Number(fmt.totalGames);
+  const ts = Number(fmt.totalSets);
+  if (Number.isFinite(tg) && Number.isFinite(ts) && tg > 1 && tg !== ts) return true;
+  return false;
+}
+
+/**
  * Scorer for set-based sports: Table Tennis, Badminton, Tennis, Pickleball, Volleyball.
- * Renders game score inputs per set based on matchFormat.
+ * Shape-aware: nested-game sports (Tennis) show N game-score rows per set; flat-set
+ * sports (TT, Badminton) show one set-score row.
  *
  * Props:
  * - config: sport UI config from sportUIConfig.js
- * - matchFormat: { totalSets, setsToWin, totalGames, gamesToWin, pointsToWinGame }
+ * - matchFormat: { totalSets, setsToWin, totalGames, gamesToWin, pointsToWinGame, ... }
  * - sets: array of completed set data from match
  * - currentSet: number
  * - player1Name: string
  * - player2Name: string
- * - onSubmitScores: (games[]) => Promise
+ * - onSubmitScores: (games[]) => Promise   // array length = 1 for flat, N for nested
  * - submitting: boolean
  * - onRefresh: () => void
  */
@@ -28,7 +43,10 @@ export default function SetBasedScorer({
   onRefresh,
 }) {
   const labels = config.labels;
-  const gamesPerSet = matchFormat?.totalGames || matchFormat?.gamesToWin * 2 - 1 || 5;
+  const nested = hasNestedGames(matchFormat);
+  const gamesPerSet = nested
+    ? (matchFormat?.totalGames || matchFormat?.gamesToWin * 2 - 1 || 5)
+    : 1;
   const pointsToWin = matchFormat?.pointsToWinGame || null;
 
   const [manualGames, setManualGames] = useState(
@@ -53,14 +71,16 @@ export default function SetBasedScorer({
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-bold text-gray-800">
-          Enter {labels.game} Scores
+          Enter {nested ? `${labels.game} Scores` : `${labels.set} Score`}
         </h3>
         <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded">
           {labels.set} {currentSet} • {pointsToWin} {labels.point}s to win
         </span>
       </div>
       <p className="text-sm text-gray-500 mb-4">
-        {labels.set} {currentSet} — enter score for each {labels.game.toLowerCase()}
+        {nested
+          ? `${labels.set} ${currentSet} — enter score for each ${labels.game.toLowerCase()}`
+          : `${labels.set} ${currentSet} — enter final score`}
       </p>
 
       {/* Column Headers */}
@@ -76,7 +96,7 @@ export default function SetBasedScorer({
         {manualGames.map((game, idx) => (
           <div key={idx} className="flex items-center gap-3 justify-center">
             <span className="text-xs text-gray-400 w-16 text-right font-medium">
-              {labels.game} {idx + 1}
+              {nested ? `${labels.game} ${idx + 1}` : `${labels.set} ${currentSet}`}
             </span>
             <input
               type="number"
@@ -116,7 +136,7 @@ export default function SetBasedScorer({
           {submitting ? (
             <><RefreshCcw className="w-4 h-4 animate-spin" /> Submitting...</>
           ) : (
-            <><Check className="w-4 h-4" /> Submit {labels.game} Scores</>
+            <><Check className="w-4 h-4" /> Submit {nested ? `${labels.game} Scores` : `${labels.set} Score`}</>
           )}
         </button>
         <button

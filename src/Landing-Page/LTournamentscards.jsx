@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Share2, MapPin, Calendar, IndianRupee, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 import defaultImg from "../assets/tournament.avif";
+import { getTournamentType } from "../utils/sportTrack";
 
 const TournamentsCard = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -85,7 +86,7 @@ const TournamentsCard = () => {
             {/* Type badge */}
             <div className="absolute top-3 left-3">
               <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-                {tournament.type || "Tournament"}
+                {getTournamentType(tournament) || "Tournament"}
               </span>
             </div>
 

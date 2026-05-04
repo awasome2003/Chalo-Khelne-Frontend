@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import groupTabsApi from "./groupTabsApi";
+import { getMatchFormat as getMatchFormatHelper } from "../../utils/sportTrack";
 
 // ================================================
 // CENTRALIZED STATE FOR THE ENTIRE GROUP TABS FLOW
@@ -24,6 +25,11 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // ---- STEP 11c — Multi-sport active sport (null = legacy single-sport,
+  //      no ?sportId query param sent → backend's STEP 11a fallback returns
+  //      unfiltered data, matching pre-multi-sport behaviour).
+  const [activeSportId, setActiveSportId] = useState(null);
 
   // ---- Navigation ----
   const [activeTab, setActiveTab] = useState("League"); // League | Top Players | Knockout
@@ -67,7 +73,7 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
     if (!tournamentId) return;
     try {
       setLoading(true);
-      const res = await groupTabsApi.fetchGroups(tournamentId);
+      const res = await groupTabsApi.fetchGroups(tournamentId, activeSportId);
       if (res.data.success) {
         const round1Groups = (res.data.data || []).filter(
           (g) => !g.groupName?.toLowerCase().includes("round 2") && !g.isRound2
@@ -82,7 +88,14 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
     } finally {
       setLoading(false);
     }
-  }, [tournamentId]);
+    // STEP 11c: activeSportId in deps so this regenerates on sport switch
+    // and the re-fetch effect below can rely on its identity changing.
+    // activeGroup is INTENTIONALLY excluded — it's read inside (the
+    // `!activeGroup` guard) but adding it to deps would re-fetch all groups
+    // every time the user clicks a different group tab. Stale-closure
+    // pattern preserved from the original code.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId, activeSportId]);
 
   const fetchMatches = useCallback(async (groupId) => {
     const gId = groupId || activeGroup;
@@ -103,7 +116,7 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
   const fetchRound2Groups = useCallback(async () => {
     if (!tournamentId) return;
     try {
-      const res = await groupTabsApi.fetchRound2Groups(tournamentId);
+      const res = await groupTabsApi.fetchRound2Groups(tournamentId, activeSportId);
       if (res.data.success) {
         const r2 = (res.data.data || res.data.groups || []).filter(
           (g) => g.groupName?.toLowerCase().includes("round 2") || g.isRound2
@@ -125,12 +138,15 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
     } catch (err) {
       console.error("Error fetching Round 2 groups:", err.message);
     }
-  }, [tournamentId]);
+    // STEP 11c: activeSportId in deps so this regenerates on sport switch.
+    // activeRound2Group intentionally excluded — same reason as fetchGroups.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId, activeSportId]);
 
   const fetchKnockoutMatches = useCallback(async () => {
     if (!tournamentId) return;
     try {
-      const res = await groupTabsApi.fetchKnockoutMatches(tournamentId);
+      const res = await groupTabsApi.fetchKnockoutMatches(tournamentId, activeSportId);
       if (res.data.success) {
         const matches = res.data.matches || [];
         const byRound = {};
@@ -142,34 +158,73 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
         setKnockoutMatchesByRound(byRound);
       }
     } catch {}
-  }, [tournamentId]);
+    // STEP 11c: activeSportId in deps for sport-switch re-fetches.
+  }, [tournamentId, activeSportId]);
 
   const fetchAvailablePlayers = useCallback(async () => {
     if (!tournamentId) return;
     try {
-      const res = await groupTabsApi.fetchAvailablePlayers(tournamentId);
+      const res = await groupTabsApi.fetchAvailablePlayers(tournamentId, activeSportId);
       if (res.data.success) {
         setAvailablePlayersForKnockout(res.data.players || []);
       }
     } catch {}
-  }, [tournamentId]);
+    // STEP 11c: activeSportId in deps for sport-switch re-fetches.
+  }, [tournamentId, activeSportId]);
 
   // ================================================
   // INITIAL LOAD
   // ================================================
 
+  // Tournament metadata is sport-independent — only re-fetch on tournamentId.
   useEffect(() => {
-    if (tournamentId) {
-      fetchTournamentData();
-      fetchGroups();
-      fetchKnockoutMatches();
-      fetchRound2Groups();
+    if (tournamentId) fetchTournamentData();
+  }, [tournamentId, fetchTournamentData]);
+
+  // STEP 11c — Init / re-validate activeSportId when tournament arrives
+  // (mirrors STEP 11b fix #2: fires on data arrival, not just mount).
+  useEffect(() => {
+    if (!tournament) return;
+    if (Array.isArray(tournament.sports) && tournament.sports.length > 0) {
+      const validIds = tournament.sports.map((s) => String(s.sportId));
+      const current = activeSportId ? String(activeSportId) : null;
+      if (!current || !validIds.includes(current)) {
+        setActiveSportId(tournament.sports[0].sportId);
+      }
+    } else {
+      setActiveSportId(null);
     }
-  }, [tournamentId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournament]);
+
+  // Sport-scoped fetches — re-fire whenever activeSportId changes (the
+  // useCallback-wrapped functions above have activeSportId in their deps,
+  // so their refs change on sport switch and trigger this effect).
+  useEffect(() => {
+    if (!tournamentId) return;
+    fetchGroups();
+    fetchKnockoutMatches();
+    fetchRound2Groups();
+  }, [tournamentId, activeSportId, fetchGroups, fetchKnockoutMatches, fetchRound2Groups]);
 
   useEffect(() => {
     if (activeGroup) fetchMatches(activeGroup);
-  }, [activeGroup]);
+  }, [activeGroup, fetchMatches]);
+
+  // STEP 11c — Sport switch handler. Resets activeGroup / activeRound2Group
+  // so fetchGroups / fetchRound2Groups (re-fired by the effect above) can
+  // pick a fresh "first group" for the new sport. V2 doesn't host a
+  // destructive Round 2 reset flow, so no confirmation prompt here — add
+  // one if a destructive flow lands in V2 panels later.
+  const handleSportSwitch = useCallback((newSportId) => {
+    if (String(newSportId) === String(activeSportId)) return;
+    setActiveGroup(null);
+    setActiveRound2Group(null);
+    setMatchesData({});
+    setRound2MatchesData({});
+    setKnockoutMatchesByRound({});
+    setActiveSportId(newSportId);
+  }, [activeSportId]);
 
   // ================================================
   // DERIVED STATE
@@ -196,7 +251,9 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
 
   const getMatchFormat = () => {
     const groupData = groups.find((g) => g._id === activeGroup);
-    const maxSets = groupData?.matchFormat?.totalSets || tournament?.matchFormat?.totalSets || 5;
+    // STEP 17b.ii — read tournament.matchFormat per active sport.
+    const sportMF = getMatchFormatHelper(tournament, activeSportId);
+    const maxSets = groupData?.matchFormat?.totalSets || sportMF?.totalSets || 5;
     return { maxSets, setsToWin: Math.ceil(maxSets / 2) };
   };
 
@@ -241,6 +298,10 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
 
     // Derived
     getMatchFormat,
+
+    // STEP 11c — Multi-sport
+    activeSportId,
+    handleSportSwitch,
 
     // Actions
     fetchMatches,

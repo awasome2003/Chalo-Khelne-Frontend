@@ -3,27 +3,29 @@ import { useState, useEffect, useContext } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Trophy, Users, Swords, Clock, ChevronRight, Plus, X, Search,
-  RotateCcw, Upload, Check, AlertCircle, Zap, Target, Crown, Trash2
+  RotateCcw, Upload, Check, AlertCircle, Zap, Target, Crown, Trash2,
+  UserPlus, Shield,
 } from "lucide-react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
+import AssignUmpireModal from "./Tournament/AssignUmpireModal";
+import { getSeedOrder } from "../utils/seedingUtils";
+import SeedPositionsPreview from "./components/SeedPositionsPreview";
+import { getMatchFormat as getMatchFormatHelper } from "../utils/sportTrack";
 
 const DRAW_SIZES = [4, 8, 16, 32, 64, 128];
 
-// Standard seeding order algorithm (same as backend getSeedOrder)
-const getSeedOrder = (size) => {
-  let seeds = [1, 2];
-  while (seeds.length < size) {
-    let next = [];
-    for (let i = 0; i < seeds.length; i++) {
-      next.push(seeds[i]);
-      next.push(2 * seeds.length + 1 - seeds[i]);
-    }
-    seeds = next;
-  }
-  return seeds;
+// Shared helper: resolves an umpire's display name from match.referee.
+// Handles nested object (group-style) and bare ObjectId (direct-knockout) shapes.
+const getUmpireName = (referee) => {
+  if (!referee) return null;
+  if (typeof referee === "string") return "Assigned";
+  return referee.name || referee.userName || "Assigned";
 };
+
+// getSeedOrder imported from ../utils/seedingUtils (Mirror & Flip).
+// Preview UI lives in ./components/SeedPositionsPreview.jsx.
 
 export default function MDirectKnockout() {
   const [searchParams] = useSearchParams();
@@ -35,6 +37,7 @@ export default function MDirectKnockout() {
   const [tournament, setTournament] = useState(null);
   const [matches, setMatches] = useState([]);
   const [matchesByRound, setMatchesByRound] = useState({});
+  const [assignModalMatch, setAssignModalMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("setup"); // bracket | setup | scoring
 
@@ -150,10 +153,21 @@ export default function MDirectKnockout() {
 
   const placePlayerInSlot = (player) => {
     if (activeSlot === null) {
-      // Find first empty slot
-      const firstEmpty = customSlots.findIndex((s) => s === null);
-      if (firstEmpty === -1) { toast.info("All slots are filled"); return; }
-      setCustomSlots((prev) => { const u = [...prev]; u[firstEmpty] = player; return u; });
+      // Auto-fill by SEED number (S1, S2, S3, ...) — not by array index.
+      // The array is laid out in bracket order [S1, S16, S8, S9, ...],
+      // so findIndex(null) would place the 2nd player at Seed 16.
+      const size = customSlots.length;
+      const seedOrder = getSeedOrder(size);
+      let target = -1;
+      for (let seed = 1; seed <= size; seed++) {
+        const arrIdx = seedOrder.indexOf(seed);
+        if (arrIdx >= 0 && customSlots[arrIdx] == null) {
+          target = arrIdx;
+          break;
+        }
+      }
+      if (target === -1) { toast.info("All slots are filled"); return; }
+      setCustomSlots((prev) => { const u = [...prev]; u[target] = player; return u; });
     } else {
       setCustomSlots((prev) => { const u = [...prev]; u[activeSlot] = player; return u; });
       setActiveSlot(null);
@@ -164,8 +178,19 @@ export default function MDirectKnockout() {
     setCustomSlots((prev) => { const u = [...prev]; u[slotIndex] = null; return u; });
   };
 
+  // Robust player-key helper: some entries have playerId as string, others as
+  // a populated `{ _id, name, ... }` object, others only have `_id`. Falls back
+  // to userName so distinct users never collapse to the same key.
+  const keyOfPlayer = (p) => {
+    if (!p) return "";
+    const raw = p.playerId ?? p._id;
+    if (raw && typeof raw === "object") return String(raw._id || raw.$oid || raw.toString?.() || "");
+    if (raw) return String(raw);
+    return p.userName || p.playerName || p.name || "";
+  };
+
   const getCustomPlayerIds = () => {
-    return new Set(customSlots.filter(Boolean).map((p) => String(p.playerId || p._id || "")));
+    return new Set(customSlots.filter(Boolean).map(keyOfPlayer));
   };
 
   // Get IDs of players already in the bracket
@@ -239,9 +264,16 @@ export default function MDirectKnockout() {
 
     setGenerating(true);
     try {
+      // STEP 16d — backend now requires sportId. This screen is a
+      // tournament-level standalone view with no sport-switcher UI, so
+      // we send sports[0].sportId. Multi-sport standalone is a
+      // separate feature (a sport tab strip on this screen).
+      const _firstSportId = tournament?.sports?.[0]?.sportId || null;
+
       // For custom mode: send players in seed-slot order, backend treats as standard (input order = seed order)
       const res = await axios.post("/api/tournaments/direct-knockout/standalone/create", {
         tournamentId,
+        sportId: _firstSportId,
         players,
         drawSize,
         drawMethod: drawMethod === "custom" ? "standard" : drawMethod,
@@ -592,6 +624,38 @@ export default function MDirectKnockout() {
                           <span>•</span>
                           <span>{match.matchStartTime ? new Date(match.matchStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}</span>
                         </div>
+
+                        {/* Umpire status */}
+                        {(() => {
+                          const umpireName = getUmpireName(match.referee);
+                          const isComp = match.status === "COMPLETED";
+                          const playersReady = match.player1?.playerName && match.player1.playerName !== "TBD" && match.player2?.playerName && match.player2.playerName !== "TBD";
+                          return (
+                            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                              {umpireName ? (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                                  <Shield className="w-3 h-3 text-blue-500" />
+                                  <span className="font-semibold">Umpire:</span>
+                                  <span className="truncate max-w-[80px]">{umpireName}</span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <Shield className="w-3 h-3 text-gray-300" />
+                                  <span>No umpire</span>
+                                </span>
+                              )}
+                              {!umpireName && !isComp && playersReady && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setAssignModalMatch(match); }}
+                                  className="flex items-center gap-0.5 text-[10px] font-bold text-orange-600 hover:text-orange-700 px-1.5 py-0.5 rounded hover:bg-orange-50 w-auto"
+                                >
+                                  <UserPlus className="w-3 h-3" />
+                                  Assign
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -729,6 +793,9 @@ export default function MDirectKnockout() {
             </div>
           )}
 
+          {/* Seed Positions Preview — live, driven by drawSize + numberOfSeeds */}
+          <SeedPositionsPreview drawSize={drawSize} numberOfSeeds={numberOfSeeds} />
+
           {/* Custom Placement Mode */}
           {drawMethod === "custom" ? (
             <div className="grid grid-cols-2 gap-6">
@@ -745,11 +812,20 @@ export default function MDirectKnockout() {
                 <h4 className="text-sm font-bold text-gray-700 mb-2">Available Players</h4>
                 <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-xl">
                   {(() => {
+                    // Custom Placement: show registeredPlayers minus those
+                    // placed in customSlots. Ignore `matches` (existing bracket)
+                    // since the user is actively redrawing.
                     const placedIds = getCustomPlayerIds();
-                    const available = getFilteredPlayers().filter((p) => !placedIds.has(String(p.playerId || p._id || "")));
+                    const q = searchQuery.trim().toLowerCase();
+                    const baseList = q
+                      ? registeredPlayers.filter((p) =>
+                          (p.userName || p.playerName || p.name || "").toLowerCase().includes(q)
+                        )
+                      : registeredPlayers;
+                    const available = baseList.filter((p) => !placedIds.has(keyOfPlayer(p)));
                     if (available.length === 0) return (
                       <div className="p-6 text-center text-gray-400 text-sm">
-                        {getFilteredPlayers().length === 0 ? "No registered players found" : "All players have been placed"}
+                        {registeredPlayers.length === 0 ? "No registered players found" : "All players have been placed"}
                       </div>
                     );
                     return (
@@ -757,7 +833,7 @@ export default function MDirectKnockout() {
                         {available.map((player, idx) => {
                           const name = player.userName || player.playerName || player.name || `Player ${idx + 1}`;
                           return (
-                            <div key={player.playerId || player._id}
+                            <div key={`${keyOfPlayer(player) || "p"}-${idx}`}
                               className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-orange-50 transition-colors"
                               onClick={() => placePlayerInSlot(player)}>
                               <Plus size={16} className="text-orange-500 flex-shrink-0" />
@@ -1085,7 +1161,7 @@ export default function MDirectKnockout() {
               </div>
             ) : (() => {
               const mf = activeMatch.matchFormat || {};
-              const maxSets = mf.maxSets || tournament?.matchFormat?.totalSets || 5;
+              const maxSets = mf.maxSets || getMatchFormatHelper(tournament)?.totalSets || 5;
               const setsToWin = mf.setsToWin || Math.ceil(maxSets / 2);
               const pointsToWin = mf.pointsToWinGame || null;
               const sets = activeMatch.sets || [];
@@ -1295,9 +1371,22 @@ export default function MDirectKnockout() {
         matches={matches.filter((m) => m.status !== "COMPLETED" && m.player1?.playerName && m.player1.playerName !== "TBD" && m.player2?.playerName && m.player2.playerName !== "TBD")}
         tournamentId={tournamentId}
         matchType="player"
-        maxSets={tournament?.matchFormat?.totalSets || 5}
-        setsToWin={Math.ceil((tournament?.matchFormat?.totalSets || 5) / 2)}
+        maxSets={getMatchFormatHelper(tournament)?.totalSets || 5}
+        setsToWin={Math.ceil((getMatchFormatHelper(tournament)?.totalSets || 5) / 2)}
         title="Bulk Score Upload — Singles Knockout"
+      />
+
+      {/* Assign Umpire Modal */}
+      <AssignUmpireModal
+        isOpen={!!assignModalMatch}
+        onClose={() => setAssignModalMatch(null)}
+        matchId={assignModalMatch?._id}
+        tournamentId={tournamentId}
+        matchLabel={assignModalMatch ? `M${assignModalMatch.matchNumber} • ${assignModalMatch.player1?.playerName || "P1"} vs ${assignModalMatch.player2?.playerName || "P2"}` : ""}
+        onAssigned={() => {
+          fetchMatches();
+          toast.success("Umpire assigned. Awaiting their response.");
+        }}
       />
 
       {/* Match Detail Modal */}
@@ -1516,3 +1605,5 @@ export default function MDirectKnockout() {
     </div>
   );
 }
+
+// SeedPositionsPreview moved to ./components/SeedPositionsPreview.jsx

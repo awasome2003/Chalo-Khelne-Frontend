@@ -5,6 +5,20 @@ import useMatchScoring from "../Tournament/useMatchScoring";
 import { DynamicScorer, getSportConfig } from "../../features/scoring";
 
 /**
+ * Detects whether the match format uses nested games (Tennis) or flat sets (TT, Badminton).
+ * Mirror of server/factories/MatchFactory.js → hasNestedGames.
+ * Kept inline because sports_app has no shared utils with the Express server.
+ */
+function hasNestedGames(fmt) {
+  if (!fmt || typeof fmt !== "object") return false;
+  if (fmt.gamesPerSet != null && Number(fmt.gamesPerSet) > 0) return true;
+  const tg = Number(fmt.totalGames);
+  const ts = Number(fmt.totalSets);
+  if (Number.isFinite(tg) && Number.isFinite(ts) && tg > 1 && tg !== ts) return true;
+  return false;
+}
+
+/**
  * Dedicated match scoring page — sport-aware.
  * Route: /tournament-management/match/:tournamentId/:matchId/score
  * Works for group stage, knockout, direct knockout, team knockout.
@@ -47,11 +61,15 @@ export default function MatchScoringPage() {
     );
   }
 
-  // Sport detection — explicit, no silent "Table Tennis" fallback
-  const sportName = match.sportsType || match.sport || null;
+  // Sport detection — explicit, no silent "Table Tennis" fallback.
+  // STEP 13: prefer the denormalized `sportName` populated by
+  // MatchFactory._stamp on every new match; older fallbacks remain for
+  // matches created before STEP 9a stamping landed.
+  const sportName = match.sportName || match.sportsType || match.sport || null;
   const sportConfig = getSportConfig(sportName);
   const scoringType = matchFormat?.scoringType || sportConfig.scoringType || "sets";
   const isSetBased = scoringType === "sets";
+  const nested = hasNestedGames(matchFormat);
 
   // Format description for header
   const formatDesc = getFormatDescription(scoringType, matchFormat, sportConfig);
@@ -110,7 +128,7 @@ export default function MatchScoringPage() {
         {/* Set-based Scorecard — only for set-based sports */}
         {isSetBased && sets.length > 0 && (
           <SetScorecard sets={sets} player1Name={player1Name} player2Name={player2Name}
-            player1SetsWon={player1SetsWon} player2SetsWon={player2SetsWon} match={match} />
+            player1SetsWon={player1SetsWon} player2SetsWon={player2SetsWon} match={match} nested={nested} />
         )}
 
         {/* Non-set match summary for time/innings/single */}
@@ -161,8 +179,12 @@ export default function MatchScoringPage() {
 function getFormatDescription(scoringType, matchFormat, sportConfig) {
   if (!matchFormat) return "";
   switch (scoringType) {
-    case "sets":
-      return `Best of ${matchFormat.totalSets} sets • ${matchFormat.gamesToWin} ${sportConfig.labels?.game?.toLowerCase() || "game"}s/set • ${matchFormat.pointsToWinGame} pts/${sportConfig.labels?.game?.toLowerCase() || "game"}`;
+    case "sets": {
+      const nested = hasNestedGames(matchFormat);
+      return nested
+        ? `Best of ${matchFormat.totalSets} sets • ${matchFormat.gamesToWin} ${sportConfig.labels?.game?.toLowerCase() || "game"}s/set • ${matchFormat.pointsToWinGame} pts/${sportConfig.labels?.game?.toLowerCase() || "game"}`
+        : `Best of ${matchFormat.totalSets} sets • ${matchFormat.pointsToWinGame} pts/${sportConfig.labels?.set?.toLowerCase() || "set"}`;
+    }
     case "time":
       return `${sportConfig.scoring?.periods || matchFormat.totalSets || 2} ${sportConfig.labels?.period?.toLowerCase() || "period"}s`;
     case "innings":
@@ -199,7 +221,7 @@ function PlayerCard({ name, score, isWinner }) {
   );
 }
 
-function SetScorecard({ sets, player1Name, player2Name, player1SetsWon, player2SetsWon, match }) {
+function SetScorecard({ sets, player1Name, player2Name, player1SetsWon, player2SetsWon, match, nested }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
       <h3 className="font-bold text-gray-800 mb-4">Set Scorecard</h3>
@@ -221,17 +243,32 @@ function SetScorecard({ sets, player1Name, player2Name, player1SetsWon, player2S
               <tr key={player.key} className="border-b border-gray-50 last:border-b-0">
                 <td className="py-3 px-3 font-semibold text-orange-500">{player.name}</td>
                 {sets.map((s, i) => {
-                  const gamesWon = s.games?.filter((g) => {
-                    const w = g.winner;
-                    if (!w) return false;
-                    return w.playerId?.toString() === match[player.key]?.playerId?.toString() || w.playerName === player.name;
-                  }).length || 0;
-                  const otherGames = (s.games?.filter(g => g.status === "COMPLETED").length || 0) - gamesWon;
-                  return (
-                    <td key={i} className={`text-center py-3 px-3 font-bold ${gamesWon > otherGames ? "text-green-600" : "text-gray-400"}`}>
-                      {s.status === "COMPLETED" || s.games?.length > 0 ? gamesWon : "-"}
-                    </td>
-                  );
+                  if (nested) {
+                    // Nested (Tennis): show games this player won in the set
+                    const gamesWon = s.games?.filter((g) => {
+                      const w = g.winner;
+                      if (!w) return false;
+                      return w.playerId?.toString() === match[player.key]?.playerId?.toString() || w.playerName === player.name;
+                    }).length || 0;
+                    const otherGames = (s.games?.filter(g => g.status === "COMPLETED").length || 0) - gamesWon;
+                    return (
+                      <td key={i} className={`text-center py-3 px-3 font-bold ${gamesWon > otherGames ? "text-green-600" : "text-gray-400"}`}>
+                        {s.status === "COMPLETED" || s.games?.length > 0 ? gamesWon : "-"}
+                      </td>
+                    );
+                  } else {
+                    // Flat (TT, Badminton): show this player's set score (points in the single synthetic game)
+                    const g = s.games?.[0];
+                    const myScore = g?.finalScore?.[player.key] ?? null;
+                    const otherKey = player.key === "player1" ? "player2" : "player1";
+                    const otherScore = g?.finalScore?.[otherKey] ?? null;
+                    const isWinner = myScore != null && otherScore != null && myScore > otherScore;
+                    return (
+                      <td key={i} className={`text-center py-3 px-3 font-bold ${isWinner ? "text-green-600" : "text-gray-400"}`}>
+                        {myScore != null ? myScore : "-"}
+                      </td>
+                    );
+                  }
                 })}
                 <td className="text-center py-3 px-3 font-black text-lg text-orange-500">{player.setsWon}</td>
               </tr>

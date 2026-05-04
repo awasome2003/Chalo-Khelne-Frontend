@@ -21,6 +21,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
+import { getKnockoutFormat } from "../utils/sportTrack";
 import { TextField } from "@mui/material";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
 import BulkResultUploadModal from "./BulkResultUploadModal";
@@ -309,8 +310,12 @@ const TeamKnockoutMatches = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Use knockoutFormat field if available, otherwise fallback to inference from playerNoValue
-        const type = data.tournament.knockoutFormat?.includes("Single") || data.tournament.playerNoValue?.includes("Single")
+        // STEP 17b.ii — read knockoutFormat per-sport (sports[0] default;
+        // this screen has no sport-switcher). Gate logic preserved:
+        // "Single" if knockoutFormat or legacy playerNoValue contains
+        // "Single", else "Double".
+        const _kf = getKnockoutFormat(data.tournament);
+        const type = _kf?.includes("Single") || data.tournament.playerNoValue?.includes("Single")
           ? "Single"
           : "Double";
         const setsNum = parseInt(data.tournament.setNo) || 3;

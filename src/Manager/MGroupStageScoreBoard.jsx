@@ -78,11 +78,15 @@ const MGroupStageScoreBoard = () => {
 
                 setMessage(`Submitting game ${i + 1} of ${gamesToSubmit.length}...`);
 
+                const token = localStorage.getItem("token");
                 const response = await fetch(
                     `/api/tournaments/matches/${matchId}/complete-game`,
                     {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
                         body: JSON.stringify({
                             finalPlayer1Points: scoreA,
                             finalPlayer2Points: scoreB
@@ -412,11 +416,15 @@ const MGroupStageScoreBoard = () => {
     // Complete current game and handle set/match progression
     const completeCurrentGame = async (playerA_points, playerB_points) => {
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch(
                 `/api/tournaments/matches/${matchId}/complete-game`,
                 {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
                     body: JSON.stringify({
                         finalPlayer1Points: playerA_points,
                         finalPlayer2Points: playerB_points

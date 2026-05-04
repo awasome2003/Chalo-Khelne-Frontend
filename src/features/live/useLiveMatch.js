@@ -31,7 +31,8 @@ export default function useLiveMatch(matchId) {
 
   if (!match) return { match: null, isLoading, error, config: null, derived: null, isRealtime };
 
-  const sportName = match.sportsType || match.sport || null;
+  // STEP 13: prefer denormalized `sportName` (populated by MatchFactory._stamp).
+  const sportName = match.sportName || match.sportsType || match.sport || null;
   const config = getSportConfig(sportName);
 
   const fmt = match.matchFormat || {};

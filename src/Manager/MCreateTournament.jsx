@@ -1,9 +1,8 @@
-import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 import {
   X,
-  Plus,
-  Trash2,
   Calendar,
   MapPin,
   Trophy,
@@ -11,11 +10,8 @@ import {
   Image as ImageIcon,
   Clock,
   Type,
-  AlignLeft,
-  DollarSign,
   Check,
   Lock,
-  Shield,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -23,93 +19,180 @@ import {
   Zap,
   Award,
   Info,
-  Settings,
-  Edit2,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { Switch } from "@mui/material";
 import { AuthContext } from "../context/AuthContext";
-import TeamKnockoutFormatSelector from "./TeamKnockoutFormatSelector";
-// Backend now uses formatId directly — no legacy mapping needed
 import {
   generateFormFields,
   validateRuleBookForm,
-  buildSubmissionPayload,
 } from "../utils/ruleBookFormEngine";
+// Sub-step 4 — wizard design primitives (Sub-step 1)
+// Sub-step 6 — SportCard + DashedAddButton for the new Step 2
+// Sub-step 7 — Select for the Cancellation Policy dropdown in Step 3
+// Sub-step 9 — Collapsible for ref-measured smooth transitions
+import {
+  Card as WCard,
+  FieldLabel,
+  TextInput,
+  Select,
+  SectionHeader,
+  ExpandableSection,
+  ToggleCard,
+  SportCard,
+  DashedAddButton,
+  Collapsible,
+} from "./wizard";
+// Sub-step 5 — sport classification + unranked defaults
+import {
+  SPORT_SCORING_TYPES,
+  isNestedSetSport,
+  slugifyForSport,
+  UNRANKED_DEFAULTS,
+  getUnrankedDefaults,
+} from "./wizard/sportClassification";
 
-// ─── Section Icons Map ───
-const SECTION_ICONS = {
-  format: <Type className="w-5 h-5 text-orange-500" />,
-  scoring: <Target className="w-5 h-5 text-emerald-500" />,
-  participant: <Users className="w-5 h-5 text-emerald-600" />,
-  tieBreaker: <Zap className="w-5 h-5 text-amber-500" />,
-  tournamentRules: <Award className="w-5 h-5 text-orange-500" />,
-};
+// Sub-step 5 — sport classification + UNRANKED_DEFAULTS lifted to a shared
+// util so SportCard and this file use one source of truth.
+// (Imported from "./wizard/sportClassification" above the file's other
+// wizard imports — kept inline here only as a comment marker.)
 
-// ─── Sport-aware defaults for unranked (custom rules) tournaments ───
-const UNRANKED_DEFAULTS = {
-  sets: {
-    "format.totalSets": 3,
-    "format.pointsPerSet": 11,
-    "format.gamesPerSet": 3,
-    "format.winByMargin": 2,
-    "format.deuceEnabled": true,
-    "format.tiebreakEnabled": false,
-    "format.serviceAlternate": 2,
-  },
-  innings: {
-    "format.oversCount": 20,
-    "format.inningsCount": 2,
-    "format.totalSets": 2,
-  },
-  time: {
-    "format.halvesCount": 2,
-    "format.halvesDuration": 45,
-    "format.totalSets": 2,
-  },
-  single: {
-    "format.totalSets": 1,
-  },
-};
-
-const SPORT_SCORING_TYPES = {
-  "Table Tennis": "sets", "Badminton": "sets", "Tennis": "sets", "Pickleball": "sets", "Volleyball": "sets", "Squash": "sets",
-  "Cricket": "innings", "Football": "time", "Basketball": "time", "Hockey": "time", "Kabaddi": "time",
-  "Chess": "single", "Carrom": "single",
-};
-
-// Sports that MUST play as teams — only Team Knockout format allowed
-const TEAM_SPORTS = new Set([
-  "Cricket", "Football", "Kabaddi", "Volleyball", "Basketball", "Hockey",
-]);
-
-// Sports that are strictly individual — no team format
-const INDIVIDUAL_SPORTS = new Set([
-  "Chess", "Carrom", "Snooker",
-]);
-
-function isTeamOnlySport(sportName) {
-  if (!sportName) return false;
-  return TEAM_SPORTS.has(sportName);
-}
-
-function isIndividualOnlySport(sportName) {
-  if (!sportName) return false;
-  return INDIVIDUAL_SPORTS.has(sportName);
-}
-
-function getUnrankedDefaults(sportName) {
-  const type = SPORT_SCORING_TYPES[sportName] || "sets";
-  return { ...(UNRANKED_DEFAULTS[type] || UNRANKED_DEFAULTS.sets) };
-}
-
-// ─── Step definitions (static steps — dynamic ones inserted at runtime) ───
+// ─── Step definitions — 3 fixed steps, no dynamic insertion ───
+// "sportConfig" is removed; locked rule book + custom match format now live
+// inside each sport card (Section D) per Sub-step 5.
 const STATIC_STEPS = [
-  { id: "basic", label: "Basic Info", icon: <Trophy className="w-4 h-4" /> },
-  { id: "sportConfig", label: "Sport Config", icon: <Settings className="w-4 h-4" /> },
-  { id: "format", label: "Tournament Setup", icon: <Type className="w-4 h-4" /> },
-  { id: "details", label: "Schedule & Details", icon: <Calendar className="w-4 h-4" /> },
+  { id: "basic",   label: "Tournament Info",   icon: <Trophy className="w-4 h-4" /> },
+  { id: "format",  label: "Sports & Format",   icon: <Type className="w-4 h-4" /> },
+  { id: "details", label: "Schedule & Policy", icon: <Calendar className="w-4 h-4" /> },
 ];
+
+// Tournament level enum — Sub-step 3 hardcodes the schema's 5 values.
+// Replaces the per-sport `availableLevels` API roundtrip.
+const FIXED_LEVELS = ["district", "state", "national", "international", "unranked"];
+
+// matchFormat schema fields that should NOT be flattened into _ruleBookValues
+// (they're metadata, not user-editable rule fields).
+const MATCHFORMAT_META_KEYS = new Set(["scoringType", "formatVersion"]);
+
+// matchFormat schema fields derived from other fields (setsToWin = ceil(totalSets/2),
+// gamesToWin = ceil(totalGames/2)). Skipped on schema→engine conversion and
+// re-derived on engine→schema conversion. Sub-step 10 round-trip fix.
+const MATCHFORMAT_DERIVED_KEYS = new Set(["setsToWin", "gamesToWin"]);
+
+// Engine field name (after stripping "format." prefix) → schema field name.
+// Both pointsPerGame and pointsPerSet collapse to pointsToWinGame; engine
+// emits at most one of them per sport (nested-set vs flat-set), so collision
+// is rare. If both ever co-exist, pointsPerGame wins.
+const ENGINE_TO_SCHEMA_RENAMES = {
+  winByMargin:   "marginToWin",
+  deuceEnabled:  "deuceRule",
+  gamesPerSet:   "totalGames",
+  pointsPerGame: "pointsToWinGame",
+  pointsPerSet:  "pointsToWinGame",
+};
+
+// Schema field → engine field name (for the inverse, schema→engine direction).
+// pointsToWinGame is ambiguous and resolved via sportName context — see
+// matchFormatToRuleBookValues below.
+const SCHEMA_TO_ENGINE_RENAMES = {
+  marginToWin: "winByMargin",
+  deuceRule:   "deuceEnabled",
+  totalGames:  "gamesPerSet",
+};
+
+// Engine path prefixes that don't belong in matchFormat (they live elsewhere
+// on sportRules, or nowhere on the persisted document).
+const NON_MATCHFORMAT_PREFIXES = ["scoring.", "participantConfig.", "tieBreaker.", "tournamentRules."];
+
+/**
+ * Convert a saved matchFormat object (flat schema shape, e.g.
+ * { totalSets: 3, pointsToWinGame: 21, marginToWin: 2 }) into the dotted-path
+ * values shape used by ruleBookFormEngine (e.g. { "format.totalSets": 3,
+ * "format.pointsPerSet": 21, "format.winByMargin": 2 }).
+ *
+ * Sub-step 10 round-trip fix: previously this just prepended "format." to every
+ * key, which left renamed schema fields (marginToWin, deuceRule, totalGames,
+ * pointsToWinGame) as unrecognized engine paths — the engine form would not
+ * surface them, so user edits silently disappeared on save. Now applies the
+ * inverse rename map so saved overrides round-trip correctly through Section D.
+ *
+ * @param {object} mf - matchFormat in flat schema shape
+ * @param {string} sportName - used to disambiguate pointsToWinGame
+ *   (nested-set sports → format.pointsPerGame, flat-set → format.pointsPerSet)
+ */
+function matchFormatToRuleBookValues(mf, sportName) {
+  if (!mf || typeof mf !== "object") return {};
+  const out = {};
+  for (const [k, v] of Object.entries(mf)) {
+    if (v == null) continue;
+    if (MATCHFORMAT_META_KEYS.has(k)) continue;
+    if (MATCHFORMAT_DERIVED_KEYS.has(k)) continue;
+
+    if (k === "pointsToWinGame") {
+      const enginePath = isNestedSetSport(sportName) ? "format.pointsPerGame" : "format.pointsPerSet";
+      out[enginePath] = v;
+      continue;
+    }
+
+    const renamed = SCHEMA_TO_ENGINE_RENAMES[k] || k;
+    out[`format.${renamed}`] = v;
+  }
+  return out;
+}
+
+/**
+ * Convert ruleBookFormEngine values (flat dotted-path shape, e.g.
+ * { "format.totalSets": 3, "format.pointsPerSet": 21, "format.winByMargin": 2 })
+ * into a flat schema-shaped matchFormat object (e.g.
+ * { totalSets: 3, pointsToWinGame: 21, marginToWin: 2, scoringType: "sets" }).
+ *
+ * Sub-step 10 fix: previously the submit handler used buildSubmissionPayload()
+ * which produces engine-nested shape ({ format: { totalSets: 3 } }) — Mongoose
+ * strict mode silently stripped the nested wrapper, so user edits never
+ * persisted. This converter strips "format." prefix, applies engine→schema
+ * renames, derives setsToWin/gamesToWin, and stamps scoringType.
+ *
+ * @param {object} values - dotted-path engine values
+ * @param {string} scoringType - copied to the output's scoringType field
+ */
+function ruleBookValuesToMatchFormat(values, scoringType) {
+  const out = {};
+  if (values && typeof values === "object") {
+    let pointsPerGameVal = null;
+    let pointsPerSetVal = null;
+
+    for (const [path, val] of Object.entries(values)) {
+      if (val == null) continue;
+      if (NON_MATCHFORMAT_PREFIXES.some((p) => path.startsWith(p))) continue;
+      if (path === "gameStructureType") continue;
+      if (!path.startsWith("format.")) continue;
+
+      const key = path.slice(7);
+
+      // Defer pointsPerGame/pointsPerSet so the collision rule (pointsPerGame
+      // wins if both are present) runs after the loop.
+      if (key === "pointsPerGame") { pointsPerGameVal = val; continue; }
+      if (key === "pointsPerSet")  { pointsPerSetVal  = val; continue; }
+
+      const renamed = ENGINE_TO_SCHEMA_RENAMES[key];
+      out[renamed || key] = val;
+    }
+
+    if (pointsPerGameVal != null) out.pointsToWinGame = pointsPerGameVal;
+    else if (pointsPerSetVal != null) out.pointsToWinGame = pointsPerSetVal;
+  }
+
+  if (typeof out.totalSets === "number") {
+    out.setsToWin = Math.ceil(out.totalSets / 2);
+  }
+  if (typeof out.totalGames === "number") {
+    out.gamesToWin = Math.ceil(out.totalGames / 2);
+  }
+
+  if (scoringType) out.scoringType = scoringType;
+
+  return out;
+}
 
 /**
  * Unified Tournament Form — supports both create and edit mode.
@@ -122,25 +205,61 @@ const STATIC_STEPS = [
  * - onSuccess: () => void (optional callback after save)
  */
 /**
+ * Map a single API sport entry to the unified form-sport shape.
+ * Used for every entry in t.sports[] — no more primary/additional split.
+ */
+function mapSportApiToFormSport(s, isFirst, legacyRootLevel = "") {
+  return {
+    _key: Math.random().toString(36).slice(2, 10),
+    _expanded: !!isFirst, // first card auto-expanded, others collapsed
+    _ruleBook: null, // lazy-fetched on Section D expand
+    _ruleBookValues: matchFormatToRuleBookValues(s.matchFormat, s.sportName),
+    _ruleBookErrors: {},
+    _loadingRuleBook: false,
+    // Sub-step 5 — one-shot guard for the lazy rule-book fetch in SportCard.
+    // Always false on edit-load: we don't pre-fetch, the user has to expand
+    // Section D first. Cleared on sport-change and on level-change.
+    _ruleBookFetchAttempted: false,
+
+    sportName: s.sportName || "",
+    sportSlug: s.sportSlug || slugifyForSport(s.sportName),
+    scoringType: s.matchFormat?.scoringType || SPORT_SCORING_TYPES[s.sportName] || "sets",
+    // Per-sport tournament level. Edit-load fallback chain:
+    //   sport entry's own level → legacy root tournamentLevel → "" (force pick)
+    tournamentLevel: s.tournamentLevel || legacyRootLevel || "",
+    type: s.type || "knockout + group stage",
+    categories: (Array.isArray(s.categories) && s.categories.length > 0)
+      ? s.categories.map((c) => ({ name: c.name, fee: Number(c.fee || 0) }))
+      : [{ name: "Open Category", fee: 0 }],
+    groupStageFormat: s.groupStageFormat || null,
+    knockoutFormat: s.knockoutFormat || null,
+    davisCupFormatId: s.davisCupFormatId || null,
+    qualifyPerGroup: Number(s.qualifyPerGroup ?? 2),
+    drawSize: s.drawSize ?? null,
+    matchFormat: s.matchFormat || { ...UNRANKED_DEFAULTS.sets },
+  };
+}
+
+/**
  * Maps raw tournament API data to form field values.
+ * Sub-step 3: every sport (including the first) flows into formData.sports[].
+ * Root form keys are tournament-wide only (title, level, dates, etc.).
  */
 function mapTournamentToForm(t, defaults, auth) {
   if (!t) return { ...defaults };
-  const tType = (t.type || "").toLowerCase();
-  const formats = [];
-  if (tType.includes("group stage")) formats.push("group+knockout");
-  if (tType === "knockout" && (t.knockoutFormat?.includes("Singles") || t.knockoutFormat?.includes("Doubles"))) formats.push("singles-knockout");
-  if (t.knockoutFormat === "Davis Cup" || t.knockoutFormat === "Teams Knockout") formats.push("davis-cup");
-  if (formats.length === 0 && tType.includes("knockout")) formats.push("singles-knockout");
+
+  // Per-sport level migration: pass legacy root tournamentLevel as fallback
+  // so existing tournaments with mixed-or-uniform levels load correctly even
+  // before any sports[i].tournamentLevel field has been written.
+  const legacyRootLevel = t.tournamentLevel || "";
+
+  const sports = (Array.isArray(t.sports) && t.sports.length > 0)
+    ? t.sports.map((s, idx) => mapSportApiToFormSport(s, idx === 0, legacyRootLevel))
+    : [newSportEntry({ expanded: true })];
 
   return {
     ...defaults,
     title: t.title || "",
-    hasGroupStage: tType.includes("group stage"),
-    hasKnockout: tType.includes("knockout"),
-    playingFormats: formats,
-    sportsType: t.sportsType || "",
-    tournamentLevel: t.tournamentLevel || "",
     description: t.description || "",
     organizerName: t.organizerName || "",
     cancellationPolicy: t.cancellationPolicy || "NO",
@@ -148,72 +267,103 @@ function mapTournamentToForm(t, defaults, auth) {
     startDate: t.startDate ? t.startDate.split("T")[0] : "",
     endDate: t.endDate ? t.endDate.split("T")[0] : "",
     termsAndConditions: t.termsAndConditions || "",
-    groupStageFormat: t.groupStageFormat || "Singles",
-    knockoutFormat: t.knockoutFormat || "Singles",
-    category: t.category || [{ name: "Open Category", fee: 0 }],
     selectedTime: t.selectedTime || { startTime: "10:00", endTime: "18:00" },
     registrationDeadline: t.registrationDeadline || "",
-    qualifyPerGroup: t.qualifyPerGroup?.toString() || "2",
     managerId: t.managerId || [auth?._id || ""],
     isPrivate: t.isPrivate || false,
     clientId: t.clientId || "",
+    sports,
   };
 }
+
+// ───────────────────────────────────────────────────────────
+// Sub-step 3 — Unified sport-entry factory (replaces newAdditionalSport).
+// Every entry in formData.sports[] uses this shape, including index 0.
+// ───────────────────────────────────────────────────────────
+
+function newSportEntry({ expanded = false } = {}) {
+  return {
+    // UI-only fields — stripped at submit
+    _key: Math.random().toString(36).slice(2, 10),
+    _expanded: !!expanded,
+    _ruleBook: null,
+    _ruleBookValues: {},
+    _ruleBookErrors: {},
+    _loadingRuleBook: false,
+    _ruleBookFetchAttempted: false, // Sub-step 5 — one-shot fetch guard
+
+    // Persisted fields (sent to API)
+    sportName: "",
+    sportSlug: "",
+    scoringType: "sets",
+    // Per-sport tournament level — empty default forces explicit choice.
+    tournamentLevel: "",
+    type: "knockout + group stage",
+    categories: [{ name: "Open Category", fee: 0 }], // Sub-step 5 — match spec
+    groupStageFormat: "Singles",
+    knockoutFormat: "Singles",
+    davisCupFormatId: null,
+    qualifyPerGroup: 2,
+    drawSize: null,
+    matchFormat: { ...UNRANKED_DEFAULTS.sets },
+  };
+}
+
 
 const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialData = null, onSuccess }) => {
   const isEditMode = mode === "edit";
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  // Sub-step 8 — split error display:
+  //   fieldErrors  → inline per-field validation errors keyed by dotted path
+  //                  ("title", "tournamentLevel", "sports[i].sportName",
+  //                   "sports[i].categories[j].name", "eventLocation", etc.)
+  //   submitError  → server/network errors from createTournament catch block;
+  //                  surfaced via react-toastify (existing global ToastContainer)
+  // The legacy global red banner is GONE — validation errors render inline at
+  // the offending input; server/upload errors go to toast.
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState("");
   const { auth } = useContext(AuthContext);
+
+  // Sub-step 4 — Step 1 UI state
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  // Sub-step 7 — Step 3 UI state (T&C collapsible link)
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   // Wizard step
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Sports & Rules state
+  // Sports list (active sports for the dropdowns)
   const [sportsList, setSportsList] = useState([]);
-  const [availableLevels, setAvailableLevels] = useState([]);
-  const [ruleBook, setRuleBook] = useState(null);
-  const [loadingRules, setLoadingRules] = useState(false);
 
-  // RuleBook-driven dynamic form state
-  const [ruleBookValues, setRuleBookValues] = useState({});
-  const [ruleBookErrors, setRuleBookErrors] = useState({});
-
+  // Sub-step 3 — Tournament-wide form state. Per-sport state (rule book, format,
+  // categories, expansion) lives on each entry in formData.sports[].
   const defaultFormData = {
     title: "",
-    hasGroupStage: true,
-    hasKnockout: false,
-    sportsType: "",
-    tournamentLevel: "",
     description: "",
     registrationDeadline: "",
     organizerName: "",
     cancellationPolicy: "YES",
     eventLocation: "",
     managerId: [auth?._id || ""],
-    category: [{ name: "Open Category", fee: 0 }],
     selectedTime: { startTime: "10:00", endTime: "18:00" },
     startDate: dayjs().format("YYYY-MM-DD"),
     endDate: dayjs().add(7, "day").format("YYYY-MM-DD"),
     termsAndConditions: "",
-    playingFormats: [], // array of: "group+knockout" | "singles-knockout" | "davis-cup"
-    groupStageFormat: "Singles",
-    knockoutFormat: "Singles",
-    qualifyPerGroup: "2",
-    drawSize: 16,
-    davisCupFormatId: "",
     isPrivate: false,
     clientId: "",
+    // Unified sports[] — first entry replaces the legacy primary-sport root scalars.
+    sports: [newSportEntry({ expanded: true })],
   };
 
   const [formData, setFormData] = useState(() => {
     if (isEditMode && initialData) {
       return mapTournamentToForm(initialData, defaultFormData, auth);
     }
-    return { ...defaultFormData };
+    return { ...defaultFormData, sports: [newSportEntry({ expanded: true })] };
   });
 
   // Sync form when modal opens, initialData changes, or mode changes
@@ -223,32 +373,22 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     if (isEditMode && initialData) {
       setFormData(mapTournamentToForm(initialData, defaultFormData, auth));
       setImage(initialData.tournamentLogo ? `/uploads/tournaments/${initialData.tournamentLogo}` : null);
+      setIsDescriptionOpen(!!initialData.description);
+      setIsTermsOpen(!!initialData.termsAndConditions);
     } else {
-      setFormData({ ...defaultFormData });
+      setFormData({ ...defaultFormData, sports: [newSportEntry({ expanded: true })] });
       setImage(null);
+      setIsDescriptionOpen(false);
+      setIsTermsOpen(false);
     }
     setImageFile(null);
-    setError("");
+    setFieldErrors({});
     setSuccess("");
     setCurrentStep(0);
-    setUserChangedSport(null);
   }, [showPopup, isEditMode, initialData]);
 
-  // Generate dynamic form sections from ruleBook
-  const { sections: ruleBookSections, defaults: ruleBookDefaults } = useMemo(
-    () => generateFormFields(ruleBook),
-    [ruleBook]
-  );
-
-  // Build wizard steps — insert "Sport Config" only when ruleBook has sections
-  const steps = useMemo(() => {
-    const isUnranked = formData.tournamentLevel === "unranked";
-    const hasSportConfig = ruleBookSections.length > 0 || ruleBook || isUnranked;
-    return STATIC_STEPS.filter((s) => {
-      if (s.id === "sportConfig") return hasSportConfig;
-      return true;
-    });
-  }, [ruleBookSections, ruleBook, formData.tournamentLevel]);
+  // Sub-step 3 — 3 fixed steps. No more dynamic insertion.
+  const steps = STATIC_STEPS;
 
   // Fetch active sports on mount
   useEffect(() => {
@@ -263,225 +403,305 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     fetchSports();
   }, []);
 
-  // Reset everything when popup opens in CREATE mode only
-  // (Edit mode is handled by the useEffect above that uses mapTournamentToForm)
-  useEffect(() => {
-    if (showPopup && !isEditMode) {
-      setFormData({ ...defaultFormData });
-      setImage(null);
-      setImageFile(null);
-      setError("");
-      setSuccess("");
-      setRuleBook(null);
-      setAvailableLevels([]);
-      setRuleBookValues({});
-      setRuleBookErrors({});
-      setCurrentStep(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showPopup]);
+  // Per-sport level: rule-book invalidation on level change is now handled
+  // inside SportCard (in onLevelChange, mirror of onSportChange). The
+  // tournament-wide level effect was removed when tournamentLevel moved to
+  // per-sport — invalidation needs to scope to the single sport whose level
+  // changed, not all sports.
 
-  // Track the sport that was set by the user manually (not by edit pre-fill)
-  const [userChangedSport, setUserChangedSport] = useState(null);
-
-  // When user manually changes sport, reset formats and fetch levels
-  useEffect(() => {
-    if (userChangedSport === null) return;
-    const sport = userChangedSport;
-
-    if (!sport) {
-      setAvailableLevels([]);
-      setRuleBook(null);
-      setRuleBookValues({});
-      setRuleBookErrors({});
-      return;
-    }
-
-    const fetchLevels = async () => {
-      try {
-        const res = await axios.get(`/api/sport-rules/sport/${sport}/levels`);
-        setAvailableLevels(res.data.data || []);
-      } catch (err) {
-        console.error("Failed to fetch levels:", err);
-        setAvailableLevels([]);
+  // ── Sub-step 3 — Sport helpers (single source of truth: formData.sports) ──
+  // Sub-step 9 — auto-clear inline errors for any keys touched by a patch.
+  const updateSport = useCallback((idx, patch) => {
+    setFormData((prev) => {
+      const next = [...prev.sports];
+      if (!next[idx]) return prev;
+      next[idx] = { ...next[idx], ...patch };
+      return { ...prev, sports: next };
+    });
+    setFieldErrors((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      let changed = false;
+      const out = { ...prev };
+      const prefix = `sports[${idx}].`;
+      for (const key of Object.keys(patch)) {
+        if (key.startsWith("_")) continue; // UI-only fields don't have inline errors
+        const errPath = `${prefix}${key}`;
+        if (out[errPath]) { delete out[errPath]; changed = true; }
+        // Editing categories clears all category-related errors for this sport.
+        if (key === "categories") {
+          for (const k of Object.keys(out)) {
+            if (k.startsWith(`${prefix}categories`)) { delete out[k]; changed = true; }
+          }
+        }
+        // Editing sportName auto-corrects type/format → also clear the type error.
+        if (key === "sportName") {
+          if (out[`${prefix}type`]) { delete out[`${prefix}type`]; changed = true; }
+        }
       }
-    };
-    fetchLevels();
+      return changed ? out : prev;
+    });
+  }, []);
 
-    const isSportTeam = isTeamOnlySport(sport);
+  const addSport = useCallback(() => {
     setFormData((prev) => ({
       ...prev,
-      tournamentLevel: "",
-      // Auto-select davis-cup for team sports, empty for individual
-      playingFormats: isSportTeam ? ["davis-cup"] : [],
-      hasGroupStage: false,
-      hasKnockout: isSportTeam,
-      groupStageFormat: isSportTeam ? "Teams" : "Singles",
-      knockoutFormat: isSportTeam ? "Teams Knockout" : "Singles",
+      sports: [
+        // Collapse all existing cards when adding a new one
+        ...prev.sports.map((s) => ({ ...s, _expanded: false })),
+        newSportEntry({ expanded: true }),
+      ],
     }));
-    setRuleBook(null);
-    setRuleBookValues({});
-    setRuleBookErrors({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userChangedSport]);
+  }, []);
 
-  // Fetch levels when sportsType changes (including from edit pre-fill) — levels only, no format reset
-  useEffect(() => {
-    if (!formData.sportsType) return;
-    const fetchLevels = async () => {
-      try {
-        const res = await axios.get(`/api/sport-rules/sport/${formData.sportsType}/levels`);
-        setAvailableLevels(res.data.data || []);
-      } catch {}
-    };
-    fetchLevels();
-  }, [formData.sportsType]);
+  const removeSport = useCallback((idx) => {
+    setFormData((prev) => {
+      if (prev.sports.length <= 1) return prev; // never remove the last card
+      return { ...prev, sports: prev.sports.filter((_, i) => i !== idx) };
+    });
+  }, []);
 
-  // When sport+level selected, fetch ruleBook OR show custom form for unranked
-  useEffect(() => {
-    if (!formData.sportsType || !formData.tournamentLevel) {
-      setRuleBook(null);
-      setRuleBookValues({});
-      setRuleBookErrors({});
-      return;
-    }
-
-    // Unranked = custom rules, no ruleBook fetch
-    if (formData.tournamentLevel === "unranked") {
-      setRuleBook(null);
-      // Set sport-aware defaults for custom rules
-      const defaults = getUnrankedDefaults(formData.sportsType);
-      setRuleBookValues(defaults);
-      setRuleBookErrors({});
-      setLoadingRules(false);
-      return;
-    }
-
-    const fetchRuleBook = async () => {
-      setLoadingRules(true);
-      try {
-        const res = await axios.get(
-          `/api/sport-rules/sport/${formData.sportsType}/${formData.tournamentLevel}`
-        );
-        setRuleBook(res.data.data || null);
-      } catch (err) {
-        console.error("Failed to fetch rule book:", err);
-        setRuleBook(null);
-      } finally {
-        setLoadingRules(false);
-      }
-    };
-    fetchRuleBook();
-  }, [formData.sportsType, formData.tournamentLevel]);
-
-  // Pre-fill ruleBook defaults
-  useEffect(() => {
-    if (ruleBookDefaults && Object.keys(ruleBookDefaults).length > 0) {
-      setRuleBookValues({ ...ruleBookDefaults });
-      setRuleBookErrors({});
-    }
-  }, [ruleBookDefaults]);
+  const toggleSportExpanded = useCallback((idx) => {
+    setFormData((prev) => ({
+      ...prev,
+      sports: prev.sports.map((s, i) => (i === idx ? { ...s, _expanded: !s._expanded } : s)),
+    }));
+  }, []);
 
   // ── Handlers ──
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImage(URL.createObjectURL(file));
+  // Sub-step 4 — image upload helpers (drag-and-drop + click + remove).
+  // Sub-step 8 — image upload errors go to toast (no longer a global banner).
+  const acceptImageFile = useCallback((file) => {
+    if (!file) return;
+    if (!file.type || !file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (PNG or JPG).");
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo file too large — max 5MB.");
+      return;
+    }
+    setImageFile(file);
+    setImage(URL.createObjectURL(file));
+  }, []);
+
+  const handleImageChange = (event) => {
+    acceptImageFile(event.target.files[0]);
   };
 
+  const removeImage = useCallback(() => {
+    setImageFile(null);
+    setImage(null);
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) acceptImageFile(file);
+  }, [acceptImageFile]);
+
+  // Generic root-field setter. The legacy `sportsType` field name maps to
+  // sports[0].sportName via the bridge below — special-cased here so existing
+  // <select name="sportsType" onChange={handleInputChange}> JSX still works.
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === "sportsType") {
+      // Sport change: also reset per-sport format defaults + clear rule book
+      // (matches the pre-Sub-step-3 userChangedSport reset behavior).
+      const isTeam = isTeamOnlySport(value);
+      const scoringType = SPORT_SCORING_TYPES[value] || "sets";
+      updateSport(0, {
+        sportName: value,
+        sportSlug: slugifyForSport(value),
+        scoringType,
+        type: isTeam ? "knockout" : "knockout + group stage",
+        knockoutFormat: isTeam ? "Teams Knockout" : "Singles",
+        groupStageFormat: isTeam ? "Teams" : "Singles",
+        _ruleBook: null,
+        _ruleBookValues: {},
+        _ruleBookErrors: {},
+        _loadingRuleBook: false,
+        _ruleBookFetchAttempted: false, // Sub-step 5 — re-arm SportCard's lazy fetch
+      });
+      // Reset tournamentLevel — different sports may not have rule books at every level.
+      setFormData((prev) => ({ ...prev, tournamentLevel: "" }));
+      return;
+    }
+    // Bridge — primary-sport scalars previously held at root now live on sports[0].
+    if (name === "qualifyPerGroup") {
+      updateSport(0, { qualifyPerGroup: Number(value) });
+      return;
+    }
+    if (name === "drawSize") {
+      updateSport(0, { drawSize: value ? Number(value) : null });
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addCategory = () => {
-    setFormData((prev) => ({
-      ...prev,
-      category: [...prev.category, { name: "", fee: 0 }],
-    }));
-  };
-
-  const handleCategoryChange = (index, field, value) => {
-    const updatedCategories = [...formData.category];
-    updatedCategories[index][field] = field === "fee" ? Math.max(0, Number(value)) : value;
-    setFormData((prev) => ({ ...prev, category: updatedCategories }));
-  };
-
-  const handleRuleBookFieldChange = useCallback((path, value) => {
-    setRuleBookValues((prev) => ({ ...prev, [path]: value }));
-    setRuleBookErrors((prev) => {
-      if (!prev[path]) return prev;
+    // Sub-step 9 — auto-clear inline error for this root field.
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
       const next = { ...prev };
-      delete next[path];
+      delete next[name];
       return next;
+    });
+  };
+
+
+  // Rule-book field handlers operate on sports[0]._ruleBookValues / _ruleBookErrors.
+  const handleRuleBookFieldChange = useCallback((path, value) => {
+    setFormData((prev) => {
+      const sp = prev.sports[0];
+      const nextValues = { ...(sp._ruleBookValues || {}), [path]: value };
+      const nextErrors = { ...(sp._ruleBookErrors || {}) };
+      delete nextErrors[path];
+      const sports = [...prev.sports];
+      sports[0] = { ...sp, _ruleBookValues: nextValues, _ruleBookErrors: nextErrors };
+      return { ...prev, sports };
     });
   }, []);
 
   const handleMultiSelectToggle = useCallback((path, option) => {
-    setRuleBookValues((prev) => {
-      const current = Array.isArray(prev[path]) ? [...prev[path]] : [];
-      const idx = current.indexOf(option);
-      if (idx >= 0) current.splice(idx, 1);
+    setFormData((prev) => {
+      const sp = prev.sports[0];
+      const current = Array.isArray(sp._ruleBookValues?.[path]) ? [...sp._ruleBookValues[path]] : [];
+      const i = current.indexOf(option);
+      if (i >= 0) current.splice(i, 1);
       else current.push(option);
-      return { ...prev, [path]: current };
+      const sports = [...prev.sports];
+      sports[0] = { ...sp, _ruleBookValues: { ...(sp._ruleBookValues || {}), [path]: current } };
+      return { ...prev, sports };
     });
   }, []);
 
   // ── Step Validation ──
+  // Sub-step 8 — populates a fieldErrors map keyed by dotted path. Returns
+  // true iff the map is empty. Inline error rendering at each input consumes
+  // these errors; there is no global validation banner.
   const validateCurrentStep = () => {
     const stepId = steps[currentStep]?.id;
-    setError("");
+    const errors = {};
 
     if (stepId === "basic") {
-      if (!formData.title.trim()) { setError("Tournament name is required"); return false; }
-      if (!formData.sportsType) { setError("Please select a sport"); return false; }
-      if (!formData.tournamentLevel) { setError("Please select a tournament level"); return false; }
-      return true;
-    }
-
-    if (stepId === "sportConfig") {
-      if (ruleBookSections.length > 0) {
-        const { valid, errors } = validateRuleBookForm(ruleBookValues, ruleBookSections);
-        if (!valid) {
-          setRuleBookErrors(errors);
-          setError("Please fix the configuration errors highlighted below");
-          return false;
+      // Per-sport level: tournamentLevel validation moved to Step 2 since
+      // each sport now has its own level.
+      if (!formData.title.trim()) errors.title = "Tournament name is required";
+    } else if (stepId === "format") {
+      // Sub-step 6 — uniform per-sport validation. Errors stored at
+      // sports[i].<field> paths so SportCard can slice and forward them.
+      const sports = formData.sports || [];
+      sports.forEach((s, i) => {
+        const prefix = `sports[${i}]`;
+        if (!s.sportName?.trim()) {
+          errors[`${prefix}.sportName`] = "Please select a sport";
         }
-        setRuleBookErrors({});
-      }
-      return true;
+        if (!s.tournamentLevel) {
+          errors[`${prefix}.tournamentLevel`] = "Please select a tournament level";
+        }
+        if (!s.type) {
+          errors[`${prefix}.type`] = "Please pick a tournament type";
+        }
+        if (!Array.isArray(s.categories) || s.categories.length === 0) {
+          errors[`${prefix}.categories`] = "At least one category is required";
+        } else {
+          s.categories.forEach((c, j) => {
+            if (!c?.name?.trim()) {
+              errors[`${prefix}.categories[${j}].name`] = "Category name is required";
+            }
+          });
+        }
+        // Rule-book validation only for sports whose Section D has fetched a
+        // ruleBook. Per-rule errors live on the sport entry's _ruleBookErrors;
+        // a single pointer error at the sport level surfaces them in the
+        // outer banner-equivalent (Sub-step 5's locked grid renders disabled
+        // for ranked, so this rarely fires in practice).
+        if (s._ruleBook) {
+          const { sections } = generateFormFields(s._ruleBook);
+          if (sections.length > 0) {
+            const { valid, errors: rbErrors } = validateRuleBookForm(s._ruleBookValues || {}, sections);
+            if (!valid) {
+              updateSport(i, { _ruleBookErrors: rbErrors });
+              errors[`${prefix}.ruleBook`] = "Please fix the rule-book fields";
+            } else {
+              updateSport(i, { _ruleBookErrors: {} });
+            }
+          }
+        }
+      });
+    } else if (stepId === "details") {
+      if (!formData.eventLocation.trim()) errors.eventLocation = "Event location is required";
+      if (!formData.startDate) errors.startDate = "Start date is required";
+      if (!formData.endDate) errors.endDate = "End date is required";
     }
 
-    if (stepId === "format") {
-      if (!formData.playingFormats || formData.playingFormats.length === 0) {
-        setError("Select at least one playing format");
-        return false;
-      }
-      return true;
-    }
-
-    if (stepId === "details") {
-      if (!formData.eventLocation.trim()) { setError("Event location is required"); return false; }
-      if (!formData.startDate || !formData.endDate) { setError("Start and end dates are required"); return false; }
-      return true;
-    }
-
-    return true;
+    setFieldErrors(errors);
+    return errors; // empty object means valid
   };
 
+  // Sub-step 9 — Scroll the first errored field into view (and expand its
+  // sport card if collapsed) so the user sees the red border without having
+  // to hunt for it. Defers to next tick so the DOM has the updated red
+  // borders rendered before scrolling.
+  const scrollToFirstError = useCallback((errors) => {
+    if (!errors || Object.keys(errors).length === 0) return;
+    const firstKey = Object.keys(errors)[0];
+
+    // If the first error is on a sport card that's collapsed, expand it first.
+    const sportMatch = firstKey.match(/^sports\[(\d+)\]/);
+    if (sportMatch) {
+      const idx = Number(sportMatch[1]);
+      const sport = formData.sports[idx];
+      if (sport && !sport._expanded) {
+        toggleSportExpanded(idx);
+      }
+    }
+
+    // Map error key → DOM selector.
+    let selector = null;
+    if (firstKey === "title") selector = "#title";
+    else if (firstKey === "eventLocation") selector = "#eventLocation";
+    else if (firstKey === "startDate") selector = "#startDate";
+    else if (firstKey === "endDate") selector = "#endDate";
+    else if (sportMatch) selector = `[data-sport-index='${sportMatch[1]}']`;
+
+    if (!selector) return;
+    // setTimeout to let the expand animation begin and inline errors paint.
+    setTimeout(() => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        try { el.focus({ preventScroll: true }); } catch { /* old browsers */ }
+      }
+    }, 50);
+  }, [formData.sports, toggleSportExpanded]);
+
   const goNext = () => {
-    if (validateCurrentStep() && currentStep < steps.length - 1) {
+    const errors = validateCurrentStep();
+    const isValid = Object.keys(errors).length === 0;
+    if (isValid && currentStep < steps.length - 1) {
       setCurrentStep((p) => p + 1);
-      setError("");
+      setFieldErrors({});
+    } else if (!isValid) {
+      scrollToFirstError(errors);
     }
   };
 
   const goPrev = () => {
     if (currentStep > 0) {
       setCurrentStep((p) => p - 1);
-      setError("");
+      setFieldErrors({});
     }
   };
 
@@ -489,36 +709,31 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
     // Only allow going back freely, forward requires validation
     if (idx < currentStep) {
       setCurrentStep(idx);
-      setError("");
+      setFieldErrors({});
     } else if (idx === currentStep + 1) {
       goNext();
     }
   };
 
   // ── Submit ──
+  // Sub-step 3 — sports[] is the canonical source. Legacy root scalars
+  // (type, sportsType, groupStageFormat, knockoutFormat, qualifyPerGroup,
+  // drawSize, davisCupFormatId, matchFormatOverrides, category) are dropped:
+  // Mongoose strict mode strips them post-STEP 17e, and the backend has
+  // treated sports[] as the source of truth since STEP 10a.
   const createTournament = async () => {
-    if (!validateCurrentStep()) return;
+    const errors = validateCurrentStep();
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstError(errors);
+      return;
+    }
 
     setIsSubmitting(true);
-    setError("");
 
     try {
-      // Determine type from selected formats
-      const formats = formData.playingFormats || [];
-      const hasGS = formats.includes("group+knockout");
-      const hasKO = formats.includes("singles-knockout") || formats.includes("davis-cup") || hasGS;
-      const tournamentType = hasGS && hasKO ? "knockout + group stage" : hasKO ? "knockout" : hasGS ? "group stage" : "";
-
-      // If Davis Cup selected, set knockoutFormat and send formatId directly
-      if (formats.includes("davis-cup")) {
-        formData.knockoutFormat = "Davis Cup";
-        if (formData.davisCupFormatId) {
-          tournamentFormData.append("davisCupFormatId", formData.davisCupFormatId);
-        }
-      }
-
-      if (!formData.title || !tournamentType || !formData.sportsType) {
-        setError("Title, Tournament Type, and Sport are required");
+      if (!formData.title || !formData.sports[0]?.sportName) {
+        // Defensive — should be caught by validateCurrentStep already.
+        toast.error("Title and at least one sport are required");
         setIsSubmitting(false);
         return;
       }
@@ -528,44 +743,59 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
       if (imageFile) tournamentFormData.append("tournamentLogo", imageFile);
 
       tournamentFormData.append("title", formData.title.trim());
-      tournamentFormData.append("type", tournamentType);
-      tournamentFormData.append("sportsType", formData.sportsType);
       tournamentFormData.append("description", formData.description || "");
       tournamentFormData.append("organizerName", formData.organizerName || "");
       tournamentFormData.append("cancellationPolicy", formData.cancellationPolicy || "NO");
       tournamentFormData.append("termsAndConditions", formData.termsAndConditions || "");
 
-      if (formData.tournamentLevel) {
-        tournamentFormData.append("tournamentLevel", formData.tournamentLevel);
-      }
-
-      if (ruleBook && Object.keys(ruleBookValues).length > 0) {
-        const payload = buildSubmissionPayload(ruleBookValues, ruleBook);
-        tournamentFormData.append("matchFormatOverrides", JSON.stringify(payload));
-      }
-
-      if (formData.hasGroupStage) tournamentFormData.append("groupStageFormat", formData.groupStageFormat);
-      if (formData.hasKnockout) tournamentFormData.append("knockoutFormat", formData.knockoutFormat);
-      if (formData.hasGroupStage && formData.hasKnockout) {
-        tournamentFormData.append("qualifyPerGroup", formData.qualifyPerGroup || "2");
-      }
-      // Draw size for standalone knockout
-      if (formData.hasKnockout && !formData.hasGroupStage && formData.drawSize) {
-        tournamentFormData.append("drawSize", formData.drawSize);
-      }
-
+      // Per-sport level: tournamentLevel is no longer sent at root; each
+      // sport carries its own value inside the sports[] payload below.
       if (formData.registrationDeadline) tournamentFormData.append("registrationDeadline", formData.registrationDeadline);
-
       if (formData.startDate) tournamentFormData.append("startDate", formData.startDate);
       if (formData.endDate) tournamentFormData.append("endDate", formData.endDate);
       if (formData.selectedTime) tournamentFormData.append("selectedTime", JSON.stringify(formData.selectedTime));
-      if (formData.category?.length) tournamentFormData.append("category", JSON.stringify(formData.category));
       if (formData.managerId?.length) tournamentFormData.append("managerId", JSON.stringify(formData.managerId));
       if (formData.eventLocation) tournamentFormData.append("eventLocation", formData.eventLocation);
       tournamentFormData.append("isPrivate", formData.isPrivate ? "true" : "false");
       if (formData.isPrivate && formData.clientId) {
         tournamentFormData.append("clientId", formData.clientId.trim());
       }
+
+      // Build sports[] payload — strip UI-only fields, resolve matchFormat per sport.
+      // Sub-step 10 round-trip fix: ruleBookValuesToMatchFormat converts engine
+      // shape (dotted paths, engine field names) → flat schema shape with renames
+      // and derived setsToWin/gamesToWin. Three resolution paths:
+      //   - Path 1 (ranked + locked rule book): _ruleBookValues mirrors ruleBook
+      //     defaults; converter produces a consistent flat-schema matchFormat.
+      //   - Path 2 (unranked + Section D opened): user edits sit in
+      //     _ruleBookValues; converter applies renames so they survive save.
+      //   - Path 3 (fresh sport, Section D never opened): _ruleBookValues is
+      //     empty; fall back to sport-aware defaults via getUnrankedDefaults.
+      const sportsPayload = formData.sports.map((s) => {
+        const scoringType = s.scoringType || SPORT_SCORING_TYPES[s.sportName] || "sets";
+        const matchFormat = (s._ruleBookValues && Object.keys(s._ruleBookValues).length > 0)
+          ? ruleBookValuesToMatchFormat(s._ruleBookValues, scoringType)
+          : ruleBookValuesToMatchFormat(getUnrankedDefaults(s.sportName), scoringType);
+
+        return {
+          sportName: s.sportName,
+          sportSlug: s.sportSlug || slugifyForSport(s.sportName),
+          scoringType,
+          tournamentLevel: s.tournamentLevel || "",
+          type: s.type,
+          categories: (s.categories || []).map((c) => ({
+            name: c.name,
+            fee: Number(c.fee || 0),
+          })),
+          groupStageFormat: String(s.type || "").includes("group stage") ? s.groupStageFormat : null,
+          knockoutFormat: String(s.type || "").includes("knockout") ? s.knockoutFormat : null,
+          davisCupFormatId: s.davisCupFormatId || null,
+          qualifyPerGroup: Number(s.qualifyPerGroup || 2),
+          drawSize: s.drawSize ? Number(s.drawSize) : null,
+          matchFormat,
+        };
+      });
+      tournamentFormData.append("sports", JSON.stringify(sportsPayload));
 
       if (isEditMode && initialData?._id) {
         // EDIT MODE — update existing tournament
@@ -592,9 +822,9 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
         onSuccess?.();
         if (!isEditMode) window.location.href = "/mtournament-management";
       }, 1500);
-    } catch (error) {
-      console.error(`Error ${isEditMode ? "updating" : "creating"} tournament:`, error);
-      setError(error.response?.data?.message || `Failed to ${isEditMode ? "update" : "create"} tournament`);
+    } catch (err) {
+      console.error(`Error ${isEditMode ? "updating" : "creating"} tournament:`, err);
+      toast.error(err.response?.data?.message || `Failed to ${isEditMode ? "update" : "create"} tournament`);
     } finally {
       setIsSubmitting(false);
     }
@@ -721,9 +951,6 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
   if (!showPopup) return null;
 
-  const selectedSportObj = sportsList.find((s) => s.name === formData.sportsType);
-  const isTeamSport = isTeamOnlySport(formData.sportsType);
-  const isIndividualSport = isIndividualOnlySport(formData.sportsType);
   const activeStep = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
 
@@ -733,772 +960,359 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
   const renderStepBasic = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Left */}
-      <div className="lg:col-span-8 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-            <Trophy className="w-5 h-5 text-orange-500" /> Basic Information
-          </h3>
+      {/* Left — main fields */}
+      <div className="lg:col-span-8">
+        <WCard className="space-y-5">
+          <SectionHeader
+            icon={<Trophy className="w-5 h-5 text-orange-500" />}
+            title="Tournament Info"
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tournament Name</label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all placeholder:text-gray-400"
-                placeholder="Ex: Summer Championship 2026"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sport</label>
-              <div className="relative">
-                <select
-                  name="sportsType"
-                  value={formData.sportsType}
-                  onChange={(e) => {
-                    handleInputChange(e);
-                    setUserChangedSport(e.target.value); // Trigger format reset only on manual change
-                  }}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">Select Sport</option>
-                  {sportsList.map((sport) => (
-                    <option key={sport._id} value={sport.name}>{sport.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tournament Level</label>
-              <div className="relative">
-                <select
-                  name="tournamentLevel"
-                  value={formData.tournamentLevel}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">
-                    {!formData.sportsType ? "Select sport first" : availableLevels.length === 0 ? "No levels available" : "Select Level"}
-                  </option>
-                  {availableLevels.map((level) => (
-                    <option key={level} value={level}>{level.charAt(0).toUpperCase() + level.slice(1)}</option>
-                  ))}
-                  <option value="unranked">Unranked (Custom Rules)</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Organizer Name</label>
-              <input
-                type="text"
-                name="organizerName"
-                value={formData.organizerName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
-                placeholder="Organization or Person Name"
-              />
-            </div>
+          {/* Tournament Name */}
+          <div>
+            <FieldLabel htmlFor="title" required>Tournament Name</FieldLabel>
+            <TextInput
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="e.g. Summer Championship 2026"
+              error={fieldErrors.title}
+            />
           </div>
 
+          {/* Tournament Level: moved to per-sport (each SportCard on Step 2
+              has its own level selector). Allows mixing e.g. Football=state
+              and TableTennis=unranked in one tournament. */}
+
+          {/* Organizer Name */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
+            <FieldLabel htmlFor="organizerName">Organizer Name</FieldLabel>
+            <TextInput
+              id="organizerName"
+              name="organizerName"
+              value={formData.organizerName}
+              onChange={handleInputChange}
+              placeholder="Organization or person name"
+            />
+          </div>
+
+          {/* Public/Private toggle card */}
+          <ToggleCard
+            icon={formData.isPrivate ? <Lock className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+            title={formData.isPrivate ? "Private Tournament" : "Public Tournament"}
+            description={
+              formData.isPrivate
+                ? "Hidden from public listing. Only you can manage registrations via bulk upload."
+                : "Visible to everyone. Players can self-register via the app."
+            }
+            checked={formData.isPrivate}
+            onChange={(b) => setFormData((prev) => ({ ...prev, isPrivate: b }))}
+          />
+
+          {/* Client ID slide-in (auto-controlled by isPrivate). Sub-step 9:
+              Collapsible — ref-measured for smooth open/close. */}
+          <Collapsible open={!!formData.isPrivate}>
+            <div className="pt-1">
+              <FieldLabel htmlFor="clientId">Client ID</FieldLabel>
+              <TextInput
+                id="clientId"
+                name="clientId"
+                value={formData.clientId}
+                onChange={handleInputChange}
+                placeholder="Leave empty to auto-generate (e.g. CK-TEN-A3F8X2)"
+                className="uppercase placeholder:normal-case font-mono tracking-wider"
+              />
+              <p className="text-xs text-gray-400 mt-1.5">A unique identifier for this corporate client. Auto-generated if left blank.</p>
+            </div>
+          </Collapsible>
+
+          {/* + Add description (collapsed by default; auto-opens on edit-load when description has content) */}
+          <ExpandableSection
+            variant="link"
+            open={isDescriptionOpen}
+            onToggle={() => setIsDescriptionOpen((o) => !o)}
+            label={isDescriptionOpen ? "Hide description" : "+ Add description"}
+          >
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all min-h-[100px] resize-y"
+              rows={4}
               placeholder="Describe your tournament..."
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-100 resize-y"
             />
-          </div>
-
-          {/* Private / Public Toggle */}
-          <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${formData.isPrivate ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200"}`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.isPrivate ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500"}`}>
-                {formData.isPrivate ? <Lock className="w-5 h-5" /> : <Users className="w-5 h-5" />}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-800">{formData.isPrivate ? "Private Tournament" : "Public Tournament"}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {formData.isPrivate
-                    ? "Hidden from public listing. Only you can manage registrations via bulk upload."
-                    : "Visible to everyone. Players can self-register via the app."}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={formData.isPrivate}
-              onChange={(e) => setFormData(prev => ({ ...prev, isPrivate: e.target.checked }))}
-              color="warning"
-              size="small"
-            />
-          </div>
-
-          {/* Client ID — shown only for private tournaments */}
-          {formData.isPrivate && (
-            <div className="mt-4 p-4 bg-amber-50/50 rounded-xl border border-amber-100">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Client ID</label>
-              <input
-                type="text"
-                name="clientId"
-                value={formData.clientId}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all uppercase placeholder:normal-case placeholder:text-gray-400 font-mono tracking-wider"
-                placeholder="Leave empty to auto-generate (e.g. CK-TEN-A3F8X2)"
-              />
-              <p className="text-xs text-gray-400 mt-1.5">A unique identifier for this corporate client. Auto-generated if left blank.</p>
-            </div>
-          )}
-        </div>
+          </ExpandableSection>
+        </WCard>
       </div>
 
-      {/* Right — Logo */}
+      {/* Right — Logo upload */}
       <div className="lg:col-span-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-gray-500" /> Tournament Logo
-          </h3>
-          <div className="w-full aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all relative flex flex-col items-center justify-center cursor-pointer group overflow-hidden">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="absolute inset-0 opacity-0 cursor-pointer z-10"
-            />
-            {image ? (
-              <div className="relative w-full h-full">
-                <img src={image} alt="Uploaded" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium">
-                  Change Logo
+        <WCard className="space-y-4">
+          <SectionHeader
+            icon={<ImageIcon className="w-5 h-5 text-gray-500" />}
+            title="Tournament Logo"
+          />
+
+          {image ? (
+            <div className="relative w-full aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+              <img src={image} alt="Tournament logo" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={removeImage}
+                aria-label="Remove logo"
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-gray-600 hover:text-red-500 flex items-center justify-center shadow-sm transition-colors duration-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`block w-full aspect-square rounded-xl border-2 border-dashed transition-colors duration-150 cursor-pointer ${
+                isDragging
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
+              }`}
+            >
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={handleImageChange}
+                className="sr-only"
+              />
+              <div className="w-full h-full flex flex-col items-center justify-center text-center p-4 pointer-events-none">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 text-gray-400 border border-gray-200">
+                  <ImageIcon className="w-5 h-5" />
                 </div>
-              </div>
-            ) : (
-              <div className="text-center p-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400 group-hover:scale-110 transition-transform">
-                  <ImageIcon className="w-6 h-6" />
-                </div>
-                <p className="text-sm font-semibold text-gray-600">Click to upload logo</p>
+                <p className="text-sm font-semibold text-gray-700">Click to upload or drag &amp; drop</p>
                 <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
               </div>
-            )}
-          </div>
-        </div>
+            </label>
+          )}
+        </WCard>
       </div>
-    </div>
-  );
-
-  // ───────────────────────────────────
-  //  STEP: SPORT CONFIG (dynamic)
-  // ───────────────────────────────────
-  const renderStepSportConfig = () => (
-    <div className="space-y-6">
-      {/* Unranked: Custom Rules (all editable) */}
-      {formData.tournamentLevel === "unranked" && (
-        <div className="bg-white p-6 rounded-2xl border border-orange-200 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-orange-100 pb-3">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Edit2 className="w-5 h-5 text-orange-500" /> Custom Rules
-              <span className="text-xs font-medium bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Editable</span>
-            </h3>
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              {formData.sportsType} — Unranked
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 bg-orange-50 p-3 rounded-xl">
-            Define your own match rules. These will apply to all matches in this tournament.
-          </p>
-
-          {/* Dynamic fields based on scoring type */}
-          {(() => {
-            const scoringType = SPORT_SCORING_TYPES[formData.sportsType] || "sets";
-
-            if (scoringType === "sets") return (
-              <div className="grid grid-cols-2 gap-4">
-                <CustomRuleInput label="Total Sets (odd)" field="format.totalSets" type="number" min={1} max={9} step={2}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Points per Game" field="format.pointsPerSet" type="number" min={1} max={50}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Games per Set" field="format.gamesPerSet" type="number" min={1} max={9}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Win by Margin" field="format.winByMargin" type="number" min={1} max={10}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleToggle label="Deuce Enabled" field="format.deuceEnabled"
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleToggle label="Tiebreak Enabled" field="format.tiebreakEnabled"
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Service Alternate" field="format.serviceAlternate" type="number" min={1} max={5}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-              </div>
-            );
-
-            if (scoringType === "innings") return (
-              <div className="grid grid-cols-2 gap-4">
-                <CustomRuleInput label="Overs per Innings" field="format.oversCount" type="number" min={1} max={50}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Innings Count" field="format.inningsCount" type="number" min={1} max={4}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-              </div>
-            );
-
-            if (scoringType === "time") return (
-              <div className="grid grid-cols-2 gap-4">
-                <CustomRuleInput label="Number of Halves" field="format.halvesCount" type="number" min={1} max={4}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-                <CustomRuleInput label="Half Duration (min)" field="format.halvesDuration" type="number" min={1} max={90}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-              </div>
-            );
-
-            return (
-              <div className="grid grid-cols-2 gap-4">
-                <CustomRuleInput label="Total Rounds" field="format.totalSets" type="number" min={1} max={9}
-                  value={ruleBookValues} onChange={setRuleBookValues} />
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* Locked Rules (read-only) — only for ranked tournaments */}
-      {formData.tournamentLevel !== "unranked" && (loadingRules || ruleBook) && (
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emerald-500" /> Sport Rules
-              <span className="text-xs font-medium bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Lock className="w-3 h-3" /> Locked
-              </span>
-            </h3>
-            {ruleBook && (
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {ruleBook.sportName} — {ruleBook.level}
-              </span>
-            )}
-          </div>
-
-          {loadingRules ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-              <span className="ml-3 text-sm text-gray-500">Loading rules...</span>
-            </div>
-          ) : ruleBook ? (
-            <div className="space-y-4">
-              {ruleBook.rules && Object.entries(ruleBook.rules).some(([k, v]) => v != null && k !== "_id") && (
-                <div>
-                  <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Gameplay Rules</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {Object.entries(ruleBook.rules)
-                      .filter(([k, v]) => v != null && k !== "_id")
-                      .map(([key, val]) => (
-                        <div key={key} className="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-100">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{formatLabel(key)}</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-0.5">{renderRuleValue(val)}</p>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {ruleBook.equipment && Object.entries(ruleBook.equipment).some(([k, v]) => v != null && k !== "_id") && (
-                <div>
-                  <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Equipment</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {Object.entries(ruleBook.equipment)
-                      .filter(([k, v]) => v != null && k !== "_id")
-                      .map(([key, val]) => (
-                        <div key={key} className="bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-100">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{formatLabel(key)}</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-0.5">{renderRuleValue(val)}</p>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {ruleBook.description && (
-                <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
-                  <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                  <p className="text-xs font-medium text-orange-700">{ruleBook.description}</p>
-                </div>
-              )}
-
-              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs font-medium text-amber-800">
-                  These rules are locked and will be automatically applied. They cannot be edited.
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {/* Dynamic RuleBook sections — 2-column layout for compact display */}
-      {ruleBookSections.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {ruleBookSections.map((section) => {
-            // Full-width for sections with multiselect or many fields
-            const hasWideField = section.fields.some((f) => f.type === "multiselect" || f.type === "text");
-            const isLargeSection = section.fields.length > 4;
-
-            return (
-              <div
-                key={section.id}
-                className={`bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4 ${
-                  hasWideField || isLargeSection ? "lg:col-span-2" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                    {SECTION_ICONS[section.id] || <Type className="w-5 h-5 text-gray-500" />}
-                    {section.title}
-                    {section.subtitle && (
-                      <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                        {section.subtitle}
-                      </span>
-                    )}
-                  </h3>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Configurable</span>
-                </div>
-
-                <div className={`grid gap-4 ${
-                  isLargeSection
-                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-                    : "grid-cols-1 md:grid-cols-2"
-                }`}>
-                  {section.fields.map((field) => renderDynamicField(field))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {ruleBookSections.length > 0 && (
-        <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
-          <Shield className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-          <p className="text-xs font-medium text-orange-700">
-            Pre-configured from <strong>{ruleBook?.sportName} — {ruleBook?.level}</strong> rule book. Adjust values as needed.
-          </p>
-        </div>
-      )}
     </div>
   );
 
   // ───────────────────────────────────
   //  STEP: TOURNAMENT SETUP
   // ───────────────────────────────────
-  const renderStepFormat = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Tournament Type & Format */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-          <Type className="w-5 h-5 text-orange-500" /> Tournament Format
-        </h3>
-
-        {/* Playing Format — sport-aware format options */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Playing Format</label>
-          <p className="text-xs text-gray-400 mb-3">
-            {isTeamSport
-              ? "Team sports play as Team Knockout (Davis Cup format)"
-              : "Select one or more formats for this tournament"}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              // Group Stage + Knockout — individual sports only
-              !isTeamSport && { key: "group+knockout", label: "Group Stage + Knockout", desc: "Round-robin groups then elimination bracket", icon: Users, color: "blue",
-                onSelect: (p) => ({ ...p, hasGroupStage: true, hasKnockout: true, groupStageFormat: p.groupStageFormat || "Singles", knockoutFormat: p.knockoutFormat || "Singles" }),
-                onDeselect: (p) => ({ ...p, hasGroupStage: false }) },
-              // Singles Knockout — individual sports only
-              !isTeamSport && { key: "singles-knockout", label: "Singles Knockout", desc: "Direct elimination — 16/32/64 draw", icon: Trophy, color: "orange",
-                onSelect: (p) => ({ ...p, hasKnockout: true }),
-                onDeselect: (p) => ({ ...p }) },
-              // Davis Cup / Team Knockout — team sports always, racquet sports optionally, NOT for individual-only sports
-              !isIndividualSport && { key: "davis-cup", label: isTeamSport ? "Team Knockout" : "Davis Cup (Team)", desc: isTeamSport ? "Teams compete in round-robin or knockout bracket" : "Team knockout — singles + doubles format", icon: Shield, color: "purple",
-                onSelect: (p) => ({ ...p, hasKnockout: true, knockoutFormat: "Teams Knockout" }),
-                onDeselect: (p) => ({ ...p }) },
-            ].filter(Boolean).map((fmt) => {
-              const isSelected = formData.playingFormats?.includes(fmt.key);
-              const Icon = fmt.icon;
-              const colors = { blue: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, orange: { border: "border-orange-500", bg: "bg-orange-50", icon: "bg-orange-500" }, purple: { border: "border-emerald-500", bg: "bg-emerald-50", icon: "bg-emerald-500" } };
-              const c = colors[fmt.color];
-              return (
-                <div
-                  key={fmt.key}
-                  onClick={() => {
-                    // Team sports cannot deselect their only format (Team Knockout)
-                    if (isTeamSport && formData.playingFormats?.includes(fmt.key)) return;
-                    setFormData((p) => {
-                      const current = p.playingFormats || [];
-                      let next, updated;
-                      if (current.includes(fmt.key)) {
-                        next = current.filter((k) => k !== fmt.key);
-                        updated = fmt.onDeselect(p);
-                      } else {
-                        next = [...current, fmt.key];
-                        updated = fmt.onSelect(p);
-                      }
-                      const hasGS = next.includes("group+knockout");
-                      const hasKO = next.length > 0;
-                      return { ...updated, playingFormats: next, hasGroupStage: hasGS, hasKnockout: hasKO };
-                    });
-                  }}
-                  className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? `${c.border} ${c.bg} shadow-sm` : "border-gray-200 bg-white hover:border-gray-300"}`}
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isSelected ? `${c.icon} text-white` : "bg-gray-100 text-gray-500"}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-bold text-sm text-gray-800">{fmt.label}</h4>
-                  <p className="text-xs text-gray-500 mt-1">{fmt.desc}</p>
-                  {isSelected && <FormatCheck color={fmt.color} />}
-                </div>
-              );
-            })}
-          </div>
-          {(!formData.playingFormats || formData.playingFormats.length === 0) && (
-            <p className="text-xs text-red-500 mt-2">Select at least one playing format</p>
-          )}
-          {formData.playingFormats?.length > 0 && (
-            <div className="flex gap-1.5 mt-3">
-              {formData.playingFormats.map((f) => (
-                <span key={f} className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full capitalize">
-                  {f.replace(/[+-]/g, " ")}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Sub-format for Singles Knockout only */}
-        {formData.playingFormats?.includes("singles-knockout") && !formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Knockout Format</label>
-            <div className="flex gap-3">
-              {["Singles", "Doubles"].map((fmt) => {
-                const formats = (formData.knockoutFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
-                const isSelected = formats.includes(fmt);
-                return (
-                  <button key={fmt} type="button"
-                    onClick={() => {
-                      let next;
-                      if (isSelected && formats.length > 1) {
-                        next = formats.filter(f => f !== fmt).join(", ");
-                      } else if (!isSelected) {
-                        next = [...formats, fmt].join(", ");
-                      } else { return; }
-                      setFormData(p => ({ ...p, knockoutFormat: next }));
-                    }}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
-                      isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                    }`}
-                  >
-                    {fmt}
-                  </button>
-                );
-              })}
-            </div>
-            {(formData.knockoutFormat || "").includes(",") && (
-              <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both Singles & Doubles selected</p>
-            )}
-          </div>
-        )}
-
-        {/* Sub-format for Group+Knockout */}
-        {formData.playingFormats?.includes("group+knockout") && !isTeamSport && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Group Stage Format</label>
-              <div className="flex gap-3">
-                {["Singles", "Doubles"].map((fmt) => {
-                  const formats = (formData.groupStageFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
-                  const isSelected = formats.includes(fmt);
-                  return (
-                    <button key={fmt} type="button"
-                      onClick={() => {
-                        let next;
-                        if (isSelected && formats.length > 1) {
-                          next = formats.filter(f => f !== fmt).join(", ");
-                        } else if (!isSelected) {
-                          next = [...formats, fmt].join(", ");
-                        } else {
-                          return; // Can't deselect last one
-                        }
-                        setFormData(p => ({ ...p, groupStageFormat: next }));
-                      }}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
-                        isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      {fmt}
-                    </button>
-                  );
-                })}
-              </div>
-              {(formData.groupStageFormat || "").includes(",") && (
-                <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both formats selected</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Knockout Format</label>
-              <div className="flex gap-3">
-                {["Singles", "Doubles"].map((fmt) => {
-                  const formats = (formData.knockoutFormat || "Singles").split(",").map(f => f.trim()).filter(Boolean);
-                  const isSelected = formats.includes(fmt);
-                  return (
-                    <button key={fmt} type="button"
-                      onClick={() => {
-                        let next;
-                        if (isSelected && formats.length > 1) {
-                          next = formats.filter(f => f !== fmt).join(", ");
-                        } else if (!isSelected) {
-                          next = [...formats, fmt].join(", ");
-                        } else {
-                          return;
-                        }
-                        setFormData(p => ({ ...p, knockoutFormat: next }));
-                      }}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all w-auto ${
-                        isSelected ? "bg-orange-500 text-white shadow-sm shadow-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      {fmt}
-                    </button>
-                  );
-                })}
-              </div>
-              {(formData.knockoutFormat || "").includes(",") && (
-                <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">Both formats selected</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Draw Size removed — selected later in the knockout flow based on actual participants */}
-
-        {/* Davis Cup Format Selector — only for racquet sports (TT, Badminton, Tennis etc.)
-            Team sports (Cricket, Football, Kabaddi, Volleyball) play straight Team vs Team — no sub-match formulas */}
-        {formData.playingFormats?.includes("davis-cup") && !isTeamSport && (
-          <TeamKnockoutFormatSelector
-            value={formData.davisCupFormatId || ""}
-            onChange={(fmtId) => setFormData((p) => ({ ...p, davisCupFormatId: fmtId }))}
+  // Sub-step 6 — Step 2 is now a list of unified <SportCard>. Each sport
+  // entry in formData.sports[] renders as one card. The legacy "Playing
+  // Format" multi-select chrome, sub-format pills, primary categories card,
+  // and AdditionalSports section are all gone — every concern lives inside
+  // SportCard now (Sub-step 5).
+  // Sub-step 8 — slice fieldErrors per sport index and pass to each card.
+  const renderStepFormat = () => {
+    const canAddSport = !!formData.sports.at(-1)?.sportName?.trim();
+    const sliceSportErrors = (idx) => {
+      const out = {};
+      const prefix = `sports[${idx}].`;
+      for (const [k, v] of Object.entries(fieldErrors)) {
+        if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+      }
+      return out;
+    };
+    return (
+      <div className="space-y-4">
+        {formData.sports.map((sport, idx) => (
+          <SportCard
+            key={sport._key}
+            sport={sport}
+            index={idx}
+            totalSports={formData.sports.length}
+            sportsList={sportsList}
+            onUpdate={(patch) => updateSport(idx, patch)}
+            onRemove={() => removeSport(idx)}
+            onToggleExpand={() => toggleSportExpanded(idx)}
+            errors={sliceSportErrors(idx)}
+            fixedLevels={FIXED_LEVELS}
           />
-        )}
+        ))}
 
-        {/* Qualify Per Group */}
-        {formData.hasGroupStage && formData.hasKnockout && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Qualify Per Group</label>
-            <p className="text-xs text-gray-400 mb-1.5">Top N players from each group advance to knockout</p>
-            <select
-              name="qualifyPerGroup"
-              value={formData.qualifyPerGroup}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              <option value="1">Top 1</option>
-              <option value="2">Top 2</option>
-              <option value="3">Top 3</option>
-              <option value="4">Top 4</option>
-            </select>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cancellation Policy</label>
-          <select
-            name="cancellationPolicy"
-            value={formData.cancellationPolicy}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer"
+        {/* + Add Another Sport — fades in when the last card has a sport selected.
+            Sub-step 9: wrapped in Collapsible for consistent smooth transition. */}
+        <Collapsible open={canAddSport} className="mt-2">
+          <DashedAddButton
+            onClick={addSport}
+            tabIndex={canAddSport ? 0 : -1}
           >
-            <option value="YES">Allow Cancellation</option>
-            <option value="NO">No Cancellation</option>
-          </select>
-        </div>
+            + Add Another Sport
+          </DashedAddButton>
+        </Collapsible>
       </div>
-
-      {/* Categories */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <Users className="w-5 h-5 text-emerald-600" /> Categories
-          </h3>
-          <button
-            type="button"
-            onClick={addCategory}
-            className="flex items-center gap-1.5 text-sm font-semibold text-orange-500 hover:text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {formData.category?.map((cat, idx) => (
-            <div key={idx} className="flex gap-3 items-center group">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={cat.name}
-                  onChange={(e) => handleCategoryChange(idx, "name", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
-                  placeholder="Category Name (e.g. Under 18)"
-                />
-              </div>
-              <div className="w-28 relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  min="0"
-                  value={cat.fee}
-                  onChange={(e) => handleCategoryChange(idx, "fee", e.target.value)}
-                  className="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
-                  placeholder="Fee"
-                />
-              </div>
-              {formData.category.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setFormData((p) => ({ ...p, category: p.category.filter((_, i) => i !== idx) }))}
-                  className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-colors"
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-2">
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Terms & Conditions</label>
-          <textarea
-            name="termsAndConditions"
-            value={formData.termsAndConditions}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all min-h-[80px] resize-y"
-            placeholder="Enter specific rules or terms..."
-          />
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // ───────────────────────────────────
   //  STEP: SCHEDULE & DETAILS
   // ───────────────────────────────────
-  const renderStepDetails = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Schedule */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-          <Calendar className="w-5 h-5 text-green-500" /> Schedule
-        </h3>
+  // Sub-step 7 — Step 3 redesigned. Two-column layout: Schedule (left) +
+  // Location & Policy (right). Cancellation Policy folded into the Location
+  // & Policy card. Terms & Conditions becomes a full-width collapsible link
+  // below both columns.
+  const renderStepDetails = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left — Schedule */}
+          <WCard className="space-y-5">
+            <SectionHeader
+              icon={<Calendar className="w-5 h-5 text-emerald-500" />}
+              title="Schedule"
+            />
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date Range</label>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <span className="text-xs text-gray-500 pl-1">Start Date</span>
-              <input
-                type="date"
-                name="startDate"
-                min={new Date().toISOString().split("T")[0]}
-                value={formData.startDate}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FieldLabel htmlFor="startDate" required>Start Date</FieldLabel>
+                <TextInput
+                  id="startDate"
+                  type="date"
+                  name="startDate"
+                  min={today}
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  error={fieldErrors.startDate}
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="endDate" required>End Date</FieldLabel>
+                <TextInput
+                  id="endDate"
+                  type="date"
+                  name="endDate"
+                  min={formData.startDate || today}
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                  error={fieldErrors.endDate}
+                />
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel>Daily Schedule</FieldLabel>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-colors duration-100">
+                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <input
+                  type="time"
+                  aria-label="Daily start time"
+                  value={formData.selectedTime?.startTime || ""}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      selectedTime: { ...p.selectedTime, startTime: e.target.value },
+                    }))
+                  }
+                  className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm text-gray-900 p-0"
+                />
+                <span className="text-gray-300">—</span>
+                <input
+                  type="time"
+                  aria-label="Daily end time"
+                  value={formData.selectedTime?.endTime || ""}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      selectedTime: { ...p.selectedTime, endTime: e.target.value },
+                    }))
+                  }
+                  className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-sm text-gray-900 p-0"
+                />
+              </div>
+            </div>
+          </WCard>
+
+          {/* Right — Location & Policy */}
+          <WCard className="space-y-5">
+            <SectionHeader
+              icon={<MapPin className="w-5 h-5 text-red-500" />}
+              title="Location"
+            />
+
+            <div>
+              <FieldLabel htmlFor="eventLocation" required>Venue Address</FieldLabel>
+              <TextInput
+                id="eventLocation"
+                name="eventLocation"
+                value={formData.eventLocation}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 outline-none"
+                placeholder="Enter full venue address"
+                error={fieldErrors.eventLocation}
               />
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-gray-500 pl-1">End Date</span>
-              <input
-                type="date"
-                name="endDate"
-                min={formData.startDate || new Date().toISOString().split("T")[0]}
-                value={formData.endDate}
+
+            <div>
+              <FieldLabel htmlFor="registrationDeadline">Registration Deadline</FieldLabel>
+              <TextInput
+                id="registrationDeadline"
+                type="datetime-local"
+                name="registrationDeadline"
+                value={formData.registrationDeadline}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500/20 outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1.5">Last date and time for players to register.</p>
+            </div>
+
+            <div>
+              <FieldLabel htmlFor="cancellationPolicy">Cancellation Policy</FieldLabel>
+              <Select
+                id="cancellationPolicy"
+                name="cancellationPolicy"
+                value={formData.cancellationPolicy}
+                onChange={handleInputChange}
+                options={[
+                  { value: "YES", label: "Allow Cancellation" },
+                  { value: "NO",  label: "No Cancellation" },
+                ]}
               />
             </div>
-          </div>
+          </WCard>
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Daily Schedule</label>
-          <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
-            <Clock className="w-5 h-5 text-gray-400" />
-            <input
-              type="time"
-              value={formData.selectedTime?.startTime || ""}
-              onChange={(e) => setFormData((p) => ({ ...p, selectedTime: { ...p.selectedTime, startTime: e.target.value } }))}
-              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 p-0"
-            />
-            <span className="text-gray-400">-</span>
-            <input
-              type="time"
-              value={formData.selectedTime?.endTime || ""}
-              onChange={(e) => setFormData((p) => ({ ...p, selectedTime: { ...p.selectedTime, endTime: e.target.value } }))}
-              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 p-0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Location */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-50 pb-3">
-          <MapPin className="w-5 h-5 text-red-500" /> Location
-        </h3>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Venue Address</label>
-          <input
-            type="text"
-            name="eventLocation"
-            value={formData.eventLocation}
-            onChange={(e) => setFormData((p) => ({ ...p, eventLocation: e.target.value }))}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all text-sm"
-            placeholder="Enter full venue address"
-          />
-        </div>
-
-        {/* Registration Deadline */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Registration Deadline</label>
-          <input
-            type="datetime-local"
-            name="registrationDeadline"
-            value={formData.registrationDeadline}
+        {/* + Add terms & conditions — full-width expandable link */}
+        <ExpandableSection
+          variant="link"
+          open={isTermsOpen}
+          onToggle={() => setIsTermsOpen((o) => !o)}
+          label={isTermsOpen ? "Hide terms & conditions" : "+ Add terms & conditions"}
+        >
+          <textarea
+            name="termsAndConditions"
+            value={formData.termsAndConditions}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all"
+            rows={4}
+            placeholder="Enter specific rules or terms..."
+            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-100 resize-y"
           />
-          <p className="text-xs text-gray-400 mt-1">Last date and time for players to register</p>
-        </div>
+        </ExpandableSection>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ═══════════════════════════════════════════
   //  RENDER ACTIVE STEP
   // ═══════════════════════════════════════════
-  // Check if rules are locked (tournament started)
-  const isRulesLocked = isEditMode && initialData && initialData.currentStage !== "registration";
+  // STEP 17c — currentStage moved from root to per-sport. Derive from
+  // sports[0] (representative when sports advance independently). Safe to
+  // default to "registration" when sports[] is missing or empty.
+  const initialStage = initialData?.sports?.[0]?.currentStage || "registration";
+  const isRulesLocked = isEditMode && initialData && initialStage !== "registration";
 
   const renderActiveStep = () => {
-    const lockedSteps = ["sportConfig", "format"];
+    // Sub-step 6 — only the "format" step is rule-locked. "sportConfig" was
+    // removed from STATIC_STEPS in Sub-step 3 and is no longer reachable.
+    const lockedSteps = ["format"];
     if (isRulesLocked && lockedSteps.includes(activeStep?.id)) {
       return (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
           <Lock className="w-10 h-10 text-amber-500 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-amber-800 mb-1">Rules Locked</h3>
           <p className="text-sm text-amber-600">
-            This tournament has already started ({initialData.currentStage.replace(/_/g, " ")}).
+            This tournament has already started ({initialStage.replace(/_/g, " ")}).
             Match rules and format cannot be changed after matches are generated.
           </p>
           <p className="text-xs text-amber-500 mt-3">You can still edit title, description, dates, and categories.</p>
@@ -1508,7 +1322,6 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
 
     switch (activeStep?.id) {
       case "basic": return renderStepBasic();
-      case "sportConfig": return renderStepSportConfig();
       case "format": return renderStepFormat();
       case "details": return renderStepDetails();
       default: return null;
@@ -1583,15 +1396,8 @@ const MCreateTournament = ({ showPopup, setShowPopup, mode = "create", initialDa
             </div>
           ) : (
             <div className="p-8">
-              {/* Error */}
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl flex items-center gap-3">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                  {error}
-                </div>
-              )}
-
-              {/* Active Step Content */}
+              {/* Sub-step 8 — global error banner removed. Validation errors
+                  render inline at each input; server errors go to toast. */}
               {renderActiveStep()}
             </div>
           )}

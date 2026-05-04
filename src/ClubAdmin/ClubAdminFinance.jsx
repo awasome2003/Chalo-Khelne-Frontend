@@ -2,6 +2,7 @@ import { toast } from "react-toastify";
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
+import { getSportName, getTournamentType, getCurrentStage } from "../utils/sportTrack";
 import {
   Users,
   Trophy,
@@ -245,12 +246,12 @@ export default function ClubAdminFinance() {
                       <tr key={t._id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-800 text-sm">{t.tournamentName || t.title}</div>
-                          <div className="text-xs text-gray-400">{t.type}</div>
+                          <div className="text-xs text-gray-400">{getTournamentType(t)}</div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{t.sport || t.sportsType || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{t.sport || getSportName(t) || "—"}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[t.status || t.currentStage?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
-                            {t.status || t.currentStage || "—"}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[t.status || getCurrentStage(t)?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
+                            {t.status || getCurrentStage(t) || "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -326,10 +327,10 @@ export default function ClubAdminFinance() {
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-gray-800">{tournamentDetail.tournament.title}</h2>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{tournamentDetail.tournament.sportsType}</span>
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{tournamentDetail.tournament.type}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[tournamentDetail.tournament.currentStage?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
-                    {tournamentDetail.tournament.currentStage}
+                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{getSportName(tournamentDetail.tournament)}</span>
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{getTournamentType(tournamentDetail.tournament)}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge[getCurrentStage(tournamentDetail.tournament)?.toLowerCase()] || "bg-gray-100 text-gray-600"}`}>
+                    {getCurrentStage(tournamentDetail.tournament)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
@@ -415,9 +416,12 @@ export default function ClubAdminFinance() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
-                            {(reg.selectedCategories || []).map((cat, i) => (
+                            {/* STEP 17b.ii — sportSelections is the only
+                                shape after STEP 16 (every booking has it).
+                                Legacy selectedCategories fallback removed. */}
+                            {(Array.isArray(reg.sportSelections) ? reg.sportSelections : []).map((s, i) => (
                               <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-medium">
-                                {cat.name} ({formatCurrency(cat.price)})
+                                {s.categoryName} ({formatCurrency(s.fee)})
                               </span>
                             ))}
                           </div>

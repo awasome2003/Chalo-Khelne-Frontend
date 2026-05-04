@@ -26,9 +26,10 @@ export default function useRealtimeMatch(matchId) {
           liveScore: data.liveScore,
           sets: data.sets,
           status: "IN_PROGRESS",
-          // Preserve sport metadata if received from enriched socket
+          // Preserve sport metadata if received from enriched socket.
+          // STEP 17b.iii — emit canonical sportName (not legacy sportsType).
           ...(data.scoringType && { matchFormat: { ...(data.matchFormat || {}), scoringType: data.scoringType } }),
-          ...(data.sportName && { sportsType: data.sportName }),
+          ...(data.sportName && { sportName: data.sportName }),
         };
 
         queryClient.setQueryData(["liveMatch", matchId], (old) => {

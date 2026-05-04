@@ -6,6 +6,7 @@ import LiveMatchesPanel from "./LiveMatchesPanel";
 import MatchCard from "./MatchCard";
 import ActivityFeed from "./ActivityFeed";
 import { PageHeader, StatCard, Card, Badge, Button, ProgressBar, EmptyState } from "../../shared/ui";
+import { getSportName, getCurrentStage } from "../../utils/sportTrack";
 
 export default function TournamentDashboardPage() {
   const { tournamentId } = useParams();
@@ -35,9 +36,11 @@ export default function TournamentDashboardPage() {
     );
   }
 
-  const sportConfig = getSportConfig(tournament.sportsType);
+  // STEP 17b.ii — read sport name + stage off sports[0] (no sport-switcher).
+  const sportName = getSportName(tournament);
+  const sportConfig = getSportConfig(sportName);
   const title = tournament.title || "Tournament";
-  const stage = tournament.currentStage || "registration";
+  const stage = getCurrentStage(tournament) || "registration";
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "TBD";
 
@@ -65,7 +68,7 @@ export default function TournamentDashboardPage() {
         }
       >
         <div className="flex items-center gap-3 mt-2 flex-wrap">
-          <Badge variant="primary" size="sm">{sportConfig.icon} {tournament.sportsType}</Badge>
+          <Badge variant="primary" size="sm">{sportConfig.icon} {sportName}</Badge>
           <Badge variant="accent" size="sm">{stage.replace(/_/g, " ").toUpperCase()}</Badge>
           <span className="text-xs text-gray-400 flex items-center gap-1">
             <Calendar className="w-3 h-3" /> {formatDate(tournament.startDate)} — {formatDate(tournament.endDate)}

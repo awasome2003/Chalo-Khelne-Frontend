@@ -9,6 +9,7 @@ import TopPlayersPanel from "./GroupTabs/TopPlayersPanel";
 import KnockoutPanel from "./GroupTabs/KnockoutPanel";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
 import BulkResultUploadModal from "./BulkResultUploadModal";
+import { getCategories } from "../utils/sportTrack";
 
 // ================================================
 // THIN ORCHESTRATOR — 300 lines instead of 4000
@@ -35,6 +36,8 @@ function TournamentGroupTabs() {
     currentGroup, currentRound2Group,
     getMatchFormat,
     fetchMatches, fetchRound2Groups, fetchKnockoutMatches,
+    // STEP 11c — Multi-sport switcher
+    activeSportId, handleSportSwitch,
   } = ctx;
 
   // ---- Modal State (kept local — only the orchestrator manages modals) ----
@@ -109,6 +112,32 @@ function TournamentGroupTabs() {
 
   return (
     <div className="mt-6 bg-white p-4 rounded-[16px] shadow">
+      {/* STEP 11c — Sport switcher (multi-sport tournaments only). Hidden
+          for single-sport / legacy tournaments. */}
+      {Array.isArray(tournament?.sports) && tournament.sports.length > 1 && (
+        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-3 flex items-center gap-2 overflow-x-auto mb-4">
+          <span className="text-[11px] uppercase tracking-wider font-bold text-gray-500 mr-2 whitespace-nowrap flex-shrink-0">
+            Sport
+          </span>
+          {tournament.sports.map((s) => {
+            const isActive = String(s.sportId) === String(activeSportId);
+            return (
+              <button
+                key={String(s.sportId)}
+                onClick={() => handleSportSwitch(s.sportId)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
+                  isActive
+                    ? "bg-emerald-500 text-white shadow-sm shadow-emerald-200"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                {s.sportName}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex space-x-2 mb-[20px]">
         {["League", "Top Players", "Knockout"].map((tab) => (
@@ -128,13 +157,15 @@ function TournamentGroupTabs() {
         ))}
       </div>
 
-      {/* Category Filter */}
-      {tournament?.category?.length > 0 && (
+      {/* Category Filter — STEP 17b.ii: per-sport categories via helper */}
+      {(() => {
+        const _cats = getCategories(tournament, activeSportId);
+        return _cats.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6 p-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
           <div className="w-full text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">
             Filter by Category
           </div>
-          {tournament.category.map((cat) => (
+          {_cats.map((cat) => (
             <button
               key={cat._id || cat.name}
               onClick={() => setSelectedCategory(cat.name === selectedCategory ? "" : cat.name)}
@@ -148,7 +179,8 @@ function TournamentGroupTabs() {
             </button>
           ))}
         </div>
-      )}
+        );
+      })()}
 
       {/* Panel Content */}
       {activeTab === "League" && (

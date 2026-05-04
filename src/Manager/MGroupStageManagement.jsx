@@ -1,5 +1,5 @@
 import { toast } from "react-toastify";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FaStar, FaRegStar, FaMedal, FaTrophy } from "react-icons/fa";
 import { ChevronDown, Check } from 'lucide-react';
 import { FiPlus, FiX, FiLock, FiCheck, FiTrash, FiAlertTriangle, FiInfo } from "react-icons/fi";
@@ -9,6 +9,54 @@ import { BiTrophy } from "react-icons/bi";
 import axios from "axios";
 import GroupsTab from "./MGrouptabs";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import SeedPositionsPreview from "./components/SeedPositionsPreview";
+import { getSportName, getCategories, getCurrentStage } from "../utils/sportTrack";
+
+// Valid knockout bracket sizes (powers of 2, cap at 128).
+const VALID_KO_DRAW_SIZES = [4, 8, 16, 32, 64, 128];
+// Smallest draw size that fits N players, or 128 if N > 128.
+const defaultDrawFor = (n) => VALID_KO_DRAW_SIZES.find((s) => s >= n) || 128;
+
+// Deterministic avatar palette — colour picked by name-hash so a player's
+// initials chip stays the same across renders/page-reloads. Replaces the
+// previous random `pravatar.cc?img=${Math.random()}` which changed on every
+// render and visually thrashed the table.
+const AVATAR_PALETTE = [
+  "bg-orange-500", "bg-emerald-500", "bg-blue-500", "bg-purple-500",
+  "bg-pink-500", "bg-amber-500", "bg-teal-500", "bg-indigo-500",
+];
+const _hashName = (s) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+function PlayerAvatar({ player, locked = false }) {
+  const name = player?.name || player?.playerName || player?.userName || "?";
+  const initials = name.trim().split(/\s+/).slice(0, 2)
+    .map((w) => (w[0] || "").toUpperCase()).join("") || "?";
+  const url = player?.image || player?.profileImage || null;
+  // Treat known random/placeholder URLs as missing so we render initials.
+  const isPlaceholder = !url || /pravatar|placeholder/i.test(url);
+  const opacityClass = locked ? "opacity-60" : "";
+  if (!isPlaceholder) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        className={`w-9 h-9 rounded-full object-cover ring-1 ring-gray-200 ${opacityClass}`}
+      />
+    );
+  }
+  const bg = AVATAR_PALETTE[_hashName(name) % AVATAR_PALETTE.length];
+  return (
+    <div
+      className={`w-9 h-9 rounded-full ${bg} text-white text-[12px] font-bold flex items-center justify-center ring-1 ring-white shadow-sm ${opacityClass}`}
+      aria-label={name}
+    >
+      {initials}
+    </div>
+  );
+}
 
 const GroupStageManagement = () => {
   const navigate = useNavigate();
@@ -17,6 +65,10 @@ const GroupStageManagement = () => {
 
   // Tournament and tab states
   const [tournament, setTournament] = useState(null);
+  // STEP 11b — Active sport for the per-sport switcher. Null on legacy
+  // single-sport tournaments (no `?sportId=` query param sent → backend
+  // returns unfiltered, matching pre-multi-sport behaviour).
+  const [activeSportId, setActiveSportId] = useState(null);
   const [selectedTab, setSelectedTab] = useState("Registered Players"); // Default to Registered Players
   const [selectedSubTab, setSelectedSubTab] = useState("Registered Players");
   const [selectedRegisterPlayerCategory, setSelectedRegisterPlayerCategory] = useState('all');
@@ -32,7 +84,10 @@ const GroupStageManagement = () => {
 
   // Pagination and search states
   const [currentPage, setCurrentPage] = useState(1);
-  const [playersPerPage] = useState(10);
+  // Page-size toggle. Default 10 keeps the table within one viewport on most
+  // screens (matches the legacy default before the redesign). 25/50 for larger
+  // rosters, "all" bypasses pagination entirely.
+  const [playersPerPage, setPlayersPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredPlayers, setFilteredPlayers] = useState([]);
 
@@ -46,8 +101,131 @@ const GroupStageManagement = () => {
   const [knockoutSettings, setKnockoutSettings] = useState({
     courtNumber: 1,
     matchStartTime: '',
-    intervalMinutes: 30
+    intervalMinutes: 30,
+    drawSize: 16,      // auto-set when Start Knockout opens based on qualifier count
+    numberOfSeeds: 0,  // 0 keeps legacy sequential pairing; >0 enables Mirror & Flip
   });
+
+  // Ordered player list for the knockout preview — seeded first, then the rest.
+  // Seeded = TopPlayers from any "seeded_*" group (order preserved).
+  // Unseeded = SuperPlayers not already in the seeded set.
+  const knockoutPlayerList = useMemo(() => {
+    const seededRows = (topPlayers || []).filter((p) =>
+      String(p.groupId || "").startsWith("seeded")
+    );
+    const seededIds = new Set(
+      seededRows.map((p) => String(p.playerId || p._id || ""))
+    );
+
+    const seeded = seededRows.map((p) => ({
+      name: p.playerName || p.userName || "Unknown",
+      playerId: String(p.playerId || p._id || ""),
+      isSeeded: true,
+    }));
+
+    const unseeded = (superPlayers || [])
+      .filter((sp) => !seededIds.has(String(sp.playerId || sp._id || "")))
+      .map((sp) => ({
+        name: sp.playerName || sp.userName || "Unknown",
+        playerId: String(sp.playerId || sp._id || ""),
+        isSeeded: false,
+      }));
+
+    return [...seeded, ...unseeded];
+  }, [topPlayers, superPlayers]);
+
+  // Bucket Top Players by finishing position (1st/2nd/3rd/...) plus seeded.
+  // Filters by the active category dropdown so section counts reflect what
+  // the manager has selected. Numeric ranks are dynamic so this works for
+  // qualifyPerGroup of 2, 3, or higher without hardcoding.
+  const topPlayersByPosition = useMemo(() => {
+    const cat = selectedTopPlayerCategory;
+    const matchesCategory = (p) => {
+      if (!cat || cat === 'All Categories' || cat === 'all') return true;
+      return (p.category || 'Open').toLowerCase() === cat.toLowerCase();
+    };
+    const filtered = (topPlayers || []).filter(matchesCategory);
+
+    const buckets = { seeded: [], unranked: [] };
+    for (const p of filtered) {
+      const isSeeded = p.isSeeded || String(p.groupId || '').startsWith('seeded');
+      if (isSeeded) {
+        buckets.seeded.push(p);
+      } else if (p.position == null) {
+        buckets.unranked.push(p);
+      } else {
+        if (!buckets[p.position]) buckets[p.position] = [];
+        buckets[p.position].push(p);
+      }
+    }
+
+    const positionKeys = Object.keys(buckets)
+      .filter((k) => k !== 'seeded' && k !== 'unranked')
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    return { buckets, positionKeys, total: filtered.length };
+  }, [topPlayers, selectedTopPlayerCategory]);
+
+  // Buckets used by the Round 2 filter chip row. Counts drive chip labels;
+  // the chips themselves render only when count > 0 so the row stays tight.
+  // Counts are taken from the Round-2-eligible pool (skip-R2 players are
+  // excluded from positions/seeded), with `skipR2` tracked separately so the
+  // dedicated chip can surface them.
+  const round2FilterCounts = useMemo(() => {
+    const counts = { all: 0, seeded: 0, skipR2: 0 };
+    const positions = {};
+    for (const p of topPlayers || []) {
+      if (p.skipRound2) {
+        counts.skipR2++;
+        continue; // not in the eligible pool
+      }
+      counts.all++;
+      const isSeeded = p.isSeeded || String(p.groupId || '').startsWith('seeded');
+      if (isSeeded) {
+        counts.seeded++;
+      } else if (typeof p.position === 'number' && p.position >= 1) {
+        positions[p.position] = (positions[p.position] || 0) + 1;
+      }
+    }
+    return { ...counts, positions };
+  }, [topPlayers]);
+
+  // Round 2 filter chip — narrows which Top Players are visible in the Round 2
+  // selection list. Pure view filter; doesn't deselect previously checked
+  // players when toggled. One of: 'all' | 'pos_1' | 'pos_2' | 'pos_3' | ... | 'seeded'.
+  // Declared here (above round2FilteredPlayers) to satisfy TDZ — the memo
+  // below reads it.
+  const [round2Filter, setRound2Filter] = useState('all');
+
+  // Apply the active filter chip + search term to topPlayers. Pure view
+  // filter — doesn't affect selection state. Skip-R2 players are excluded
+  // from every chip EXCEPT the dedicated "skip_r2" chip, since they're not
+  // eligible for Round 2.
+  const round2FilteredPlayers = useMemo(() => {
+    let list = topPlayers || [];
+    if (round2Filter === 'skip_r2') {
+      list = list.filter((p) => p.skipRound2);
+    } else {
+      list = list.filter((p) => !p.skipRound2);
+      if (round2Filter === 'seeded') {
+        list = list.filter((p) => p.isSeeded || String(p.groupId || '').startsWith('seeded'));
+      } else {
+        const m = /^pos_(\d+)$/.exec(round2Filter || '');
+        if (m) {
+          const rank = Number(m[1]);
+          list = list.filter((p) => p.position === rank);
+        }
+      }
+    }
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter((p) =>
+        (p.playerName || p.userName || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [topPlayers, round2Filter, searchTerm]);
 
   // Group creation states
   const [modalStep, setModalStep] = useState(0);
@@ -62,6 +240,16 @@ const GroupStageManagement = () => {
   // Seeding confirmation modal
   const [showSeedingModal, setShowSeedingModal] = useState(false);
   const [playerToSeed, setPlayerToSeed] = useState(null);
+
+  // Round-2-skip seeding (Round 2 Qualifiers tab → final knockout). When
+  // skipRound2 is true on a TopPlayer entry, that player bypasses Round 2 and
+  // is added directly to Round 3 (final knockout).
+  const [showSkipR2Modal, setShowSkipR2Modal] = useState(false);
+  const [playerToSkipR2, setPlayerToSkipR2] = useState(null); // { playerId, playerName, currentlySkipping }
+  const skipR2Count = useMemo(
+    () => (topPlayers || []).filter((p) => p.skipRound2).length,
+    [topPlayers]
+  );
 
   // Round 2 progression states
   const [showRound2Modal, setShowRound2Modal] = useState(false);
@@ -82,16 +270,41 @@ const GroupStageManagement = () => {
     startDate: '',
     startTime: '',
     courtNumber: 1,
-    intervalMinutes: 30
+    intervalMinutes: 30,
+    drawSize: 16,         // auto-picked when schedule modal opens
+    numberOfSeeds: 0,     // auto-picked from seeded Top Players count
   });
+
+  // Ordered player list for the Round 2 Direct-Knockout preview (Schedule modal).
+  // Uses the manager's hand-picked subset (selectedDirectKnockoutPlayers) and
+  // flags each as seeded by cross-referencing TopPlayers with "seeded_*" groupId.
+  const round2KnockoutPlayerList = useMemo(() => {
+    const seededUserIds = new Set(
+      (topPlayers || [])
+        .filter((p) => String(p.groupId || "").startsWith("seeded"))
+        .map((p) => String(p.playerId || p._id || ""))
+    );
+    const normalize = (p) => ({
+      name: p.playerName || p.userName || p.name || "Unknown",
+      playerId: String(p.playerId || p._id || ""),
+    });
+    const seeded = (selectedDirectKnockoutPlayers || [])
+      .filter((p) => seededUserIds.has(String(p.playerId || p._id || "")))
+      .map((p) => ({ ...normalize(p), isSeeded: true }));
+    const unseeded = (selectedDirectKnockoutPlayers || [])
+      .filter((p) => !seededUserIds.has(String(p.playerId || p._id || "")))
+      .map((p) => ({ ...normalize(p), isSeeded: false }));
+    return [...seeded, ...unseeded];
+  }, [selectedDirectKnockoutPlayers, topPlayers]);
 
   // Draw Method State (Global vs Local Rules)
   const [drawMethod, setDrawMethod] = useState("global"); // 'global' or 'local'
 
-  // Transform tournament categories to dropdown format
+  // Transform tournament categories to dropdown format — STEP 17b.ii
+  // reads per-sport via helper. Defaults to active sport's categories.
   const categories = [
     { value: 'all', label: 'All Categories' },
-    ...(tournament?.category?.map(cat => ({
+    ...(getCategories(tournament, activeSportId).map(cat => ({
       value: cat.name.toLowerCase().replace(/\s+/g, '_'),
       label: cat.name
     })) || [
@@ -122,18 +335,22 @@ const GroupStageManagement = () => {
         .get(`/api/tournaments/${tournamentId}`)
         .then((response) => {
           if (response.data.success && response.data.tournament) {
-            setTournament(response.data.tournament);
+            const _tournament = response.data.tournament;
+            setTournament(_tournament);
+            // STEP 17b.ii — read currentStage + categories per-sport
+            // (sports[0] default — activeSportId not yet resolved here).
             // Check if knockout was already generated
-            const stage = response.data.tournament.currentStage;
+            const stage = getCurrentStage(_tournament);
             if (stage === "knockout" || stage === "completed") {
               setKnockoutGenerated(true);
             }
             // Set default category to first category if available
-            if (response.data.tournament.category && response.data.tournament.category.length > 0) {
+            const _cats = getCategories(_tournament);
+            if (_cats.length > 0) {
               // Default to 'all' to show all players initially
               setSelectedRegisterPlayerCategory('all');
-              setSelectedTopPlayerCategory(response.data.tournament.category[0].name);
-              setSelectedSuperPlayerCategory(response.data.tournament.category[0].name);
+              setSelectedTopPlayerCategory(_cats[0].name);
+              setSelectedSuperPlayerCategory(_cats[0].name);
             }
           }
         })
@@ -142,6 +359,73 @@ const GroupStageManagement = () => {
         });
     }
   }, [tournamentId]);
+
+  // STEP 11b — Initialize / re-validate activeSportId when tournament data
+  // arrives. Per the approval note: this fires when tournament is set, not
+  // just on mount. Explicit `Array.isArray + length > 0` guard so we don't
+  // optional-chain element access on a possibly-empty array.
+  useEffect(() => {
+    if (!tournament) return;
+    if (Array.isArray(tournament.sports) && tournament.sports.length > 0) {
+      const validIds = tournament.sports.map((s) => String(s.sportId));
+      const current = activeSportId ? String(activeSportId) : null;
+      if (!current || !validIds.includes(current)) {
+        setActiveSportId(tournament.sports[0].sportId);
+      }
+    } else {
+      // Legacy single-sport tournament — null means "send no ?sportId query".
+      setActiveSportId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournament]);
+
+  // STEP 11b — Re-fetch sport-scoped data when activeSportId changes.
+  // NOTE: fetch functions are currently regular (not useCallback). Deps
+  // intentionally limited to [activeSportId, tournamentId] — the function
+  // refs are stable enough for this use case. If any of these fetches get
+  // wrapped in useCallback later, update this deps array to include them
+  // (per STEP 11b approval note #1).
+  useEffect(() => {
+    if (!tournamentId) return;
+    if (!tournament) return; // wait until tournament + activeSportId both ready
+    fetchTopPlayers();
+    fetchSuperPlayers();
+    checkRound2Progress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSportId, tournamentId]);
+
+  // STEP 11b — Sport switch handler. Confirms when there's unsaved Round 2
+  // state, then resets per-sport in-flight state so the new sport starts
+  // fresh. The re-fetch effect above re-pulls data with the new sportId.
+  const handleSportSwitch = (newSportId) => {
+    if (resetting) return; // approval note #2 — can't switch mid-reset
+    if (String(newSportId) === String(activeSportId)) return;
+
+    const hasUnsaved =
+      isRound2Mode ||
+      (Array.isArray(selectedRound2Players) && selectedRound2Players.length > 0) ||
+      (Array.isArray(selectedDirectKnockoutPlayers) && selectedDirectKnockoutPlayers.length > 0);
+    if (hasUnsaved) {
+      const ok = window.confirm("Discard your current Round 2 selection and switch sport?");
+      if (!ok) return;
+    }
+
+    // Clear in-flight Round 2 / knockout state so the new sport starts fresh.
+    setIsRound2Mode(false);
+    setSelectedRound2Players([]);
+    setRound2Filter('all');
+    setRound2Option(null);
+    setRound2Progress(null);
+    setSelectedDirectKnockoutPlayers([]);
+    setShowRound2Modal(false);
+    setShowKnockoutModal(false);
+    setShowDirectKnockoutPlayerModal(false);
+    setShowDirectKnockoutScheduleModal(false);
+    setSearchTerm('');
+    setCurrentPage(1);
+
+    setActiveSportId(newSportId); // re-fetch effect picks this up
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -156,7 +440,8 @@ const GroupStageManagement = () => {
     try {
       if (!tournamentId) return;
 
-      const response = await axios.get(`/api/tournaments/direct-knockout/${tournamentId}/matches`);
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
+      const response = await axios.get(`/api/tournaments/direct-knockout/${tournamentId}/matches${sportQuery}`);
       if (response.data.success && response.data.matches.length > 0) {
         setAnyMatchesGenerated(true);
         return;
@@ -178,11 +463,12 @@ const GroupStageManagement = () => {
     }
   }, [tournamentId]);
 
-  // Fetch top players for the tournament
+  // Fetch top players for the tournament (sport-scoped via activeSportId).
   const fetchTopPlayers = async () => {
     try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
       const response = await axios.get(
-        `/api/tournaments/topplayers/${tournamentId}`
+        `/api/tournaments/topplayers/${tournamentId}${sportQuery}`
       );
       if (response.data.success && response.data.topPlayers) {
         setTopPlayers(response.data.topPlayers);
@@ -192,11 +478,12 @@ const GroupStageManagement = () => {
     }
   };
 
-  // Fetch super players from database (using existing endpoint)
+  // Fetch super players from database (sport-scoped via activeSportId).
   const fetchSuperPlayers = async () => {
     try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
       const response = await axios.get(
-        `/api/tournaments/superplayers/${tournamentId}`
+        `/api/tournaments/superplayers/${tournamentId}${sportQuery}`
       );
       if (response.data.success && response.data.superPlayers) {
         setSuperPlayers(response.data.superPlayers);
@@ -226,13 +513,21 @@ const GroupStageManagement = () => {
         return;
       }
 
+      // Send explicit player order (seeded first, then Round 1 qualifiers) so
+      // the backend places them exactly as the preview showed.
+      const playerOrder = knockoutPlayerList.map((p) => p.playerId).filter(Boolean);
+
       const response = await axios.post(
         `/api/tournaments/knockout/generate`,
         {
           tournamentId,
+          sportId: activeSportId,
           courtNumber: knockoutSettings.courtNumber,
           matchStartTime: knockoutSettings.matchStartTime,
-          intervalMinutes: knockoutSettings.intervalMinutes
+          intervalMinutes: knockoutSettings.intervalMinutes,
+          drawSize: knockoutSettings.drawSize,
+          numberOfSeeds: knockoutSettings.numberOfSeeds,
+          playerOrder,
         }
       );
 
@@ -277,16 +572,24 @@ const GroupStageManagement = () => {
 
           if (response.data.success && response.data.bookings.length > 0) {
 
-            const players = response.data.bookings.map((booking) => ({
-              id: booking._id,           // Booking ID
-              userId: booking.userId?._id || booking.userId,    // Extract _id from userId object
-              name: booking.userName || booking.name,
-              bookingDate: booking.bookingDate,
-              categories: booking.selectedCategories || [], // Add categories here
-              image: `https://i.pravatar.cc/50?img=${Math.floor(
-                Math.random() * 70
-              )}`,
-            }));
+            const players = response.data.bookings.map((booking) => {
+              // STEP 17b.ii — sportSelections is the only shape after
+              // STEP 16. Legacy selectedCategories fallback removed.
+              // Downstream consumers (cat.name in filter / display)
+              // expect a `name` field, so we normalize here.
+              const ss = Array.isArray(booking.sportSelections) ? booking.sportSelections : [];
+              const categories = ss.map((s) => ({ name: s.categoryName, fee: s.fee, sportName: s.sportName }));
+              return {
+                id: booking._id,           // Booking ID
+                userId: booking.userId?._id || booking.userId,    // Extract _id from userId object
+                name: booking.userName || booking.name,
+                bookingDate: booking.bookingDate,
+                categories,
+                image: `https://i.pravatar.cc/50?img=${Math.floor(
+                  Math.random() * 70
+                )}`,
+              };
+            });
 
             setRegisteredPlayers(players);
             setFilteredPlayers(players);
@@ -386,13 +689,22 @@ const GroupStageManagement = () => {
     setCurrentPage(1); // Reset to first page when searching or filtering
   }, [searchTerm, registeredPlayers, selectedRegisterPlayerCategory]);
 
-  // Calculate pagination - use different data source based on Round 2 mode
-  const indexOfLastPlayer = currentPage * playersPerPage;
-  const indexOfFirstPlayer = indexOfLastPlayer - playersPerPage;
-  const currentPlayers = isRound2Mode
-    ? topPlayers.slice(indexOfFirstPlayer, indexOfLastPlayer)
-    : filteredPlayers.slice(indexOfFirstPlayer, indexOfLastPlayer);
-  const totalPages = Math.ceil((isRound2Mode ? topPlayers.length : filteredPlayers.length) / playersPerPage);
+  // Reset pagination when the Round 2 filter chip changes — otherwise a
+  // manager on page 3 of "All" who switches to "Top 1" can land on an empty
+  // page that doesn't exist in the smaller filtered list.
+  useEffect(() => {
+    if (isRound2Mode) setCurrentPage(1);
+  }, [round2Filter, isRound2Mode]);
+
+  // Calculate pagination - use different data source based on Round 2 mode.
+  // In Round 2 mode the source is the chip-filtered top players list.
+  // playersPerPage === "all" bypasses pagination entirely.
+  const _showAll = playersPerPage === "all";
+  const _sourceList = isRound2Mode ? round2FilteredPlayers : filteredPlayers;
+  const indexOfLastPlayer = _showAll ? _sourceList.length : currentPage * playersPerPage;
+  const indexOfFirstPlayer = _showAll ? 0 : indexOfLastPlayer - playersPerPage;
+  const currentPlayers = _sourceList.slice(indexOfFirstPlayer, indexOfLastPlayer);
+  const totalPages = _showAll ? 1 : Math.ceil(_sourceList.length / playersPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -401,11 +713,22 @@ const GroupStageManagement = () => {
   // Selection functions for group creation - handle both Round 1 and Round 2 modes
   const handleSelectAll = (checked) => {
     if (isRound2Mode) {
-      // Round 2 mode: select Top Players
+      // Round 2 mode: "select all visible" — adds every currently-filtered
+      // player to the selection (preserving prior selections from other
+      // filters). Unchecking only removes the currently-visible subset.
       if (checked) {
-        setSelectedRound2Players([...topPlayers]);
+        setSelectedRound2Players((prev) => {
+          const existingIds = new Set(prev.map(p => String(p.playerId || p._id || '')));
+          const additions = round2FilteredPlayers.filter(
+            (p) => !existingIds.has(String(p.playerId || p._id || ''))
+          );
+          return [...prev, ...additions];
+        });
       } else {
-        setSelectedRound2Players([]);
+        const visibleIds = new Set(round2FilteredPlayers.map(p => String(p.playerId || p._id || '')));
+        setSelectedRound2Players((prev) =>
+          prev.filter((p) => !visibleIds.has(String(p.playerId || p._id || '')))
+        );
       }
     } else {
       // Round 1 mode: select regular players
@@ -434,7 +757,8 @@ const GroupStageManagement = () => {
 
   const togglePlayerSelection = (playerId) => {
     if (isRound2Mode) {
-      // Round 2 mode: toggle Top Player selection
+      // Round 2 mode: lookup against the full topPlayers (not the filtered
+      // view) so toggling works regardless of which filter chip is active.
       const player = topPlayers.find(p => p.playerId === playerId);
       if (player) {
         setSelectedRound2Players(prev => {
@@ -481,56 +805,156 @@ const GroupStageManagement = () => {
   const confirmSeedPlayer = async () => {
     if (!playerToSeed) return;
 
-    try {
-      const isCurrentlySeeded = seededPlayers.includes(playerToSeed.id);
+    const isCurrentlySeeded = seededPlayers.includes(playerToSeed.id);
 
-      if (isCurrentlySeeded) {
-        // Remove from seeded players
-        setSeededPlayers(prev => prev.filter(id => id !== playerToSeed.id));
-        localStorage.setItem(`seeded_${tournamentId}`, JSON.stringify(seededPlayers.filter(id => id !== playerToSeed.id)));
-      } else {
-        // Add to seeded players
-        const newSeededPlayers = [...seededPlayers, playerToSeed.id];
-        setSeededPlayers(newSeededPlayers);
-        localStorage.setItem(`seeded_${tournamentId}`, JSON.stringify(newSeededPlayers));
+    // Multi-sport seeded synthetic groupId format: seeded_<sportSlug>_<categorySlug>.
+    // STEP 17b.ii — read sportSlug from the active sport-track via helper.
+    // Detection helpers (groupId.startsWith('seeded')) match both old and
+    // new formats, so reads of pre-migration data still work.
+    const slugify = (s) => String(s || '').toLowerCase().replace(/\s+/g, '_');
+    const _activeTrack = (tournament?.sports || []).find(
+      (t) => activeSportId && String(t.sportId) === String(activeSportId)
+    ) || tournament?.sports?.[0];
+    const sportSlug = slugify(
+      _activeTrack?.sportSlug || _activeTrack?.sportName || 'sport'
+    );
+    const categorySlug = slugify(selectedRegisterPlayerCategory || 'open');
+    const newFormatGroupId = `seeded_${sportSlug}_${categorySlug}`;
 
-        // Save to Top Players via API (only for regular players, not Super Players)
+    // For UNSEED — use the player's actual existing groupId so we hit the
+    // right doc even if it's still in the legacy `seeded_<cat>` format
+    // (i.e. pre-migration data). For ADD — always use the new format.
+    const existingSeededEntry = (topPlayers || []).find((p) =>
+      String(p.playerId || p._id || '') === String(playerToSeed.userId) &&
+      String(p.groupId || '').startsWith('seeded')
+    );
+    const groupId = isCurrentlySeeded
+      ? (existingSeededEntry?.groupId || newFormatGroupId)
+      : newFormatGroupId;
+
+    if (isCurrentlySeeded) {
+      // REMOVE — call backend DELETE. If it fails, keep the star on and toast.
+      try {
+        await axios.delete(
+          `/api/tournaments/topplayers/${tournamentId}/${groupId}/player/${playerToSeed.userId}`
+        );
+        const updated = seededPlayers.filter((id) => id !== playerToSeed.id);
+        setSeededPlayers(updated);
+        localStorage.setItem(`seeded_${tournamentId}`, JSON.stringify(updated));
+        fetchTopPlayers(); // refresh Round 2 Qualifiers list
+      } catch (err) {
+        console.error("Error unseeding player:", err);
+        toast.error(
+          err?.response?.data?.message ||
+            `Failed to unseed ${playerToSeed.name}. Please try again.`
+        );
+        // Keep local state as-is so the star reflects reality.
+      }
+    } else {
+      // ADD — call backend POST. Optimistically flip the star, roll back on failure.
+      const isFromSuperPlayers = superPlayers.some(
+        (sp) =>
+          sp.playerId === playerToSeed.userId ||
+          sp.playerName === playerToSeed.name ||
+          sp.userName === playerToSeed.name
+      );
+
+      const updated = [...seededPlayers, playerToSeed.id];
+      setSeededPlayers(updated);
+      localStorage.setItem(`seeded_${tournamentId}`, JSON.stringify(updated));
+
+      if (!isFromSuperPlayers) {
         try {
-          // Only save to Top Players if this is a regular registered player
-          // Don't save to Top Players if player is already a Super Player
-          const isFromSuperPlayers = superPlayers.some(sp =>
-            sp.playerId === playerToSeed.userId ||
-            sp.playerName === playerToSeed.name ||
-            sp.userName === playerToSeed.name
-          );
-
-          if (!isFromSuperPlayers) {
-            await axios.post(`/api/tournaments/topplayers/save`, {
-              tournamentId: tournamentId,
-              groupId: `seeded_${selectedRegisterPlayerCategory}`, // Use category as group
-              players: [{
+          await axios.post(`/api/tournaments/topplayers/save`, {
+            tournamentId,
+            groupId,
+            players: [
+              {
                 playerId: playerToSeed.userId,
                 playerName: playerToSeed.name,
-                category: selectedRegisterPlayerCategory
-              }]
-            });
-
-            // Refresh top players list
-            fetchTopPlayers();
-          } else {
-          }
-        } catch (error) {
-          console.error("Error saving to Top Players:", error);
-          // Continue with local storage even if API fails
+                category: selectedRegisterPlayerCategory,
+              },
+            ],
+          });
+          fetchTopPlayers();
+        } catch (err) {
+          console.error("Error saving to Top Players:", err);
+          // Roll back local state so the star doesn't lie about success.
+          setSeededPlayers((prev) => prev.filter((id) => id !== playerToSeed.id));
+          localStorage.setItem(
+            `seeded_${tournamentId}`,
+            JSON.stringify(seededPlayers.filter((id) => id !== playerToSeed.id))
+          );
+          toast.error(
+            err?.response?.data?.message ||
+              `Failed to seed ${playerToSeed.name}. Please try again.`
+          );
         }
       }
-
-      setShowSeedingModal(false);
-      setPlayerToSeed(null);
-    } catch (error) {
-      console.error("Error seeding player:", error);
-      toast.error("Failed to seed player. Please try again.");
     }
+
+    setShowSeedingModal(false);
+    setPlayerToSeed(null);
+  };
+
+  // Open the Round-2-skip confirmation modal for a Top Player.
+  const showSkipR2Confirmation = (player) => {
+    setPlayerToSkipR2({
+      playerId: String(player.playerId || player._id || ''),
+      playerName: player.playerName || player.userName || 'this player',
+      currentlySkipping: !!player.skipRound2,
+    });
+    setShowSkipR2Modal(true);
+  };
+
+  // Toggle skipRound2 on the selected Top Player. Optimistically updates the
+  // local list and rolls back on failure.
+  const confirmSkipR2 = async () => {
+    if (!playerToSkipR2 || !tournamentId) return;
+    const { playerId, currentlySkipping } = playerToSkipR2;
+    const nextSkip = !currentlySkipping;
+
+    // Optimistic local update — flip the flag in topPlayers immediately so
+    // the UI reflects the change before the network round-trip resolves.
+    setTopPlayers((prev) =>
+      (prev || []).map((p) =>
+        String(p.playerId || p._id || '') === playerId
+          ? { ...p, skipRound2: nextSkip }
+          : p
+      )
+    );
+    // If the player was selected for Round 2 and is now skipping, prune them.
+    if (nextSkip) {
+      setSelectedRound2Players((prev) =>
+        prev.filter((p) => String(p.playerId || p._id || '') !== playerId)
+      );
+    }
+
+    try {
+      await axios.post(
+        `/api/tournaments/topplayers/${tournamentId}/skip-round2`,
+        { playerId, skip: nextSkip }
+      );
+      toast.info(
+        nextSkip
+          ? `${playerToSkipR2.playerName} will skip Round 2 and go straight to the final knockout.`
+          : `${playerToSkipR2.playerName} will play Round 2 again.`
+      );
+    } catch (err) {
+      console.error('Error toggling skipRound2:', err);
+      // Roll back local state on failure.
+      setTopPlayers((prev) =>
+        (prev || []).map((p) =>
+          String(p.playerId || p._id || '') === playerId
+            ? { ...p, skipRound2: currentlySkipping }
+            : p
+        )
+      );
+      toast.error(err?.response?.data?.message || 'Failed to update skip-Round-2 status.');
+    }
+
+    setShowSkipR2Modal(false);
+    setPlayerToSkipR2(null);
   };
 
   // Show delete warning modal
@@ -588,11 +1012,41 @@ const GroupStageManagement = () => {
     checkRound2Progress();
   }, [tournamentId]);
 
-  // Check if Round 2 has been initiated
+  // Sync seededPlayers state with DB truth once registered players + top players
+  // are loaded. TopPlayers stores `playerId` (user ObjectId); seededPlayers
+  // state stores `player.id` (booking ObjectId). We reverse-map via
+  // registeredPlayers to restore stars for players who were seeded earlier
+  // (survives localStorage clears / cross-device).
+  useEffect(() => {
+    if (!registeredPlayers.length || !topPlayers.length) return;
+
+    const seededUserIds = new Set(
+      topPlayers
+        .filter((p) => String(p.groupId || "").startsWith("seeded"))
+        .map((p) => String(p.playerId || ""))
+        .filter(Boolean)
+    );
+    if (seededUserIds.size === 0) return;
+
+    const dbSeededBookingIds = registeredPlayers
+      .filter((p) => seededUserIds.has(String(p.userId || "")))
+      .map((p) => p.id);
+
+    setSeededPlayers((prev) => {
+      const merged = Array.from(new Set([...prev, ...dbSeededBookingIds]));
+      if (merged.length !== prev.length) {
+        localStorage.setItem(`seeded_${tournamentId}`, JSON.stringify(merged));
+      }
+      return merged;
+    });
+  }, [registeredPlayers, topPlayers, tournamentId]);
+
+  // Check if Round 2 has been initiated (sport-scoped via activeSportId).
   const checkRound2Progress = async () => {
     try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
       const response = await axios.get(
-        `/api/tournaments/round2/status/${tournamentId}`
+        `/api/tournaments/round2/status/${tournamentId}${sportQuery}`
       );
       if (response.data.success) {
         setRound2Progress(response.data.status);
@@ -605,11 +1059,12 @@ const GroupStageManagement = () => {
     }
   };
 
-  // Fetch Round 2 groups
+  // Fetch Round 2 groups (sport-scoped via activeSportId).
   const fetchRound2Groups = async () => {
     try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
       const response = await axios.get(
-        `/api/tournaments/round2/groups/${tournamentId}`
+        `/api/tournaments/round2/groups/${tournamentId}${sportQuery}`
       );
       if (response.data.success) {
         setRound2Groups(response.data.groups);
@@ -637,7 +1092,10 @@ const GroupStageManagement = () => {
     try {
       const response = await axios.post(
         `/api/tournaments/round2/reset`,
-        { tournamentId }
+        // STEP 11b — scope reset to active sport so a Tennis reset doesn't
+        // wipe Badminton's Round 2 data. Backend falls back to legacy
+        // all-tournament reset when sportId is omitted.
+        { tournamentId, sportId: activeSportId || undefined }
       );
 
       if (response.data.success) {
@@ -645,6 +1103,7 @@ const GroupStageManagement = () => {
         setIsRound2Mode(false);
         setSelectedRound2Players([]);
         setRound2Option(null);
+        setRound2Filter('all');
         setShowResetModal(false);
 
         const d = response.data.deleted || {};
@@ -674,6 +1133,30 @@ const GroupStageManagement = () => {
       return;
     }
 
+    // Auto-pick draw size (smallest that fits) and number of seeds (rounded
+    // down to a valid preset, capped at drawSize/2) based on how many of the
+    // selected players are flagged seeded in TopPlayers.
+    const chosenDraw = defaultDrawFor(count);
+    const seededSet = new Set(
+      (topPlayers || [])
+        .filter((p) => String(p.groupId || "").startsWith("seeded"))
+        .map((p) => String(p.playerId || p._id || ""))
+    );
+    const seededInSelection = selectedDirectKnockoutPlayers.filter((p) =>
+      seededSet.has(String(p.playerId || p._id || ""))
+    ).length;
+    const VALID_SEED_COUNTS = [0, 2, 4, 8, 16, 32];
+    const maxSeedsForDraw = Math.floor(chosenDraw / 2);
+    const autoSeeds = [...VALID_SEED_COUNTS]
+      .reverse()
+      .find((n) => n <= seededInSelection && n <= maxSeedsForDraw) ?? 0;
+
+    setKnockoutSchedule((prev) => ({
+      ...prev,
+      drawSize: chosenDraw,
+      numberOfSeeds: autoSeeds,
+    }));
+
     // Close player selection modal and open schedule modal
     setShowDirectKnockoutPlayerModal(false);
     setShowDirectKnockoutScheduleModal(true);
@@ -692,6 +1175,7 @@ const GroupStageManagement = () => {
         `/api/tournaments/round2/initiate`,
         {
           tournamentId,
+          sportId: activeSportId,
           option: 'knockout',
           topPlayers: topPlayers.map(player => ({
             playerId: player.playerId,
@@ -706,6 +1190,7 @@ const GroupStageManagement = () => {
         `/api/tournaments/direct-knockout/validate-players`,
         {
           tournamentId,
+          sportId: activeSportId,
           selectedPlayers: selectedDirectKnockoutPlayers.map(player => ({
             playerId: player.playerId || player._id,
             userName: player.userName || player.name
@@ -718,12 +1203,26 @@ const GroupStageManagement = () => {
         return;
       }
 
+      // Reorder selection so seeded players come first (matches preview and
+      // drives the backend's Mirror & Flip placement, which reads players in
+      // array order).
+      const idOf = (p) => String(p.playerId || p._id || "");
+      const orderMap = new Map(
+        round2KnockoutPlayerList.map((row, i) => [row.playerId, i])
+      );
+      const orderedSelection = [...selectedDirectKnockoutPlayers].sort((a, b) => {
+        const ai = orderMap.has(idOf(a)) ? orderMap.get(idOf(a)) : Number.POSITIVE_INFINITY;
+        const bi = orderMap.has(idOf(b)) ? orderMap.get(idOf(b)) : Number.POSITIVE_INFINITY;
+        return ai - bi;
+      });
+
       // Create the matches
       const matchResponse = await axios.post(
         `/api/tournaments/direct-knockout/create-matches`,
         {
           tournamentId,
-          selectedPlayers: selectedDirectKnockoutPlayers.map(player => ({
+          sportId: activeSportId,
+          selectedPlayers: orderedSelection.map(player => ({
             playerId: player.playerId || player._id,
             userName: player.userName || player.name
           })),
@@ -731,12 +1230,14 @@ const GroupStageManagement = () => {
             startDate: knockoutSchedule.startDate,
             startTime: knockoutSchedule.startTime,
             courtNumber: knockoutSchedule.courtNumber,
-            intervalMinutes: knockoutSchedule.intervalMinutes
+            intervalMinutes: knockoutSchedule.intervalMinutes,
+            drawSize: knockoutSchedule.drawSize, // backend reads schedule.drawSize
           },
-          drawMethod, // 'global' or 'local'
-          // For Local Rules, we might need to send specific seed info if available
-          // We'll rely on backend to use topPlayers data or what's sent here
-          seededPlayers: seededPlayers // Send list of seeded player IDs for reference
+          // Translate the cosmetic Global/Local setting into a backend-valid
+          // drawMethod. When seeds > 0, use hybrid (top-N locked + rest shuffled).
+          drawMethod: knockoutSchedule.numberOfSeeds > 0 ? 'hybrid' : 'standard',
+          numberOfSeeds: knockoutSchedule.numberOfSeeds,
+          seededPlayers, // list of seeded player IDs for reference
         }
       );
 
@@ -760,6 +1261,7 @@ const GroupStageManagement = () => {
     try {
       setRound2Option(option);
       setShowRound2Modal(false);
+      setRound2Filter('all'); // reset filter chip when entering Round 2 mode
 
       if (option === 'knockout') {
         // Don't call initiate API yet — wait until user completes the full flow
@@ -771,6 +1273,7 @@ const GroupStageManagement = () => {
           `/api/tournaments/round2/initiate`,
           {
             tournamentId,
+            sportId: activeSportId,
             option,
             topPlayers: topPlayers.map(player => ({
               playerId: player.playerId,
@@ -884,6 +1387,7 @@ const GroupStageManagement = () => {
 
       return {
         tournamentId: tournamentId,
+        sportId: activeSportId,
         groupName: isRound2Mode ? `Round 2 ${name}` : name,
         players: playersForGroup,
         category: selectedRegisterPlayerCategory,
@@ -934,6 +1438,191 @@ const GroupStageManagement = () => {
     setSelectedRound2Players([]); // Clear Round 2 player selection
   };
 
+  // ---------- Top Players: position-grouped section helpers ----------
+  const positionLabel = (n) =>
+    n === 1 ? 'Group Winners' :
+    n === 2 ? 'Runners Up' :
+    n === 3 ? 'Third Place' :
+    `${n}th Place`;
+
+  const positionMedalColor = (n) =>
+    n === 1 ? 'text-yellow-500' :
+    n === 2 ? 'text-gray-400' :
+    n === 3 ? 'text-orange-700' :
+    'text-gray-400';
+
+  // Stable, lightweight initials avatar — no more random pravatar URLs that
+  // re-shuffle on every render. Tone is derived from a hash of the player ID
+  // so each player keeps a consistent color across renders.
+  const AVATAR_TONES = [
+    'bg-blue-100 text-blue-700',
+    'bg-rose-100 text-rose-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-amber-100 text-amber-700',
+    'bg-purple-100 text-purple-700',
+    'bg-cyan-100 text-cyan-700',
+    'bg-orange-100 text-orange-700',
+    'bg-teal-100 text-teal-700',
+  ];
+  const avatarTone = (id) => {
+    const s = String(id || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
+  };
+  const initialOf = (name) => {
+    const s = String(name || '?').trim();
+    if (!s) return '?';
+    const parts = s.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return s[0].toUpperCase();
+  };
+
+  // Pick a rank-badge style based on position / seeded state.
+  const rankBadgeFor = (player) => {
+    const isSeeded = player.isSeeded || String(player.groupId || '').startsWith('seeded');
+    if (isSeeded) return { label: 'S', cls: 'bg-orange-100 text-orange-700 ring-orange-200' };
+    const r = player.position;
+    if (r === 1) return { label: '1', cls: 'bg-yellow-100 text-yellow-800 ring-yellow-300' };
+    if (r === 2) return { label: '2', cls: 'bg-gray-200 text-gray-700 ring-gray-300' };
+    if (r === 3) return { label: '3', cls: 'bg-orange-200 text-orange-900 ring-orange-300' };
+    if (r) return { label: String(r), cls: 'bg-gray-100 text-gray-600 ring-gray-200' };
+    return { label: '–', cls: 'bg-gray-100 text-gray-400 ring-gray-200' };
+  };
+
+  const renderTopPlayerRow = (player, idx) => {
+    const skipping = !!player.skipRound2;
+    const isSeeded = player.isSeeded || String(player.groupId || '').startsWith('seeded');
+    const badge = rankBadgeFor(player);
+    const tone = avatarTone(player.playerId || player._id);
+    const initial = initialOf(player.playerName || player.userName);
+    return (
+      <div
+        key={player._id || `${player.playerId || ''}-${idx}`}
+        className={`flex items-center gap-3 px-4 py-3 transition-colors ${skipping ? 'bg-yellow-50/40 hover:bg-yellow-50/70' : 'hover:bg-gray-50'}`}
+      >
+        {/* Rank badge */}
+        <div className={`w-8 h-8 rounded-full ring-2 flex items-center justify-center text-sm font-bold flex-shrink-0 ${badge.cls}`}>
+          {badge.label}
+        </div>
+        {/* Avatar (deterministic initials) */}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${tone}`}>
+          {initial}
+        </div>
+        {/* Name + skip badge + meta line */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-gray-900 truncate">
+              {player.playerName || player.userName || 'Unknown Player'}
+            </span>
+            {skipping && (
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                <FaStar className="w-2.5 h-2.5" /> Skip R2
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 truncate">
+            <span className={isSeeded ? 'text-orange-600 font-medium' : ''}>
+              {isSeeded ? 'Seeded' : (player.groupName || '—')}
+            </span>
+            <span className="text-gray-300 mx-1.5">·</span>
+            <span>{player.category || 'Open'}</span>
+          </div>
+        </div>
+        {/* Points */}
+        <div className="text-sm font-bold text-gray-700 tabular-nums whitespace-nowrap">
+          {player.points ?? 0}
+          <span className="text-gray-400 font-normal text-xs ml-1">pts</span>
+        </div>
+        {/* Star action */}
+        <button
+          onClick={() => showSkipR2Confirmation(player)}
+          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${skipping
+            ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
+            : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+            }`}
+          title={skipping
+            ? 'Un-seed — player will play Round 2'
+            : 'Seed for final knockout — player skips Round 2'}
+        >
+          {skipping ? <FaStar className="w-4 h-4" /> : <FaRegStar className="w-4 h-4" />}
+        </button>
+      </div>
+    );
+  };
+
+  const skipR2InSection = (players) => (players || []).filter((p) => p.skipRound2).length;
+
+  // Section header — used by all three section renderers below. The first
+  // section's `border-t` is suppressed via Tailwind's `first:` since each
+  // section is rendered as a direct child of the unified container.
+  const renderSectionHeader = (icon, title, subtitle, players, accent) => {
+    const skips = skipR2InSection(players);
+    return (
+      <div className={`flex items-center justify-between px-4 py-2.5 border-t border-b border-gray-200 first:border-t-0 ${accent?.bg || 'bg-gray-50'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          {icon}
+          <h4 className={`font-bold text-sm ${accent?.text || 'text-gray-800'} truncate`}>{title}</h4>
+          {subtitle && <span className="text-[11px] text-gray-500 hidden sm:inline">· {subtitle}</span>}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {skips > 0 && (
+            <span className="text-[10px] font-bold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+              <FaStar className="w-2.5 h-2.5" /> {skips} skip R2
+            </span>
+          )}
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${accent?.count || 'bg-white text-gray-700 ring-1 ring-gray-200'}`}>
+            {players.length}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPositionSection = (rank, players) => (
+    <div key={`pos-${rank}`}>
+      {renderSectionHeader(
+        <FaMedal className={`${positionMedalColor(rank)} w-4 h-4`} />,
+        positionLabel(rank),
+        `Position ${rank}`,
+        players
+      )}
+      <div className="divide-y divide-gray-100">
+        {players.map(renderTopPlayerRow)}
+      </div>
+    </div>
+  );
+
+  const renderSeededSection = (players) => (
+    <div key="seeded">
+      {renderSectionHeader(
+        <FaStar className="text-orange-500 w-4 h-4" />,
+        'Seeded Players',
+        'Did not play group stage',
+        players,
+        { bg: 'bg-orange-50', text: 'text-orange-900', count: 'bg-orange-200 text-orange-900' }
+      )}
+      <div className="divide-y divide-gray-100">
+        {players.map(renderTopPlayerRow)}
+      </div>
+    </div>
+  );
+
+  const renderUnrankedSection = (players) => (
+    <div key="unranked">
+      {renderSectionHeader(
+        <FiInfo className="text-yellow-600 w-4 h-4" />,
+        'Unranked',
+        'Standings not yet computed',
+        players,
+        { bg: 'bg-yellow-50', text: 'text-yellow-900', count: 'bg-yellow-200 text-yellow-900' }
+      )}
+      <div className="divide-y divide-gray-100">
+        {players.map(renderTopPlayerRow)}
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -947,28 +1636,74 @@ const GroupStageManagement = () => {
           </button>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{tournament?.title || "Tournament Management"}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Group Stage · {tournament?.sportsType || "Sport"}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Group Stage · {getSportName(tournament, activeSportId) || "Sport"}</p>
           </div>
         </div>
       </div>
+
+      {/* STEP 11b — Sport switcher (multi-sport tournaments only). Hidden
+          for single-sport / legacy tournaments. Pills are disabled while a
+          Round 2 reset is in flight to prevent mid-reset sport switching
+          from targeting the wrong sport's data (approval note #2). */}
+      {Array.isArray(tournament?.sports) && tournament.sports.length > 1 && (
+        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-3 flex items-center gap-2 overflow-x-auto">
+          <span className="text-[11px] uppercase tracking-wider font-bold text-gray-500 mr-2 whitespace-nowrap flex-shrink-0">
+            Sport
+          </span>
+          {tournament.sports.map((s) => {
+            const isActive = String(s.sportId) === String(activeSportId);
+            return (
+              <button
+                key={String(s.sportId)}
+                onClick={() => handleSportSwitch(s.sportId)}
+                disabled={resetting}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
+                  isActive
+                    ? "bg-emerald-500 text-white shadow-sm shadow-emerald-200"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
+                } ${resetting ? "opacity-50 cursor-not-allowed" : ""}`}
+                title={resetting ? "Reset in progress — please wait" : undefined}
+              >
+                {s.sportName}
+              </button>
+            );
+          })}
+          {resetting && (
+            <span className="text-[11px] text-gray-500 italic ml-2 flex-shrink-0">
+              Resetting…
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4">
         <div className="flex flex-wrap gap-2 mb-5">
           {[
-            { key: "Players", tab: "Registered Players", sub: "Registered Players", label: "All Players" },
-            { key: "Top", tab: "Registered Players", sub: "Top Players", label: "Round 2 Qualifiers" },
-            { key: "Super", tab: "Registered Players", sub: "Super Players", label: "Super Players" },
+            // Label flips to "Round 2 Selection" while isRound2Mode is on so
+            // the manager understands they're picking from Top Players, not
+            // raw registered players.
+            { key: "Players", tab: "Registered Players", sub: "Registered Players", label: isRound2Mode ? "Round 2 Selection" : "All Players" },
+            { key: "Top", tab: "Registered Players", sub: "Top Players", label: "Stage 2" },
+            // Super Players tab is only meaningful AFTER Round 2 winners are
+            // determined — hide it during Round 2 setup to avoid confusion.
+            ...(isRound2Mode ? [] : [{ key: "Super", tab: "Registered Players", sub: "Super Players", label: "Super Players" }]),
             { key: "Groups", tab: "Groups", sub: "", label: "Groups" },
           ].map((item) => {
             const isActive = (selectedTab === item.tab && selectedSubTab === item.sub) || (item.tab === "Groups" && selectedTab === "Groups");
+            // While in Round 2 mode, highlight the active selection tab in
+            // emerald to differentiate from the normal orange and reinforce
+            // "you're in a Round 2 sub-flow" visually.
+            const activeColor = isRound2Mode && item.key === "Players"
+              ? "bg-emerald-500 text-white shadow-sm shadow-emerald-200"
+              : "bg-orange-500 text-white shadow-sm shadow-orange-200";
             return (
               <button
                 key={item.key}
                 onClick={() => { setSelectedTab(item.tab); setSelectedSubTab(item.sub); }}
                 className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all w-auto ${
                   isActive
-                    ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+                    ? activeColor
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
               >
@@ -988,134 +1723,224 @@ const GroupStageManagement = () => {
                 <div className="p-4">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-4">
-                      {isRound2Mode ? "Top Players Selection for Round 2" : "Registered Players"}
+                      {isRound2Mode ? 'Round 2 — Select Players' : 'Registered Players'}
                     </h3>
 
-                    {/* Round 2 Guide */}
-                    {isRound2Mode && (
-                      <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6">
-                        <h4 className="text-green-700 font-semibold mb-2 flex items-center gap-2">
-                          <GiTrophyCup className="w-4 h-4" /> Round 2 Group Stage Setup
-                        </h4>
-                        <p className="text-sm text-green-600 mb-2">
-                          You're now setting up Round 2 with <strong>{topPlayers.length} Top Players</strong> from Round 1.
+                    {/* Skip-R2 banner — surfaces players who are seeded for the
+                        final knockout and aren't eligible for Round 2. */}
+                    {isRound2Mode && round2FilterCounts.skipR2 > 0 && round2Filter !== 'skip_r2' && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+                        <FaStar className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                        <p className="text-sm text-yellow-800 flex-1">
+                          <strong>{round2FilterCounts.skipR2}</strong> player{round2FilterCounts.skipR2 === 1 ? ' is' : 's are'} seeded for the final knockout — they skip Round 2 and won't appear in the selection list.
                         </p>
-                        <ul className="text-xs text-green-600 space-y-1">
-                          <li>• <strong>Select Top Players</strong> using checkboxes to include them in Round 2</li>
-                          <li>• <strong>Create Groups</strong> using the same workflow as Round 1</li>
-                          <li>• <strong>Winners</strong> from Round 2 will become Super Players for final knockouts</li>
-                          <li>• <strong>Minimum 2 players</strong> required, recommended 4-8 for balanced groups</li>
-                        </ul>
+                        <button
+                          onClick={() => setRound2Filter('skip_r2')}
+                          className="text-xs font-semibold text-yellow-800 hover:underline whitespace-nowrap"
+                        >
+                          View →
+                        </button>
                       </div>
                     )}
 
-                    <div className="flex flex-col lg:flex-row gap-4 mb-4">
-                      {/* Search Bar */}
-                      <div className="flex-1">
+                    {/* Round 2 filter chips — view filter for the player list. */}
+                    {isRound2Mode && (() => {
+                      const chips = [
+                        { key: 'all', label: 'All', count: round2FilterCounts.all },
+                        ...Object.keys(round2FilterCounts.positions || {})
+                          .map(Number)
+                          .sort((a, b) => a - b)
+                          .map((rank) => ({
+                            key: `pos_${rank}`,
+                            label: `Top ${rank}`,
+                            count: round2FilterCounts.positions[rank],
+                          })),
+                        ...(round2FilterCounts.seeded > 0
+                          ? [{ key: 'seeded', label: 'Seeded', count: round2FilterCounts.seeded }]
+                          : []),
+                        ...(round2FilterCounts.skipR2 > 0
+                          ? [{ key: 'skip_r2', label: 'Skip R2', count: round2FilterCounts.skipR2 }]
+                          : []),
+                      ];
+                      return (
+                        <div className="flex items-center gap-2 flex-wrap mb-4">
+                          {chips.map((c) => {
+                            const active = round2Filter === c.key;
+                            const isSkipR2 = c.key === 'skip_r2';
+                            const activeColor = isSkipR2
+                              ? 'bg-yellow-500 text-white border-yellow-500 shadow-sm'
+                              : 'bg-orange-500 text-white border-orange-500 shadow-sm';
+                            const idleColor = isSkipR2
+                              ? 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:border-yellow-400'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300 hover:text-orange-600';
+                            const countTone = active
+                              ? (isSkipR2 ? 'text-yellow-100' : 'text-orange-100')
+                              : 'text-gray-400';
+                            return (
+                              <button
+                                key={c.key}
+                                onClick={() => setRound2Filter(c.key)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${active ? activeColor : idleColor}`}
+                              >
+                                {isSkipR2 && <FaStar className="inline w-3 h-3 mr-1" />}
+                                {c.label}
+                                <span className={`ml-1.5 ${countTone}`}>({c.count})</span>
+                              </button>
+                            );
+                          })}
+                          <div className="flex-1" />
+                          {round2Filter !== 'skip_r2' && (
+                            <button
+                              onClick={() => handleSelectAll(true)}
+                              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                            >
+                              <FiCheck className="inline w-3 h-3 mr-1" />
+                              Select All Visible
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Toolbar — search + category + primary CTA. Clear Groups
+                        demoted to a small text-link below (testing-only). */}
+                    <div className="flex flex-col lg:flex-row gap-3 mb-3 items-stretch lg:items-center">
+                      <div className="flex-1 relative">
                         <input
                           type="text"
-                          placeholder={isRound2Mode ? "Search Top Players..." : "Search players by name..."}
+                          placeholder={isRound2Mode ? "Search Top Players…" : "Search players by name…"}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
                         />
                       </div>
 
-                      {/* Category Dropdown */}
-                      <div className="relative w-full lg:w-64">
-                        <div className="relative">
-                          <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
-                          >
-                            <span className="block truncate">
-                              {categories.find(cat => cat.value === selectedRegisterPlayerCategory)?.label || 'Select Category'}
-                            </span>
-                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                              <ChevronDown className="h-4 w-4 text-gray-600" />
-                            </span>
-                          </button>
+                      <div className="relative w-full lg:w-56">
+                        <button
+                          onClick={() => setIsOpen(!isOpen)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-left focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 hover:border-gray-300 transition"
+                        >
+                          <span className="block truncate">
+                            {categories.find(cat => cat.value === selectedRegisterPlayerCategory)?.label || 'Select Category'}
+                          </span>
+                          <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                            <ul className="py-1">
+                              {categories.map((category) => (
+                                <li key={category.value}>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRegisterPlayerCategory(category.value);
+                                      setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-emerald-50 flex items-center justify-between transition-colors"
+                                  >
+                                    <span>{category.label}</span>
+                                    {selectedRegisterPlayerCategory === category.value && (
+                                      <Check className="h-4 w-4 text-emerald-500" />
+                                    )}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
 
-                          {isOpen && (
-                            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
-                              <ul className="py-1">
-                                {categories.map((category) => (
-                                  <li key={category.value}>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedRegisterPlayerCategory(category.value);
-                                        setIsOpen(false);
-                                      }}
-                                      className="w-full px-4 py-2 text-left hover:bg-orange-50 flex items-center justify-between transition-colors duration-150"
-                                    >
-                                      <span>{category.label}</span>
-                                      {selectedRegisterPlayerCategory === category.value && (
-                                        <Check className="h-4 w-4 text-orange-500" />
-                                      )}
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                      <button
+                        onClick={handleCreateGroupClick}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-sm w-auto"
+                      >
+                        <FiPlus className="w-4 h-4" /> Create Groups
+                      </button>
+                    </div>
+
+                    {/* Status row + demoted Clear Groups link.
+                        Hidden when bulk-selection bar is showing (below). */}
+                    {((isRound2Mode ? selectedRound2Players.length : selectedPlayers.length) === 0) && (
+                      <div className="flex justify-between items-center mb-3 text-xs text-gray-500">
+                        <div>
+                          {isRound2Mode ? (
+                            <>Showing {round2FilteredPlayers.length} of {topPlayers.length} Top Players{(round2Filter !== 'all' || searchTerm) && ' · filtered'}</>
+                          ) : (
+                            <>Showing {currentPlayers.length} of {filteredPlayers.length} players{searchTerm && ` · filtered from ${registeredPlayers.length}`}</>
+                          )}
+                          {!isRound2Mode && (
+                            <>
+                              <span className="mx-2 text-gray-300">·</span>
+                              {Object.values(playerGroups).filter(g => g && g[selectedRegisterPlayerCategory]).length} in groups
+                              <span className="mx-2 text-gray-300">·</span>
+                              {seededPlayers.length} seeded
+                            </>
                           )}
                         </div>
-                      </div>
-
-                      {/* Create Groups Button */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleCreateGroupClick}
-                          className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 whitespace-nowrap"
-                        >
-                          <FiPlus /> Create Groups
-                        </button>
-
-                        {/* Delete Groups Button - For Testing */}
                         <button
                           onClick={showDeleteGroupsWarning}
-                          className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 whitespace-nowrap"
-                          title="Delete all groups (for testing)"
+                          className="text-[11px] font-semibold text-red-500 hover:text-red-700 hover:underline w-auto bg-transparent"
+                          title="Delete all groups (testing utility)"
                         >
-                          <FiTrash />  Clear Groups
+                          Clear all groups
                         </button>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Player Count and Status Info */}
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="text-sm text-gray-600">
-                        {isRound2Mode ? (
-                          `Showing ${topPlayers.length} Top Players available for Round 2`
-                        ) : (
-                          <>
-                            Showing {currentPlayers.length} of {filteredPlayers.length} players
-                            {searchTerm && ` (filtered from ${registeredPlayers.length} total)`}
-                          </>
-                        )}
-                      </div>
-                      <div className="flex gap-4 text-sm text-gray-600">
-                        <span>
+                    {/* Sticky bulk-action bar — appears only when ≥1 selected.
+                        Replaces the status row above. */}
+                    {(isRound2Mode ? selectedRound2Players.length : selectedPlayers.length) > 0 && (
+                      <div className="sticky top-0 z-20 mb-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-emerald-800">
                           {isRound2Mode ? selectedRound2Players.length : selectedPlayers.length} selected
                         </span>
-                        {!isRound2Mode && (
-                          <>
-                            <span>{Object.values(playerGroups).filter(g => g && g[selectedRegisterPlayerCategory]).length} in groups</span>
-                            <span>{seededPlayers.length} seeded</span>
-                          </>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleCreateGroupClick}
+                            className="px-3 py-1 rounded-md text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 w-auto"
+                          >
+                            Create Groups with {isRound2Mode ? selectedRound2Players.length : selectedPlayers.length}
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (isRound2Mode) setSelectedRound2Players([]);
+                              else setSelectedPlayers([]);
+                            }}
+                            className="px-3 py-1 rounded-md text-[11px] font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 w-auto"
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Players Table */}
+                  {/* Players Table — Sub-step Plan A redesign.
+                      Card wrapper with subtle border, no thick interior lines.
+                      Avatar embedded next to name, deterministic initials
+                      fallback, auto-collapse Categories column when uniform. */}
                   <div className="overflow-hidden">
-                    {(isRound2Mode ? topPlayers.length : filteredPlayers.length) > 0 ? (
+                    {(isRound2Mode ? round2FilteredPlayers.length : filteredPlayers.length) > 0 ? (
                       <>
-                        <div className="overflow-x-auto">
-                          <table className="w-full bg-white border border-gray-300 rounded-lg">
-                            <thead className="bg-gray-50">
+                        {(() => {
+                          // Auto-collapse Categories column when every visible player
+                          // shares the same single-category set (typical "Open Category"
+                          // tournaments). Round 2 always shows Points instead.
+                          const uniformCategories = !isRound2Mode && (() => {
+                            const reps = currentPlayers.map((p) =>
+                              (p.categories || []).map((c) => c.name).sort().join("|") || "—"
+                            );
+                            return new Set(reps).size <= 1;
+                          })();
+                          const showSecondaryColumn = isRound2Mode || !uniformCategories;
+                          const secondaryHeader = isRound2Mode ? "Points" : "Categories";
+                          return (
+                        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                          <table className="w-full">
+                            <thead className="bg-gray-50/70 border-b border-gray-200">
                               <tr>
-                                <th className="px-4 py-3 text-left">
+                                <th className="px-4 py-2.5 text-left w-10">
                                   <input
                                     type="checkbox"
                                     onChange={(e) => handleSelectAll(e.target.checked)}
@@ -1134,135 +1959,144 @@ const GroupStageManagement = () => {
                                             return !(uGroups && uGroups[selectedRegisterPlayerCategory]) && !(nGroups && nGroups[selectedRegisterPlayerCategory]);
                                           }).every(player => selectedPlayers.includes(player.id)))
                                     }
-                                    className="rounded text-orange-500 focus:ring-orange-500"
+                                    className="rounded text-emerald-500 focus:ring-emerald-400 border-gray-300"
                                   />
                                 </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Avatar</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Player Name</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                                  {isRound2Mode ? "Points" : "Categories"}
-                                </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                                  {isRound2Mode ? "Type" : "Seed Player"}
+                                <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Player</th>
+                                {showSecondaryColumn && (
+                                  <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">{secondaryHeader}</th>
+                                )}
+                                <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Status</th>
+                                <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500 w-24">
+                                  {isRound2Mode ? "Type" : "Seed"}
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-100">
                               {currentPlayers.map((player, index) => {
                                 if (isRound2Mode) {
-                                  // Round 2 mode: handle Top Players
                                   const isSelected = selectedRound2Players.find(p => p.playerId === player.playerId);
                                   const isSeeded = player.groupId?.includes('seeded');
-
+                                  const isSkipR2 = !!player.skipRound2;
                                   return (
-                                    <tr key={player._id || index} className="hover:bg-gray-50">
-                                      <td className="px-4 py-3">
+                                    <tr key={player._id || index} className={`hover:bg-gray-50/60 transition-colors ${isSkipR2 ? 'bg-yellow-50/30' : ''}`}>
+                                      <td className="px-4 py-2.5">
                                         <input
                                           type="checkbox"
-                                          checked={!!isSelected}
-                                          onChange={() => togglePlayerSelection(player.playerId)}
-                                          className="rounded text-orange-500 focus:ring-orange-500"
+                                          checked={!!isSelected && !isSkipR2}
+                                          disabled={isSkipR2}
+                                          onChange={() => { if (!isSkipR2) togglePlayerSelection(player.playerId); }}
+                                          className={`rounded text-emerald-500 focus:ring-emerald-400 border-gray-300 ${isSkipR2 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          title={isSkipR2 ? 'Seeded for final knockout — not eligible for Round 2' : undefined}
                                         />
                                       </td>
-                                      <td className="px-4 py-3">
-                                        <img
-                                          src={`https://i.pravatar.cc/50?img=${Math.floor(Math.random() * 70)}`}
-                                          alt={player.playerName || 'Player Avatar'}
-                                          className="w-10 h-10 rounded-full"
-                                        />
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <div className="font-medium text-gray-900">
-                                          {player.playerName || 'Unknown Player'}
+                                      <td className="px-4 py-2.5">
+                                        <div className="flex items-center gap-3">
+                                          <PlayerAvatar player={player} locked={isSkipR2} />
+                                          <div className={`text-sm font-semibold ${isSkipR2 ? 'text-gray-500' : 'text-gray-900'}`}>
+                                            {player.playerName || 'Unknown Player'}
+                                          </div>
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">
-                                        {player.points || 0} points
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                                          <FaStar className="mr-1" /> Top Player
+                                      {showSecondaryColumn && (
+                                        <td className="px-4 py-2.5 text-sm text-gray-600">
+                                          {player.points || 0} pts
+                                        </td>
+                                      )}
+                                      <td className="px-4 py-2.5">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-100">
+                                          <FaStar className="w-2.5 h-2.5 mr-1" /> Top Player
                                         </span>
                                       </td>
-                                      <td className="px-4 py-3">
-                                        <span className="text-sm text-gray-600">
-                                          {isSeeded ? 'Seeded' : 'Round 1 Qualifier'}
-                                        </span>
+                                      <td className="px-4 py-2.5">
+                                        <div className="text-xs text-gray-600 flex items-center gap-1.5">
+                                          {isSeeded ? 'Seeded' : 'Round 1'}
+                                          {isSkipR2 && (
+                                            <span className="text-[9px] uppercase tracking-wider font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                                              Skip R2
+                                            </span>
+                                          )}
+                                        </div>
                                       </td>
                                     </tr>
                                   );
                                 } else {
-                                  // Round 1 mode: handle Regular Players
                                   const userGroups = playerGroups[player.userId];
                                   const nameGroups = playerGroups[`name_${player.name.toLowerCase().trim()}`];
                                   const isInGroup = selectedRegisterPlayerCategory !== 'all' && (
                                     (userGroups && userGroups[selectedRegisterPlayerCategory]) ||
                                     (nameGroups && nameGroups[selectedRegisterPlayerCategory])
                                   );
-
                                   const isSeeded = seededPlayers.includes(player.id);
                                   const isLocked = !!isInGroup;
-
                                   return (
-                                    <tr key={player.id || index} className={`hover:bg-gray-50 ${isLocked ? 'bg-gray-25' : ''}`}>
-                                      <td className="px-4 py-3">
+                                    <tr key={player.id || index} className={`transition-colors ${isLocked ? 'bg-gray-50/40 opacity-60' : 'hover:bg-emerald-50/40'}`}>
+                                      <td className="px-4 py-2.5">
                                         <input
                                           type="checkbox"
                                           checked={selectedPlayers.includes(player.id)}
                                           onChange={() => togglePlayerSelection(player.id)}
                                           disabled={isLocked}
-                                          className={`rounded text-orange-500 focus:ring-orange-500 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          className={`rounded text-emerald-500 focus:ring-emerald-400 border-gray-300 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         />
                                       </td>
-                                      <td className="px-4 py-3">
-                                        <img
-                                          src={player.image}
-                                          alt={player.name || 'Player Avatar'}
-                                          className={`w-10 h-10 rounded-full ${isLocked ? 'opacity-75' : ''}`}
-                                        />
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <div className={`font-medium ${isLocked ? 'text-gray-500' : 'text-gray-900'}`}>
-                                          {player.name || 'Unknown Player'}
+                                      <td className="px-4 py-2.5">
+                                        <div className="flex items-center gap-3">
+                                          <PlayerAvatar player={player} locked={isLocked} />
+                                          <div className="min-w-0">
+                                            <div className={`text-sm font-semibold truncate ${isLocked ? 'text-gray-500' : 'text-gray-900'}`}>
+                                              {player.name || 'Unknown Player'}
+                                            </div>
+                                            {/* Categories shown inline as a subtitle ONLY when the
+                                                column is collapsed (uniform across rows) and there's
+                                                actually a category to show. Otherwise they live in
+                                                the dedicated column. */}
+                                            {!showSecondaryColumn && player.categories?.length > 0 && (
+                                              <div className="text-[11px] text-gray-400 truncate">
+                                                {player.categories.map((c) => c.name).join(", ")}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">
-                                        {player.categories && player.categories.length > 0
-                                          ? player.categories.map(cat => cat.name).join(", ")
-                                          : 'N/A'
-                                        }
-                                      </td>
-                                      <td className="px-4 py-3">
+                                      {showSecondaryColumn && (
+                                        <td className="px-4 py-2.5 text-sm text-gray-600">
+                                          {player.categories && player.categories.length > 0
+                                            ? player.categories.map(cat => cat.name).join(", ")
+                                            : '—'
+                                          }
+                                        </td>
+                                      )}
+                                      <td className="px-4 py-2.5">
                                         {isInGroup ? (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            <FiLock className="mr-1" /> {isInGroup}
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                            <FiLock className="w-2.5 h-2.5 mr-1" /> {isInGroup}
                                           </span>
                                         ) : (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            <FiCheck className="mr-1" /> Available
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                            <FiCheck className="w-2.5 h-2.5 mr-1" /> Available
                                           </span>
                                         )}
                                       </td>
-                                      <td className="px-4 py-3">
+                                      <td className="px-4 py-2.5">
                                         <button
                                           onClick={() => showSeedingConfirmation(player)}
                                           disabled={isLocked}
-                                          className={`p-2 rounded-full transition-colors ${isLocked
-                                            ? 'text-gray-700 cursor-not-allowed'
+                                          className={`p-1.5 rounded-lg transition-colors w-auto ${isLocked
+                                            ? 'text-gray-300 cursor-not-allowed bg-transparent'
                                             : isSeeded
-                                              ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
-                                              : 'text-gray-600 hover:text-yellow-500 hover:bg-yellow-50'
-                                            }`}
+                                              ? 'text-yellow-500 hover:bg-yellow-50 bg-transparent'
+                                              : 'text-gray-300 hover:text-yellow-500 hover:bg-yellow-50 bg-transparent'
+                                          }`}
                                           title={
                                             isLocked
                                               ? 'Cannot seed player already in group'
                                               : isSeeded
-                                                ? 'Remove seeded status - Click to unstar'
-                                                : 'Mark as seeded player - Click to add to Top Players'
+                                                ? 'Remove seeded status'
+                                                : 'Mark as seeded player'
                                           }
                                         >
-                                          {isSeeded ? <FaStar /> : <FaRegStar />}
+                                          {isSeeded ? <FaStar className="w-4 h-4" /> : <FaRegStar className="w-4 h-4" />}
                                         </button>
                                       </td>
                                     </tr>
@@ -1272,56 +2106,80 @@ const GroupStageManagement = () => {
                             </tbody>
                           </table>
                         </div>
+                          );
+                        })()}
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                          <div className="flex items-center justify-between mt-6 px-4">
-                            <div className="text-sm text-gray-600">
-                              Page {currentPage} of {totalPages}
-                            </div>
+                        {/* Footer — page-size toggle + compact prev/next when paginating.
+                            Plan A: dropped page-numbers in favour of "Show 25/50/All"
+                            since most rosters are <100 players and one click to "All"
+                            often beats clicking through 4 pages. */}
+                        <div className="flex items-center justify-between mt-3 px-1 text-xs text-gray-500 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span>Show</span>
+                            {[10, 25, 50, "all"].map((size) => {
+                              const active = playersPerPage === size;
+                              return (
+                                <button
+                                  key={String(size)}
+                                  onClick={() => {
+                                    setPlayersPerPage(size);
+                                    setCurrentPage(1);
+                                  }}
+                                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors w-auto ${
+                                    active
+                                      ? "bg-emerald-500 text-white"
+                                      : "bg-white text-gray-600 border border-gray-200 hover:border-emerald-300 hover:text-emerald-600"
+                                  }`}
+                                >
+                                  {size === "all" ? "All" : size}
+                                </button>
+                              );
+                            })}
+                            <span className="ml-2 text-gray-400">
+                              {_showAll
+                                ? `${_sourceList.length} total`
+                                : `${(currentPage - 1) * playersPerPage + 1}–${Math.min(currentPage * playersPerPage, _sourceList.length)} of ${_sourceList.length}`}
+                            </span>
+                          </div>
+                          {!_showAll && totalPages > 1 && (
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handlePageChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1 text-[11px] font-semibold border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed w-auto"
                               >
                                 Previous
                               </button>
-
-                              {/* Page numbers */}
-                              {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                                if (pageNum > totalPages) return null;
-
-                                return (
-                                  <button
-                                    key={pageNum}
-                                    onClick={() => handlePageChange(pageNum)}
-                                    className={`px-3 py-2 text-sm border rounded-md ${currentPage === pageNum
-                                      ? 'bg-orange-500 text-white border-orange-500'
-                                      : 'border-gray-300 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    {pageNum}
-                                  </button>
-                                );
-                              })}
-
+                              <span className="text-[11px] text-gray-500 self-center">
+                                Page {currentPage} of {totalPages}
+                              </span>
                               <button
                                 onClick={() => handlePageChange(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1 text-[11px] font-semibold border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed w-auto"
                               >
                                 Next
                               </button>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </>
                     ) : (
                       <div className="text-center py-12 bg-white border border-gray-300 rounded-lg">
                         <div className="text-gray-500">
-                          {searchTerm ? (
+                          {isRound2Mode ? (
+                            (searchTerm || round2Filter !== 'all') ? (
+                              <>
+                                <p className="text-lg font-medium">No Top Players match this filter</p>
+                                <p className="text-sm mt-1">Try a different filter chip or clear the search.</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-lg font-medium">No Top Players yet</p>
+                                <p className="text-sm mt-1">Complete Round 1 or seed players to see qualifiers here.</p>
+                              </>
+                            )
+                          ) : searchTerm ? (
                             <>
                               <p className="text-lg font-medium">No players found</p>
                               <p className="text-sm mt-1">Try adjusting your search term</p>
@@ -1391,6 +2249,9 @@ const GroupStageManagement = () => {
                     <div className="flex justify-between items-center mb-4">
                       <div className="text-sm text-gray-600">
                         Total Top Players: {topPlayers.length}
+                        {selectedTopPlayerCategory && selectedTopPlayerCategory !== 'All Categories' && selectedTopPlayerCategory !== 'all' && (
+                          <span className="text-gray-400"> · Showing {topPlayersByPosition.total} in {selectedTopPlayerCategory}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-sm text-orange-500">
@@ -1423,65 +2284,36 @@ const GroupStageManagement = () => {
                     </div>
                   </div>
 
-                  {/* Top Players Table */}
-                  <div className="overflow-hidden">
-                    {topPlayers.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full bg-white border border-gray-300 rounded-lg">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Avatar</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Player Name</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Category</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Type</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {topPlayers.map((player, index) => (
-                              <tr key={player._id || index} className="hover:bg-gray-50">
-                                <td className="px-4 py-3">
-                                  <img
-                                    src={`https://i.pravatar.cc/50?img=${Math.floor(Math.random() * 70)}`}
-                                    alt={player.playerName || 'Player Avatar'}
-                                    className="w-10 h-10 rounded-full"
-                                  />
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">
-                                    {player.playerName || 'Unknown Player'}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {player.category || 'Open'}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                                    <FaStar className="mr-1" /> Top Player
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="text-sm text-gray-600">
-                                    {player.groupId?.includes('seeded') ? 'Seeded' : 'Round 1 Qualifier'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  {/* Top Players — unified card with section dividers */}
+                  {topPlayers.length === 0 ? (
+                    <div className="text-center py-12 bg-white border border-gray-300 rounded-2xl">
+                      <div className="text-gray-500">
+                        <FaStar className="mx-auto text-4xl mb-4 text-gray-700" />
+                        <p className="text-lg font-medium">No Top Players Yet</p>
+                        <p className="text-sm mt-1">
+                          Seed players by clicking the star icon in Registered Players, or complete Round 1 to see qualifiers here.
+                        </p>
                       </div>
-                    ) : (
-                      <div className="text-center py-12 bg-white border border-gray-300 rounded-lg">
-                        <div className="text-gray-500">
-                          <FaStar className="mx-auto text-4xl mb-4 text-gray-700" />
-                          <p className="text-lg font-medium">No Top Players Yet</p>
-                          <p className="text-sm mt-1">
-                            Seed players by clicking the star icon in Registered Players, or complete Round 1 to see qualifiers here.
-                          </p>
-                        </div>
+                    </div>
+                  ) : topPlayersByPosition.total === 0 ? (
+                    <div className="text-center py-12 bg-white border border-gray-300 rounded-2xl">
+                      <div className="text-gray-500">
+                        <FaStar className="mx-auto text-4xl mb-4 text-gray-700" />
+                        <p className="text-lg font-medium">No Top Players in {selectedTopPlayerCategory}</p>
+                        <p className="text-sm mt-1">Switch the category dropdown to see players from another category.</p>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                      {topPlayersByPosition.positionKeys.map((rank) =>
+                        renderPositionSection(rank, topPlayersByPosition.buckets[rank])
+                      )}
+                      {topPlayersByPosition.buckets.seeded.length > 0 &&
+                        renderSeededSection(topPlayersByPosition.buckets.seeded)}
+                      {topPlayersByPosition.buckets.unranked.length > 0 &&
+                        renderUnrankedSection(topPlayersByPosition.buckets.unranked)}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1506,6 +2338,23 @@ const GroupStageManagement = () => {
                               toast.warn(`Maximum 128 players supported for knockout. Currently: ${count}`);
                               return;
                             }
+                            // Auto-pick smallest valid draw size that fits all
+                            // qualifiers. Auto-seed count = number of seeded
+                            // Top Players (star-marked), rounded down to a
+                            // valid preset (0/2/4/8/16/32) and capped at
+                            // drawSize/2.
+                            const chosenDraw = defaultDrawFor(count);
+                            const seededCount = knockoutPlayerList.filter((p) => p.isSeeded).length;
+                            const VALID_SEED_COUNTS = [0, 2, 4, 8, 16, 32];
+                            const maxSeedsForDraw = Math.floor(chosenDraw / 2);
+                            const autoSeeds = [...VALID_SEED_COUNTS]
+                              .reverse()
+                              .find((n) => n <= seededCount && n <= maxSeedsForDraw) ?? 0;
+                            setKnockoutSettings((prev) => ({
+                              ...prev,
+                              drawSize: chosenDraw,
+                              numberOfSeeds: autoSeeds,
+                            }));
                             setShowKnockoutModal(true);
                           }}
                           className="bg-orange-500 text-white px-6 py-2.5 rounded-xl hover:bg-orange-600 transition-colors flex items-center gap-2 font-bold text-sm active:scale-[0.97] w-auto"
@@ -1620,7 +2469,7 @@ const GroupStageManagement = () => {
 
         {/* Groups Tab Content */}
         {selectedTab === "Groups" && (
-          <GroupsTab tournamentId={tournamentId} />
+          <GroupsTab tournamentId={tournamentId} activeSportId={activeSportId} />
         )}
       </div>
 
@@ -1997,6 +2846,82 @@ const GroupStageManagement = () => {
         </div>
       )}
 
+      {/* Skip-Round-2 Confirmation Modal */}
+      {showSkipR2Modal && playerToSkipR2 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-8 rounded-lg relative max-w-md mx-4 shadow-lg">
+            <button
+              className="absolute top-4 right-4 text-xl text-gray-600 hover:text-gray-800"
+              onClick={() => {
+                setShowSkipR2Modal(false);
+                setPlayerToSkipR2(null);
+              }}
+            >
+              <FiX />
+            </button>
+
+            <div className="text-center">
+              <div className="text-yellow-500 text-4xl mb-4 flex justify-center">
+                <FaStar />
+              </div>
+
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                {playerToSkipR2.currentlySkipping ? 'Un-seed for Round 2?' : 'Seed for Final Knockout?'}
+              </h2>
+
+              <div className="text-left mb-6">
+                <p className="text-gray-600 mb-4">
+                  <strong>Player:</strong> {playerToSkipR2.playerName}
+                </p>
+
+                {playerToSkipR2.currentlySkipping ? (
+                  <div className="bg-red-50 border border-red-200 rounded p-3">
+                    <p className="text-red-700">
+                      <FiInfo className="inline mr-2" />
+                      This player will play Round 2 again. They will be eligible for Round 2 group/knockout selection.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                    <p className="text-yellow-700">
+                      <FiInfo className="inline mr-2" />
+                      This player will be seeded for the final knockout (Round 3) and will:
+                    </p>
+                    <ul className="list-disc list-inside mt-2 text-yellow-700 text-sm">
+                      <li>Skip Round 2 entirely</li>
+                      <li>Be placed directly in the final knockout bracket</li>
+                      <li>Show a "Skip R2" badge in the qualifiers list</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => {
+                    setShowSkipR2Modal(false);
+                    setPlayerToSkipR2(null);
+                  }}
+                  className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSkipR2}
+                  className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 ${playerToSkipR2.currentlySkipping
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-yellow-500 hover:bg-yellow-600'
+                    }`}
+                >
+                  <FaStar />
+                  {playerToSkipR2.currentlySkipping ? 'Remove Skip-R2' : 'Confirm Skip R2'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reset Round 2 Confirmation Modal */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
@@ -2073,7 +2998,7 @@ const GroupStageManagement = () => {
       {/* Round 2 Option Selection Modal */}
       {showRound2Modal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-[24px] relative max-w-2xl mx-4 shadow-2xl animate-fadeIn">
+          <div className="bg-white p-8 rounded-[24px] relative max-w-2xl w-full mx-4 shadow-2xl animate-fadeIn">
             <button
               className="absolute top-6 right-6 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
               onClick={() => setShowRound2Modal(false)}
@@ -2091,60 +3016,53 @@ const GroupStageManagement = () => {
               </h2>
 
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                You have <strong className="text-gray-900">{topPlayers.length} Top Players</strong> ready for the next stage.
-                Select how you want them to compete.
+                You have <strong className="text-gray-900">{topPlayers.length} Top Players</strong> ready
+                {skipR2Count > 0 && (
+                  <> (<strong className="text-yellow-700">{skipR2Count}</strong> seeded for final knockout — will skip Round 2)</>
+                )}.
+                Pick a format — you'll choose which players to include on the next screen.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Group Stage Option */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* Group Stage 2 */}
                 <div
-                  className={`group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${round2Option === 'group_stage'
-                    ? 'border-orange-500 bg-orange-50/50 shadow-lg scale-[1.02]'
-                    : 'border-gray-300 hover:border-orange-300 hover:shadow-md'
-                    }`}
                   onClick={() => setRound2Option('group_stage')}
+                  className={`group relative text-left flex flex-col p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${round2Option === 'group_stage'
+                    ? 'border-orange-500 bg-orange-50/40 shadow-lg ring-4 ring-orange-100'
+                    : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+                    }`}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-500 group-hover:bg-orange-500 group-hover:text-white'
-                    }`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'group_stage' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-500'}`}>
                     <GiTrophyCup className="w-7 h-7" />
                   </div>
                   <h3 className="font-bold text-xl mb-2 text-gray-900">Group Stage 2</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                    Create new groups with Top Players for another round of league matches.
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Selected players play another round-robin group stage. Winners become Super Players for the final knockout.
                   </p>
-                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-white/50 p-3 rounded-lg">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>Round-robin format</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>Multiple matches per player</li>
-                  </ul>
                   {round2Option === 'group_stage' && (
-                    <div className="absolute top-4 right-4 text-orange-500 bg-white rounded-full p-1 shadow-sm">
+                    <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md">
                       <FiCheck className="w-4 h-4" />
                     </div>
                   )}
                 </div>
 
-                {/* Knockout Option */}
+                {/* Direct Knockout */}
                 <div
-                  className={`group relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${round2Option === 'knockout'
-                    ? 'border-red-500 bg-red-50/50 shadow-lg scale-[1.02]'
-                    : 'border-gray-300 hover:border-red-300 hover:shadow-md'
-                    }`}
                   onClick={() => setRound2Option('knockout')}
+                  className={`group relative text-left flex flex-col p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${round2Option === 'knockout'
+                    ? 'border-red-500 bg-red-50/40 shadow-lg ring-4 ring-red-100'
+                    : 'border-gray-200 hover:border-red-300 hover:shadow-md'
+                    }`}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'knockout' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500 group-hover:bg-red-500 group-hover:text-white'
-                    }`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${round2Option === 'knockout' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500'}`}>
                     <MdFlashOn className="w-7 h-7" />
                   </div>
                   <h3 className="font-bold text-xl mb-2 text-gray-900">Direct Knockout</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                    Elimination matches. Winner advances, loser goes home.
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Selected players go straight into a single-elimination bracket. Winner takes all.
                   </p>
-                  <ul className="text-sm text-gray-500 text-left space-y-2 bg-white/50 p-3 rounded-lg">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>Single elimination bracket</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>Fast completion</li>
-                  </ul>
                   {round2Option === 'knockout' && (
-                    <div className="absolute top-4 right-4 text-red-500 bg-white rounded-full p-1 shadow-sm">
+                    <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md">
                       <FiCheck className="w-4 h-4" />
                     </div>
                   )}
@@ -2166,7 +3084,7 @@ const GroupStageManagement = () => {
                     : 'bg-gray-300 cursor-not-allowed'
                     }`}
                 >
-                  Start Round 2 <MdRocket className="w-5 h-5" />
+                  Next: Pick Players <MdRocket className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -2176,8 +3094,8 @@ const GroupStageManagement = () => {
 
       {/* Knockout Scheduling Modal */}
       {showKnockoutModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-xl my-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MdFlashOn className="w-5 h-5 text-red-500" />
@@ -2241,13 +3159,86 @@ const GroupStageManagement = () => {
                 />
               </div>
 
+              {/* Draw Size */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Draw Size
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {VALID_KO_DRAW_SIZES.map((size) => {
+                    const tooSmall = superPlayers.length > size;
+                    const active = knockoutSettings.drawSize === size;
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        disabled={tooSmall}
+                        onClick={() => setKnockoutSettings((p) => ({
+                          ...p,
+                          drawSize: size,
+                          numberOfSeeds: Math.min(p.numberOfSeeds, size / 2),
+                        }))}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-bold w-auto transition-all ${
+                          tooSmall
+                            ? "bg-red-50 text-red-300 border border-red-200 cursor-not-allowed"
+                            : active
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  {superPlayers.length}/{knockoutSettings.drawSize} players — {Math.max(0, knockoutSettings.drawSize - superPlayers.length)} BYEs
+                </p>
+              </div>
+
+              {/* Number of Seeded Players */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Number of Seeded Players
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[0, 2, 4, 8, 16, 32].filter((n) => n <= knockoutSettings.drawSize / 2).map((n) => {
+                    const active = knockoutSettings.numberOfSeeds === n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setKnockoutSettings((p) => ({ ...p, numberOfSeeds: n }))}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-bold w-auto transition-all ${
+                          active ? "bg-orange-500 text-white shadow-sm" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {n === 0 ? "None" : n}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  {knockoutSettings.numberOfSeeds === 0
+                    ? "No seeding — players placed in rank order (legacy sequential pairing)."
+                    : `Top ${knockoutSettings.numberOfSeeds} ranked players get fixed Mirror & Flip positions. Remaining placed into unseeded slots.`}
+                </p>
+              </div>
+
+              {/* Live preview — with actual player names once topPlayers + superPlayers are loaded */}
+              <SeedPositionsPreview
+                drawSize={knockoutSettings.drawSize}
+                numberOfSeeds={knockoutSettings.numberOfSeeds}
+                players={knockoutPlayerList}
+              />
+
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                 <div className="flex items-start gap-2">
                   <div className="text-orange-500 mt-0.5">ℹ️</div>
                   <div className="text-sm text-orange-600">
                     <p className="font-medium mb-1">Tournament Info:</p>
-                    <p>• {superPlayers.length} Super Players will compete</p>
-                    <p>• Bracket will auto-generate based on player count</p>
+                    <p>• {superPlayers.length} Super Players qualified from groups</p>
+                    <p>• Draw size {knockoutSettings.drawSize}, {knockoutSettings.numberOfSeeds} seeded</p>
                     <p>• Matches scheduled with your specified interval</p>
                   </div>
                 </div>
@@ -2296,6 +3287,51 @@ const GroupStageManagement = () => {
               </button>
             </div>
 
+            {/* Skip-R2 banner (final-KO seeds excluded from the picker pool) */}
+            {round2FilterCounts.skipR2 > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+                <FaStar className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  <strong>{round2FilterCounts.skipR2}</strong> player{round2FilterCounts.skipR2 === 1 ? ' is' : 's are'} seeded for the final knockout and excluded from this bracket. They'll join Round 3 directly.
+                </p>
+              </div>
+            )}
+
+            {/* Filter chips — narrow the available pool by position / seeded */}
+            {(() => {
+              const chips = [
+                { key: 'all', label: 'All', count: round2FilterCounts.all },
+                ...Object.keys(round2FilterCounts.positions || {})
+                  .map(Number)
+                  .sort((a, b) => a - b)
+                  .map((rank) => ({ key: `pos_${rank}`, label: `Top ${rank}`, count: round2FilterCounts.positions[rank] })),
+                ...(round2FilterCounts.seeded > 0
+                  ? [{ key: 'seeded', label: 'Seeded', count: round2FilterCounts.seeded }]
+                  : []),
+              ];
+              return (
+                <div className="flex items-center gap-2 flex-wrap mb-6">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mr-2">Filter pool:</span>
+                  {chips.map((c) => {
+                    const active = round2Filter === c.key;
+                    return (
+                      <button
+                        key={c.key}
+                        onClick={() => setRound2Filter(c.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${active
+                          ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-red-300 hover:text-red-600'
+                          }`}
+                      >
+                        {c.label}
+                        <span className={`ml-1.5 ${active ? 'text-red-100' : 'text-gray-400'}`}>({c.count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             <div className="mb-10">
               <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 mb-8 border border-gray-200">
                 <div className="flex items-center gap-4 mb-2">
@@ -2305,22 +3341,23 @@ const GroupStageManagement = () => {
                   <div className="h-px bg-gray-300 flex-1"></div>
                 </div>
                 <p className="text-lg text-gray-700">
-                  You have <span className="text-3xl font-bold text-gray-900 mx-1">{topPlayers.length}</span> Top Players qualified.
+                  You have <span className="text-3xl font-bold text-gray-900 mx-1">{round2FilteredPlayers.length}</span>
+                  {round2Filter === 'all' ? ' Top Players' : ` ${round2Filter === 'seeded' ? 'Seeded' : `Top ${round2Filter.replace('pos_', '')}`} players`} in the pool.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 {[4, 8, 16, 32, 64, 128].map((size) => {
                   const minForSize = Math.ceil(size / 2) + 1;
-                  const isAvailable = topPlayers.length >= minForSize;
-                  const actualPlayers = Math.min(topPlayers.length, size);
+                  const isAvailable = round2FilteredPlayers.length >= minForSize;
+                  const actualPlayers = Math.min(round2FilteredPlayers.length, size);
                   const byes = size - actualPlayers;
                   return (
                     <button
                       key={size}
                       onClick={() => {
                         if (isAvailable) {
-                          const newSelection = topPlayers.slice(0, Math.min(topPlayers.length, size));
+                          const newSelection = round2FilteredPlayers.slice(0, Math.min(round2FilteredPlayers.length, size));
                           setSelectedDirectKnockoutPlayers(newSelection);
                           setShowDirectKnockoutPlayerModal(false);
                           setShowDirectKnockoutScheduleModal(true);
@@ -2458,155 +3495,206 @@ const GroupStageManagement = () => {
 
       {/* 🔥 DIRECT KNOCKOUT SCHEDULE MODAL (ENHANCED) */}
       {showDirectKnockoutScheduleModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-[24px] relative max-w-lg mx-4 shadow-2xl animate-fadeIn">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                  <BiTrophy className="w-6 h-6 text-red-500" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl animate-fadeIn flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+                  <BiTrophy className="w-5 h-5" />
                 </div>
-                Schedule Matches
-              </h2>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900 truncate">Schedule Knockout Matches</h2>
+                  <p className="text-[11px] text-gray-500 truncate">Review settings, then create the bracket</p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowDirectKnockoutScheduleModal(false)}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 bg-transparent w-auto"
+                aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-4 mb-8">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Players</p>
-                  <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length}</p>
+            {/* Body (scrollable) */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Stats strip — uses drawSize so math is always accurate */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-gray-200 px-3 py-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Players</p>
+                  <p className="text-lg font-bold text-gray-900 mt-0.5">
+                    {selectedDirectKnockoutPlayers.length}
+                    <span className="text-sm text-gray-400 font-normal"> / {knockoutSchedule.drawSize}</span>
+                  </p>
                 </div>
-                <div className="h-auto w-px bg-orange-100"></div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Matches</p>
-                  <p className="text-2xl font-bold text-gray-800">{selectedDirectKnockoutPlayers.length - 1}</p>
+                <div className="rounded-lg border border-gray-200 px-3 py-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Matches</p>
+                  <p className="text-lg font-bold text-gray-900 mt-0.5">{knockoutSchedule.drawSize - 1}</p>
                 </div>
-                <div className="h-auto w-px bg-orange-100"></div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1">Total Rounds</p>
-                  <p className="text-2xl font-bold text-gray-800">{Math.log2(selectedDirectKnockoutPlayers.length)}</p>
+                <div className="rounded-lg border border-gray-200 px-3 py-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Rounds</p>
+                  <p className="text-lg font-bold text-gray-900 mt-0.5">{Math.log2(knockoutSchedule.drawSize)}</p>
                 </div>
               </div>
-            </div>
 
-            {/* Draw Method Selection */}
-            <div className="mb-8">
-              <label className="block text-sm font-bold text-gray-700 mb-3">Bracket Draw Method</label>
-              <div className="grid grid-cols-2 gap-4">
-                <div
-                  className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'global'
-                    ? 'border-orange-500 bg-orange-50/50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  onClick={() => setDrawMethod('global')}
-                >
-                  <div className="font-bold text-gray-900 mb-1">Global Rules 🌍</div>
-                  <div className="text-xs text-gray-500 leading-snug">
-                    Standard seeding protection logic (1 vs Last, etc). Best for balanced competition.
+              {/* Schedule fields — single 4-column row */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Schedule</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={knockoutSchedule.startDate}
+                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
+                    />
                   </div>
-                  {drawMethod === 'global' && <div className="absolute top-2 right-2 text-orange-500"><FiCheck /></div>}
-                </div>
-
-                <div
-                  className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${drawMethod === 'local'
-                    ? 'border-orange-500 bg-orange-50/50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  onClick={() => setDrawMethod('local')}
-                >
-                  <div className="font-bold text-gray-900 mb-1">Local Rules 🏠</div>
-                  <div className="text-xs text-gray-500 leading-snug">
-                    Fixed custom slot assignments based on specific local templates.
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      value={knockoutSchedule.startTime}
+                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, startTime: e.target.value }))}
+                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
+                    />
                   </div>
-                  {drawMethod === 'local' && <div className="absolute top-2 right-2 text-orange-500"><FiCheck /></div>}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Court</label>
+                    <input
+                      type="number" min="1" max="10" placeholder="1"
+                      value={knockoutSchedule.courtNumber}
+                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, courtNumber: parseInt(e.target.value) }))}
+                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Interval (min)</label>
+                    <input
+                      type="number" min="15" max="120" step="5" placeholder="30"
+                      value={knockoutSchedule.intervalMinutes}
+                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, intervalMinutes: parseInt(e.target.value) }))}
+                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Draw Method — segmented control */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Bracket Draw Method</p>
+                <div className="inline-flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+                  {[
+                    { value: 'global', label: 'Global Rules', hint: '1 vs Last, balanced' },
+                    { value: 'local', label: 'Local Rules', hint: 'Custom templates' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDrawMethod(opt.value)}
+                      className={`px-4 py-1.5 rounded-md text-sm font-semibold w-auto transition-all ${
+                        drawMethod === opt.value
+                          ? 'bg-white text-orange-600 shadow-sm'
+                          : 'bg-transparent text-gray-600 hover:text-gray-900'
+                      }`}
+                      title={opt.hint}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Draw Size + Number of Seeded Players — side-by-side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Draw Size</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {VALID_KO_DRAW_SIZES.map((size) => {
+                      const tooSmall = selectedDirectKnockoutPlayers.length > size;
+                      const active = knockoutSchedule.drawSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          disabled={tooSmall}
+                          onClick={() => setKnockoutSchedule((p) => ({
+                            ...p,
+                            drawSize: size,
+                            numberOfSeeds: Math.min(p.numberOfSeeds, Math.floor(size / 2)),
+                          }))}
+                          className={`px-3 py-1 rounded-md text-xs font-bold w-auto transition-all ${
+                            tooSmall
+                              ? 'bg-red-50 text-red-300 border border-red-200 cursor-not-allowed'
+                              : active
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5">
+                    {Math.max(0, knockoutSchedule.drawSize - selectedDirectKnockoutPlayers.length)} BYEs
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Seeded Players</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[0, 2, 4, 8, 16, 32].filter((n) => n <= Math.floor(knockoutSchedule.drawSize / 2)).map((n) => {
+                      const active = knockoutSchedule.numberOfSeeds === n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setKnockoutSchedule((p) => ({ ...p, numberOfSeeds: n }))}
+                          className={`px-3 py-1 rounded-md text-xs font-bold w-auto transition-all ${
+                            active ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {n === 0 ? 'None' : n}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5">
+                    {knockoutSchedule.numberOfSeeds === 0
+                      ? 'Sequential pairing.'
+                      : `Top ${knockoutSchedule.numberOfSeeds} at fixed Mirror & Flip positions.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Live preview */}
+              <SeedPositionsPreview
+                drawSize={knockoutSchedule.drawSize}
+                numberOfSeeds={knockoutSchedule.numberOfSeeds}
+                players={round2KnockoutPlayerList}
+              />
             </div>
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={knockoutSchedule.startDate}
-                    onChange={(e) => setKnockoutSchedule(prev => ({
-                      ...prev,
-                      startDate: e.target.value
-                    }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Start Time</label>
-                  <input
-                    type="time"
-                    value={knockoutSchedule.startTime}
-                    onChange={(e) => setKnockoutSchedule(prev => ({
-                      ...prev,
-                      startTime: e.target.value
-                    }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Court Number</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    placeholder="1"
-                    value={knockoutSchedule.courtNumber}
-                    onChange={(e) => setKnockoutSchedule(prev => ({
-                      ...prev,
-                      courtNumber: parseInt(e.target.value)
-                    }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Interval (min)</label>
-                  <input
-                    type="number"
-                    min="15"
-                    max="120"
-                    step="5"
-                    placeholder="30"
-                    value={knockoutSchedule.intervalMinutes}
-                    onChange={(e) => setKnockoutSchedule(prev => ({
-                      ...prev,
-                      intervalMinutes: parseInt(e.target.value)
-                    }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-4 mt-10 pt-6 border-t border-gray-200">
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowDirectKnockoutScheduleModal(false)}
-                className="flex-1 px-4 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 w-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDirectKnockoutCreation}
                 disabled={!knockoutSchedule.startDate || !knockoutSchedule.startTime}
-                className={`flex-1 px-4 py-3 rounded-xl text-white font-bold text-lg shadow-lg flex justify-center items-center gap-2 transition-all ${knockoutSchedule.startDate && knockoutSchedule.startTime
-                  ? 'bg-red-500 hover:bg-red-600 hover:-translate-y-0.5'
-                  : 'bg-gray-300 cursor-not-allowed'
-                  }`}
+                className={`px-5 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2 w-auto transition-colors ${
+                  knockoutSchedule.startDate && knockoutSchedule.startTime
+                    ? 'bg-orange-500 hover:bg-orange-600'
+                    : 'bg-gray-300 cursor-not-allowed'
+                }`}
               >
-                Create Matches <MdFlashOn className="w-5 h-5" />
+                <MdFlashOn className="w-4 h-4" />
+                Create Matches
               </button>
             </div>
           </div>

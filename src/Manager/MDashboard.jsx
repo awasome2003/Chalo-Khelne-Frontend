@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { StatCard, Badge, SectionCard, EmptyState, Button } from "../shared/ui";
+import { getCategories } from "../utils/sportTrack";
 
 const Dashboard = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -193,10 +194,8 @@ const Dashboard = () => {
                 ? (endDateStr && startDateStr !== endDateStr ? `${startDateStr} – ${endDateStr}` : startDateStr)
                 : "TBA";
 
-              // Fee Calculation Logic
-              const cats = tournament.categories || tournament.category || [];
-              let parsedCats = [];
-              if (Array.isArray(cats)) parsedCats = cats;
+              // Fee Calculation Logic — STEP 17b.ii: per-sport via helper
+              const parsedCats = getCategories(tournament);
 
               const fees = parsedCats.map(cat => Number(cat.fee) || 0);
               const minFee = fees.length ? Math.min(...fees) : 0;

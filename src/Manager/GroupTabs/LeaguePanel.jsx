@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FiFlag, FiTable, FiEdit2, FiCheck, FiInfo, FiUpload } from "react-icons/fi";
 import { useGroupTabs } from "./GroupTabsContext";
 import groupTabsApi from "./groupTabsApi";
+import { getTournamentType, getCurrentStage, getQualifyPerGroup } from "../../utils/sportTrack";
 
 export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkScore, onOpenCsvUpload, onOpenGenerateModal }) {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
     matchesData, groupsWithMatches,
     filteredGroups, currentGroup,
     fetchMatches,
+    activeSportId,
   } = useGroupTabs();
 
   const [standingsData, setStandingsData] = useState({});
@@ -174,15 +176,15 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
               )}
           </div>
 
-          {/* Standings Table */}
+          {/* Standings Table — STEP 17b.ii: per-sport qualifyPerGroup */}
           {showStandings && standingsData[activeGroup] && (
-            <StandingsTable data={standingsData[activeGroup]} qualifyPerGroup={tournament?.qualifyPerGroup || 2} />
+            <StandingsTable data={standingsData[activeGroup]} qualifyPerGroup={getQualifyPerGroup(tournament, activeSportId)} />
           )}
 
-          {/* Transition to Knockout */}
-          {tournament?.type === "knockout + group stage" &&
-            tournament?.currentStage !== "knockout" &&
-            tournament?.currentStage !== "completed" && (
+          {/* Transition to Knockout — STEP 17b.ii: per-sport type/stage */}
+          {getTournamentType(tournament, activeSportId) === "knockout + group stage" &&
+            getCurrentStage(tournament, activeSportId) !== "knockout" &&
+            getCurrentStage(tournament, activeSportId) !== "completed" && (
               <div className="mt-4">
                 <button
                   className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md disabled:opacity-50"
@@ -192,7 +194,7 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
                   {transitionLoading ? "Processing..." : <><FiFlag /> Transition to Knockout</>}
                 </button>
                 <p className="text-[11px] text-gray-400 text-center mt-1">
-                  All group matches must be completed. Top {tournament?.qualifyPerGroup || 2} per group will qualify.
+                  All group matches must be completed. Top {getQualifyPerGroup(tournament, activeSportId)} per group will qualify.
                 </p>
               </div>
             )}

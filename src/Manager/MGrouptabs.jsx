@@ -10,7 +10,9 @@ import {
   FiInfo,
   FiPlus,
   FiUpload,
-  FiTrash2
+  FiTrash2,
+  FiUserPlus,
+  FiShield,
 } from "react-icons/fi";
 import sports_tennis from "../assets/sports_tennis.png";
 import medal from "../assets/medal.png";
@@ -18,9 +20,29 @@ import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
 import BulkResultUploadModal from "./BulkResultUploadModal";
+import AssignUmpireModal from "./Tournament/AssignUmpireModal";
+import {
+  getCategories,
+  getMatchFormat as getMatchFormatHelper,
+  getQualifyPerGroup,
+  getTournamentType,
+  getCurrentStage,
+} from "../utils/sportTrack";
+
+// Resolve umpire display name from match.referee (Phase 2).
+// Handles nested object (group-style) and bare ObjectId (direct-knockout) shapes.
+const getUmpireName = (referee) => {
+  if (!referee) return null;
+  if (typeof referee === "string") return "Assigned";
+  return referee.name || referee.userName || "Assigned";
+};
 
 export default function Tournament({
   tournamentId: propTournamentId,
+  // Sport currently selected in MGroupStageManagement's per-sport tab strip.
+  // Without this, the knockout-bracket fetch can't filter to the right sport
+  // and ends up displaying matches from every sport in the tournament.
+  activeSportId: propActiveSportId = null,
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -43,6 +65,7 @@ export default function Tournament({
   const [matchInterval, setMatchInterval] = useState("");
   const [startTime, setStartTime] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
+  const [activeKnockoutRound, setActiveKnockoutRound] = useState(0);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [matchesData, setMatchesData] = useState({});
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -65,6 +88,9 @@ export default function Tournament({
   // Knockout matches
   const [knockoutMatches, setKnockoutMatches] = useState([]);
   const [knockoutMatchesByRound, setKnockoutMatchesByRound] = useState({});
+
+  // Umpire assignment modal (Phase 2 — single shared modal across all three sub-tabs)
+  const [assignModalMatch, setAssignModalMatch] = useState(null);
 
   // 🔥 DIRECT KNOCKOUT - The new beast!
   const [tournamentMode, setTournamentMode] = useState("round2-plus-knockout");
@@ -110,6 +136,24 @@ export default function Tournament({
   // Bulk Score Upload state
   const [bulkScoreModal, setBulkScoreModal] = useState({ open: false, matches: [], groupId: null, title: "" });
   const [showCsvUpload, setShowCsvUpload] = useState(false);
+
+  // Group-management bulk-action state (Sub-step Plan A — per-sport scoped).
+  // selectionMode: when true, group cards show a checkbox and a sticky action
+  // bar appears at the top with bulk actions for the selected set.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedGroupIds, setSelectedGroupIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const toggleGroupSelected = (gid) => {
+    setSelectedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gid)) next.delete(gid); else next.add(gid);
+      return next;
+    });
+  };
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedGroupIds(new Set());
+  };
 
   const handleEditGroup = async (group) => {
     // Set the current group to be edited
@@ -461,6 +505,9 @@ export default function Tournament({
         `/api/tournaments/direct-knockout/validate-players`,
         {
           tournamentId,
+          // STEP 16d — backend now requires sportId. Legacy MGrouptabs
+          // has no sport-switcher UI; default to sports[0].sportId.
+          sportId: tournament?.sports?.[0]?.sportId || null,
           selectedPlayers: selectedPlayers.map(p => ({ playerId: p.playerId || p._id, userName: p.userName }))
         }
       );
@@ -520,7 +567,11 @@ export default function Tournament({
           // 🎯 Initialize selectedCategory if not set
           if (round1Groups.length > 0 && !selectedCategory) {
             // Priority: 1. First category from tournament, 2. Category of first group
-            const tournamentCats = tournament?.category || (response.data.tournament?.category);
+            // STEP 17b.ii — read per-sport categories (sports[0] default).
+            const _resp = response.data.tournament;
+            const tournamentCats = getCategories(tournament).length > 0
+              ? getCategories(tournament)
+              : getCategories(_resp);
             if (tournamentCats && tournamentCats.length > 0) {
               setSelectedCategory(tournamentCats[0].name);
             } else if (round1Groups[0].category) {
@@ -582,7 +633,8 @@ export default function Tournament({
     fetchRound2Groups();
     fetchKnockoutMatches();
     fetchTournamentMode(); // 🔥 Detect tournament mode
-  }, [tournamentId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId, propActiveSportId]);
 
   // 🎯 Secondary useEffect to fetch available players after groups are loaded
   useEffect(() => {
@@ -623,16 +675,35 @@ export default function Tournament({
   // Fetch knockout matches - SuperMatch objects support live-state integration
   const fetchKnockoutMatches = async () => {
     try {
+      // Resolve the active sport — fall back to sports[0] if no per-sport
+      // switcher is wired (legacy single-sport rendering).
+      const _activeSportId = propActiveSportId || tournament?.sports?.[0]?.sportId || null;
+      const _activeSport = (tournament?.sports || []).find(
+        (s) => String(s.sportId) === String(_activeSportId)
+      ) || tournament?.sports?.[0] || null;
+      const _type = String(_activeSport?.type || "");
+      const _sportQuery = _activeSportId ? `?sportId=${_activeSportId}` : "";
 
-      // Fetch both SuperMatch knockout matches AND Direct Knockout matches
+      // Pick the right knockout source per sport type:
+      //   - "knockout + group stage"  → SuperMatch (the Round-2 KO from group standings)
+      //   - "knockout"                → DirectKnockoutMatch (direct-elimination bracket)
+      // Previously this fetched both endpoints and merged the results, which
+      // caused stale DirectKnockout records from earlier experiments to leak
+      // into a GS+KO tournament's bracket display, making it look identical
+      // to the Singles Knockout view.
+      const _useSuperMatch = _type.includes("group stage");
+      const _useDirectKO = _type === "knockout";
+
       const [superMatchResponse, directKnockoutResponse] = await Promise.all([
-        // SuperMatch knockout matches (traditional flow)
-        axios.get(`/api/tournaments/knockout/matches/${tournamentId}`)
-          .catch(err => ({ data: { success: false, matches: [] } })),
+        _useSuperMatch
+          ? axios.get(`/api/tournaments/knockout/matches/${tournamentId}${_sportQuery}`)
+              .catch(err => ({ data: { success: false, matches: [] } }))
+          : Promise.resolve({ data: { success: false, matches: [] } }),
 
-        // Direct Knockout matches (new beast system!)
-        axios.get(`/api/tournaments/direct-knockout/${tournamentId}/matches`)
-          .catch(err => ({ data: { success: false, matches: [] } }))
+        _useDirectKO
+          ? axios.get(`/api/tournaments/direct-knockout/${tournamentId}/matches${_sportQuery}`)
+              .catch(err => ({ data: { success: false, matches: [] } }))
+          : Promise.resolve({ data: { success: false, matches: [] } }),
       ]);
 
       let allMatches = [];
@@ -1281,6 +1352,8 @@ export default function Tournament({
       // Prepare the API payload
       const payload = {
         tournamentId,
+        // STEP 16d — sports[0] default; legacy MGrouptabs has no sport switcher.
+        sportId: tournament?.sports?.[0]?.sportId || null,
         selectedPlayers: selectedPlayersForKnockout,
         schedule: {
           courtNumber: directKnockoutSchedule.courtNumber,
@@ -1405,7 +1478,7 @@ export default function Tournament({
   // Bulk Score Upload Helpers
   const getMatchFormat = () => {
     const groupData = groups.find(g => g._id === activeGroup);
-    const maxSets = groupData?.matchFormat?.totalSets || tournament?.matchFormat?.totalSets || 5;
+    const maxSets = groupData?.matchFormat?.totalSets || getMatchFormatHelper(tournament)?.totalSets || 5;
     return { maxSets, setsToWin: Math.ceil(maxSets / 2) };
   };
 
@@ -1463,232 +1536,483 @@ export default function Tournament({
     <div className="mt-6 bg-white p-4 rounded-[16px] shadow">
 
 
-      {/* 🔹 Sub-Group Tabs */}
-      <div className="flex space-x-2 mb-[20px]">
+      {/* Sub-Stage Tabs (segmented) */}
+      <div className="inline-flex items-center gap-1 p-1 bg-gray-100 rounded-lg mb-5">
         {['League', 'Top Players', 'Knockout'].map((tab) => (
           <button
             key={tab}
             onClick={() => setactiveSubGroupTab(tab)}
-            className={`px-[24px] py-[8px] rounded-full text-sm font-[400] w-auto transition lg:text-[18px] sm:text-[16px] ${activeSubGroupTab === tab
-              ? 'text-gray-900'
-              : 'text-gray-900 hover:text-black'
-              }`}
-            style={{
-              border:
-                activeSubGroupTab === tab
-                  ? '1px solid #F97316'
-                  : '1px solid #EDEAEB',
-              backgroundColor:
-                activeSubGroupTab === tab ? 'transparent' : '#EDEAEB',
-            }}
+            className={`px-5 py-1.5 rounded-md text-sm font-semibold transition-all w-auto ${
+              activeSubGroupTab === tab
+                ? 'bg-white text-orange-600 shadow-sm'
+                : 'bg-transparent text-gray-600 hover:text-gray-900'
+            }`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* 🎯 Category Selection Tabs - GLOBAL FILTER */}
-      {tournament?.category && tournament.category.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6 p-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="w-full text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">
-            Filter by Category
+      {/* Category Filter — STEP 17b.ii: per-sport via helper */}
+      {(() => {
+        const _cats = getCategories(tournament);
+        return _cats.length > 0 && (
+        <div className="mb-5">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+            Filter by category
           </div>
-          {tournament.category.map((cat) => {
-            const newCat = cat.name;
-            return (
-              <button
-                key={cat._id || cat.name}
-                onClick={() => {
-                  setSelectedCategory(newCat);
-
-                  // 🎯 Update active groups based on new category
-                  const firstInCat = groups.find(g => {
-                    const gCat = (g.category || "").toLowerCase().trim().replace(/_/g, " ");
-                    const nCat = (newCat || "").toLowerCase().trim().replace(/_/g, " ");
-                    return gCat === nCat || gCat.includes(nCat) || nCat.includes(gCat);
-                  });
-
-                  if (firstInCat) {
-                    setActiveGroup(firstInCat._id);
-                    fetchMatches(firstInCat._id);
-                  } else {
-                    setActiveGroup(null);
-                  }
-
-                  const firstRound2InCat = round2Groups.find(g => {
-                    const gCat = (g.category || "").toLowerCase().trim().replace(/_/g, " ");
-                    const nCat = (newCat || "").toLowerCase().trim().replace(/_/g, " ");
-                    return gCat === nCat || gCat.includes(nCat) || nCat.includes(gCat);
-                  });
-
-                  if (firstRound2InCat) {
-                    setActiveRound2Group(firstRound2InCat._id);
-                  } else {
-                    setActiveRound2Group(null);
-                  }
-                }}
-                className={`px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-300 transform ${selectedCategory && (selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim())
-                  ? "bg-[#F97316] text-white shadow-lg scale-105"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-[#F97316]"
+          <div className="flex flex-wrap gap-1.5">
+            {_cats.map((cat) => {
+              const newCat = cat.name;
+              const isActive = selectedCategory && selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+              return (
+                <button
+                  key={cat._id || cat.name}
+                  onClick={() => {
+                    setSelectedCategory(newCat);
+                    const firstInCat = groups.find(g => {
+                      const gCat = (g.category || "").toLowerCase().trim().replace(/_/g, " ");
+                      const nCat = (newCat || "").toLowerCase().trim().replace(/_/g, " ");
+                      return gCat === nCat || gCat.includes(nCat) || nCat.includes(gCat);
+                    });
+                    if (firstInCat) {
+                      setActiveGroup(firstInCat._id);
+                      fetchMatches(firstInCat._id);
+                    } else {
+                      setActiveGroup(null);
+                    }
+                    const firstRound2InCat = round2Groups.find(g => {
+                      const gCat = (g.category || "").toLowerCase().trim().replace(/_/g, " ");
+                      const nCat = (newCat || "").toLowerCase().trim().replace(/_/g, " ");
+                      return gCat === nCat || gCat.includes(nCat) || nCat.includes(gCat);
+                    });
+                    if (firstRound2InCat) {
+                      setActiveRound2Group(firstRound2InCat._id);
+                    } else {
+                      setActiveRound2Group(null);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all w-auto ${
+                    isActive
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
                   }`}
-              >
-                {cat.name}
-              </button>
-            );
-          })}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
+        );
+      })()}
 
-      {/* 🔹 Group or Player/Knockout Content */}
+      {/* League Stage */}
       {activeSubGroupTab === "League" && (
         <div>
-          {/* Group Selection Tabs */}
-          <div className="flex space-x-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
-            {filteredGroups.map((group, index) => (
+          {/* Bulk-action toolbar — Sub-step Plan A.
+              Sits above the group-tab strip. "Generate All" always visible
+              when there's at least one group lacking matches; Select toggles
+              checkbox mode. While selectionMode is on, the strip below shows
+              checkbox-tabs and a sticky action bar appears for the selection. */}
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+              {filteredGroups.length} group{filteredGroups.length === 1 ? "" : "s"} in this sport
+            </div>
+            <div className="flex items-center gap-2">
+              {(() => {
+                // Visible when any filtered group hasn't had matches fetched yet
+                // OR is known to have zero matches. Server-side bulk endpoint
+                // also skips ones that already have matches, so this is just a
+                // visibility hint, not a strict gate.
+                const candidates = filteredGroups.filter((g) => !groupsWithMatches.has(g._id));
+                if (candidates.length === 0 || selectionMode) return null;
+                return (
+                  <button
+                    onClick={async () => {
+                      if (bulkBusy) return;
+                      const groupIds = candidates.map((g) => g._id);
+                      setBulkBusy(true);
+                      try {
+                        const res = await axios.post("/api/tournaments/matches/generate-bulk", {
+                          tournamentId, groupIds,
+                        });
+                        const { totalMatchesCreated = 0, generated = [], skipped = [], failed = [] } = res.data || {};
+                        toast.success(
+                          `Generated ${totalMatchesCreated} match${totalMatchesCreated === 1 ? "" : "es"} across ${generated.length} group${generated.length === 1 ? "" : "s"}` +
+                          (skipped.length ? ` · ${skipped.length} skipped` : "") +
+                          (failed.length ? ` · ${failed.length} failed` : "")
+                        );
+                        // Refresh matches for whichever group is currently active.
+                        if (activeGroup) await fetchMatches(activeGroup);
+                        // Mark all generated groups as having matches.
+                        setGroupsWithMatches((prev) => {
+                          const next = new Set(prev);
+                          for (const g of generated) next.add(g.groupId);
+                          return next;
+                        });
+                      } catch (err) {
+                        toast.error("Bulk generate failed: " + (err.response?.data?.message || err.message));
+                      } finally {
+                        setBulkBusy(false);
+                      }
+                    }}
+                    disabled={bulkBusy}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 w-auto ${
+                      bulkBusy
+                        ? "bg-orange-200 text-white cursor-not-allowed"
+                        : "bg-orange-500 text-white hover:bg-orange-600"
+                    }`}
+                  >
+                    <FiFlag size={13} />
+                    {bulkBusy ? "Generating…" : `Generate All (${candidates.length})`}
+                  </button>
+                );
+              })()}
               <button
-                key={group._id}
-                onClick={async () => {
-                  setActiveGroup(group._id);  // update active group
-                  await fetchMatches(group._id); // fetch matches for this group
+                onClick={() => {
+                  if (selectionMode) exitSelectionMode();
+                  else setSelectionMode(true);
                 }}
-                className={`px-4 py-2 text-sm w-auto font-semibold rounded-lg transition-all groupstabs whitespace-nowrap ${activeGroup === group._id
-                  ? "bg-[#F97316] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border w-auto ${
+                  selectionMode
+                    ? "bg-gray-800 text-white border-gray-800 hover:bg-gray-900"
+                    : "bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                {group.groupName || `Group ${index + 1}`}
+                {selectionMode ? "Exit Select" : "Select"}
               </button>
-            ))}
+            </div>
+          </div>
+
+          {/* Sticky bulk-action bar — only when selectionMode is on. */}
+          {selectionMode && (
+            <div className="sticky top-0 z-20 mb-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-800">
+                  {selectedGroupIds.size} of {filteredGroups.length} selected
+                </span>
+                <button
+                  onClick={() => {
+                    if (selectedGroupIds.size === filteredGroups.length) {
+                      setSelectedGroupIds(new Set());
+                    } else {
+                      setSelectedGroupIds(new Set(filteredGroups.map((g) => g._id)));
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline w-auto bg-transparent"
+                >
+                  {selectedGroupIds.size === filteredGroups.length ? "Clear all" : "Select all"}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={bulkBusy || selectedGroupIds.size === 0}
+                  onClick={async () => {
+                    if (bulkBusy || selectedGroupIds.size === 0) return;
+                    const groupIds = Array.from(selectedGroupIds);
+                    setBulkBusy(true);
+                    try {
+                      const res = await axios.post("/api/tournaments/matches/generate-bulk", {
+                        tournamentId, groupIds,
+                      });
+                      const { totalMatchesCreated = 0, generated = [], skipped = [], failed = [] } = res.data || {};
+                      toast.success(
+                        `Generated ${totalMatchesCreated} match${totalMatchesCreated === 1 ? "" : "es"} across ${generated.length} group${generated.length === 1 ? "" : "s"}` +
+                        (skipped.length ? ` · ${skipped.length} skipped` : "") +
+                        (failed.length ? ` · ${failed.length} failed` : "")
+                      );
+                      if (activeGroup) await fetchMatches(activeGroup);
+                      setGroupsWithMatches((prev) => {
+                        const next = new Set(prev);
+                        for (const g of generated) next.add(g.groupId);
+                        return next;
+                      });
+                      exitSelectionMode();
+                    } catch (err) {
+                      toast.error("Bulk generate failed: " + (err.response?.data?.message || err.message));
+                    } finally {
+                      setBulkBusy(false);
+                    }
+                  }}
+                  className="px-3 py-1 rounded-md text-[11px] font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-orange-200 disabled:cursor-not-allowed w-auto"
+                >
+                  Generate Matches
+                </button>
+                <button
+                  disabled={bulkBusy || selectedGroupIds.size === 0}
+                  onClick={async () => {
+                    if (bulkBusy || selectedGroupIds.size === 0) return;
+                    const groupIds = Array.from(selectedGroupIds);
+                    if (!window.confirm(`Delete ${groupIds.length} group(s) and all their matches? This cannot be undone.`)) return;
+                    setBulkBusy(true);
+                    try {
+                      const res = await axios.post("/api/tournaments/bookinggroups/bulk-delete", { groupIds });
+                      const { totalMatchesRemoved = 0, deleted = [], blocked = [], failed = [] } = res.data || {};
+                      const summary =
+                        `Deleted ${deleted.length} group${deleted.length === 1 ? "" : "s"} (${totalMatchesRemoved} match${totalMatchesRemoved === 1 ? "" : "es"})` +
+                        (blocked.length ? ` · blocked ${blocked.length}` : "") +
+                        (failed.length ? ` · failed ${failed.length}` : "");
+                      if (blocked.length > 0) {
+                        toast.warn(summary + ". " + blocked[0].message);
+                      } else {
+                        toast.success(summary);
+                      }
+                      // Remove deleted groups from local state and refresh.
+                      const deletedIds = new Set(deleted.map((d) => d.groupId));
+                      setGroups((prev) => prev.filter((g) => !deletedIds.has(g._id)));
+                      setGroupsWithMatches((prev) => {
+                        const next = new Set(prev);
+                        for (const id of deletedIds) next.delete(id);
+                        return next;
+                      });
+                      if (activeGroup && deletedIds.has(activeGroup)) {
+                        const remaining = filteredGroups.filter((g) => !deletedIds.has(g._id));
+                        setActiveGroup(remaining[0]?._id || null);
+                      }
+                      exitSelectionMode();
+                    } catch (err) {
+                      toast.error("Bulk delete failed: " + (err.response?.data?.message || err.message));
+                    } finally {
+                      setBulkBusy(false);
+                    }
+                  }}
+                  className="px-3 py-1 rounded-md text-[11px] font-bold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-200 disabled:cursor-not-allowed w-auto"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={exitSelectionMode}
+                  className="px-3 py-1 rounded-md text-[11px] font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 w-auto"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Group Selection */}
+          <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+            {filteredGroups.map((group, index) => {
+              const isActive = activeGroup === group._id;
+              const isSelected = selectedGroupIds.has(group._id);
+              return (
+                <button
+                  key={group._id}
+                  onClick={async () => {
+                    if (selectionMode) {
+                      toggleGroupSelected(group._id);
+                      return;
+                    }
+                    setActiveGroup(group._id);
+                    await fetchMatches(group._id);
+                  }}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap w-auto inline-flex items-center gap-1.5 ${
+                    selectionMode
+                      ? isSelected
+                        ? "bg-emerald-500 text-white"
+                        : "bg-white text-gray-700 border border-gray-200 hover:border-emerald-300"
+                      : isActive
+                        ? "bg-orange-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {selectionMode && (
+                    <span className={`inline-block w-3.5 h-3.5 rounded border ${isSelected ? "bg-white border-white text-emerald-600" : "border-gray-400"} flex items-center justify-center`}>
+                      {isSelected && <span className="text-[10px] font-black leading-none">✓</span>}
+                    </span>
+                  )}
+                  {group.groupName || `Group ${index + 1}`}
+                </button>
+              );
+            })}
           </div>
 
           {/* Group Content */}
           {currentGroup ? (
-            <div className="w-full p-4 bg-white rounded-2xl">
-              <div className="flex justify-between items-center mb-0">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              {/* Group header strip */}
+              <div className="bg-gradient-to-r from-orange-50 to-white px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-[18px] md:text-[18px] font-[500] text-orange-500">
-                    {currentGroup.groupName ||
-                      `Group ${groups.indexOf(currentGroup) + 1}`}
+                  <h2 className="text-base font-bold text-gray-900">
+                    {currentGroup.groupName || `Group ${groups.indexOf(currentGroup) + 1}`}
                   </h2>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {currentGroup.players?.length || 0} players
+                  </span>
+                  {currentGroup.category && (
+                    <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                      {currentGroup.category}
+                    </span>
+                  )}
                 </div>
                 {groupsWithMatches.has(currentGroup._id) ? (
                   <div className="relative group">
                     <button
-                      className="text-gray-400 cursor-not-allowed"
+                      className="p-1.5 rounded text-gray-300 cursor-not-allowed bg-transparent w-auto"
                       disabled
-                      title="You can only edit groups if matches haven't been generated"
+                      title="Matches already generated — editing locked"
                     >
-                      <FiEdit2 />
+                      <FiEdit2 size={14} />
                     </button>
-                    <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg py-2 px-3 bottom-full right-0 mb-2 w-56 z-50 shadow-lg text-center leading-tight whitespace-normal">
-                      You can only edit groups if matches haven't been generated
+                    <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1.5 px-2.5 bottom-full right-0 mb-1 w-52 z-50 shadow-lg text-center leading-tight">
+                      Matches already generated — editing is locked
                     </div>
                   </div>
                 ) : (
                   <button
-                    className="text-orange-500 hover:text-orange-700 cursor-pointer"
+                    className="p-1.5 rounded text-gray-500 hover:text-orange-600 hover:bg-orange-50 bg-transparent w-auto"
                     onClick={() => handleEditGroup(currentGroup)}
-                    title="Edit Group"
+                    title="Edit group"
                   >
-                    <FiEdit2 />
+                    <FiEdit2 size={14} />
                   </button>
                 )}
               </div>
 
-              {/* List of Players */}
-              <ol className="list-decimal pl-5 space-y-2 text-lg mb-4">
-                {currentGroup.players?.map((player, index) => (
-                  <li key={player._id || index}>
-                    {player.userId?.name || player.userName || `Player ${index + 1}`}
-                  </li>
-                ))}
-              </ol>
+              {/* Players — chip grid */}
+              <div className="px-5 py-4">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Players</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentGroup.players?.map((player, index) => {
+                    const name = player.userId?.name || player.userName || `Player ${index + 1}`;
+                    return (
+                      <div key={player._id || index}
+                        className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full pl-1 pr-3 py-1">
+                        <span className="w-5 h-5 rounded-full bg-orange-400 text-white text-[10px] font-bold flex items-center justify-center">
+                          {index + 1}
+                        </span>
+                        <span className="text-xs font-medium text-gray-700">{name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {(!matchesData[activeGroup] || matchesData[activeGroup]?.length === 0) && (
+              {/* Action toolbar */}
+              <div className="px-5 pb-4 space-y-2">
+                {/* Primary row */}
+                <div className="flex gap-2 flex-wrap">
+                  {(!matchesData[activeGroup] || matchesData[activeGroup]?.length === 0) && (
+                    <button
+                      className="flex-1 min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      <FiFlag size={14} />
+                      Generate Matches
+                    </button>
+                  )}
                   <button
-                    className="bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition active:scale-[0.97]"
-                    onClick={() => setIsModalOpen(true)}
+                    className="flex-1 min-w-[140px] py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100"
+                    onClick={() => {
+                      if (showStandings && standingsData[activeGroup]) {
+                        setShowStandings(false);
+                      } else {
+                        fetchStandings(activeGroup);
+                        setShowStandings(true);
+                      }
+                    }}
                   >
-                    <FiFlag className="w-4 h-4" />
-                    Generate Matches
+                    <FiTable size={14} />
+                    {showStandings && standingsData[activeGroup] ? "Hide Standings" : "Standings"}
                   </button>
-                )}
-
-                <button
-                  className="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 text-orange-500 bg-orange-50 border border-orange-200 hover:bg-orange-100 transition"
-                  onClick={() => {
-                    if (showStandings && standingsData[activeGroup]) {
-                      setShowStandings(false);
-                    } else {
-                      fetchStandings(activeGroup);
-                      setShowStandings(true);
+                  <button
+                    className="flex-1 min-w-[140px] py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    onClick={() =>
+                      navigate(`/tournament-management/group-stage/${tournamentId}/${activeGroup}/points-table`, {
+                        state: { tournamentId, groupId: activeGroup, round: 1 }
+                      })
                     }
-                  }}
-                >
-                  <FiTable />
-                  {showStandings && standingsData[activeGroup] ? "Hide Standings" : "Standings"}
-                </button>
+                  >
+                    Points Table
+                  </button>
+                </div>
 
-                {/* Navigate to full points table */}
-                <button
-                  className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[400] flex items-center justify-center gap-3 text-gray-600 bg-white hover:bg-gray-50"
-                  style={{ border: "1px solid #E5E7EB" }}
-                  onClick={() =>
-                    navigate(`/tournament-management/group-stage/${tournamentId}/${activeGroup}/points-table`, {
-                      state: { tournamentId, groupId: activeGroup, round: 1 }
-                    })
-                  }
-                >
-                  Points Table (Full View)
-                </button>
-
-                {/* Bulk Score Upload Button - shown when matches exist */}
+                {/* Secondary row — bulk upload (only shown when there are incomplete matches) */}
                 {matchesData[activeGroup]?.length > 0 && matchesData[activeGroup].some(
                   m => m.status !== 'completed' && m.status !== 'COMPLETED'
                 ) && (
-                  <>
+                  <div className="flex gap-2 flex-wrap">
                     <button
-                      className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[500] flex items-center justify-center gap-3 text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
+                      className="flex-1 min-w-[140px] py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 text-white bg-emerald-500 hover:bg-emerald-600"
                       onClick={() => openBulkScoreModal(
                         matchesData[activeGroup] || [],
                         activeGroup,
                         `Bulk Score Upload — ${currentGroup?.groupName || 'Group'}`
                       )}
                     >
-                      <FiCheck />
+                      <FiCheck size={14} />
                       Bulk Score Upload
                     </button>
                     <button
-                      className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[500] flex items-center justify-center gap-3 text-orange-600 border-2 border-orange-300 bg-orange-50 hover:bg-orange-100"
+                      className="flex-1 min-w-[140px] py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100"
                       onClick={() => setShowCsvUpload(true)}
                     >
-                      <FiUpload />
-                      Upload CSV/Excel
+                      <FiUpload size={14} />
+                      Upload CSV
                     </button>
-                  </>
+                  </div>
                 )}
 
-                {/* Delete All Matches for this Group */}
-                {matchesData[activeGroup]?.length > 0 && (
+                {/* Destructive — separated.
+                    Sub-step Plan A: two side-by-side buttons. "Delete All
+                    Matches" wipes matches but keeps the group; "Delete Group"
+                    removes the group itself and cascades its matches. The
+                    second is gated by the per-sport stage on the server (409
+                    if past group_stage with completed matches). */}
+                <div className="flex gap-2 flex-wrap">
+                  {matchesData[activeGroup]?.length > 0 && (
+                    <button
+                      className="flex-1 min-w-[160px] py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200"
+                      onClick={() => {
+                        if (window.confirm(`Delete ALL ${matchesData[activeGroup]?.length || 0} matches from this group? This cannot be undone.`)) {
+                          axios.delete(`/api/tournaments/matches/${tournamentId}/${activeGroup}/all`)
+                            .then((res) => {
+                              toast.info(res.data.message || "Matches deleted");
+                              fetchMatches();
+                            })
+                            .catch((err) => toast.error("Failed to delete: " + (err.response?.data?.message || err.message)));
+                        }
+                      }}
+                    >
+                      <FiTrash2 size={14} />
+                      Delete All Matches ({matchesData[activeGroup]?.length || 0})
+                    </button>
+                  )}
                   <button
-                    className="w-full py-2 rounded-full md:text-[16px] sm:text-[14px] font-[400] flex items-center justify-center gap-3 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 mt-2"
-                    onClick={() => {
-                      if (window.confirm(`Delete ALL ${matchesData[activeGroup]?.length || 0} matches from this group? This cannot be undone.`)) {
-                        axios.delete(`/api/tournaments/matches/${tournamentId}/${activeGroup}/all`)
-                          .then((res) => {
-                            toast.info(res.data.message || "Matches deleted");
-                            fetchMatches();
-                          })
-                          .catch((err) => toast.error("Failed to delete: " + (err.response?.data?.message || err.message)));
+                    className="flex-1 min-w-[160px] py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700 border border-red-700"
+                    onClick={async () => {
+                      const matchCount = matchesData[activeGroup]?.length || 0;
+                      const name = currentGroup?.groupName || "this group";
+                      const tail = matchCount > 0 ? ` and its ${matchCount} match${matchCount === 1 ? "" : "es"}` : "";
+                      if (!window.confirm(`Delete "${name}"${tail}? This cannot be undone.`)) return;
+                      try {
+                        const res = await axios.delete(`/api/tournaments/bookinggroups/${activeGroup}`);
+                        toast.success(res.data?.message || "Group deleted");
+                        const removedId = activeGroup;
+                        setGroups((prev) => prev.filter((g) => g._id !== removedId));
+                        setGroupsWithMatches((prev) => {
+                          const next = new Set(prev);
+                          next.delete(removedId);
+                          return next;
+                        });
+                        const remaining = filteredGroups.filter((g) => g._id !== removedId);
+                        setActiveGroup(remaining[0]?._id || null);
+                      } catch (err) {
+                        const status = err.response?.status;
+                        const msg = err.response?.data?.message || err.message;
+                        if (status === 409) {
+                          toast.warn(msg); // Block message (past group_stage with completed matches)
+                        } else {
+                          toast.error("Failed to delete group: " + msg);
+                        }
                       }
                     }}
                   >
-                    <FiTrash2 />
-                    Delete All Matches ({matchesData[activeGroup]?.length || 0})
+                    <FiTrash2 size={14} />
+                    Delete Group
                   </button>
-                )}
-
+                </div>
               </div>
 
               {/* Inline Standings Table */}
@@ -1717,7 +2041,7 @@ export default function Tournament({
                         {standingsData[activeGroup].standings.map((p, idx) => (
                           <tr key={p.playerId} className={`border-t border-gray-100 ${
                             p.qualified ? "bg-green-50" : ""
-                          } ${idx < (tournament?.qualifyPerGroup || 2) ? "font-semibold" : ""}`}>
+                          } ${idx < getQualifyPerGroup(tournament) ? "font-semibold" : ""}`}>
                             <td className="px-3 py-2 text-gray-500">{p.rank}</td>
                             <td className="px-3 py-2 text-gray-900 flex items-center gap-1.5">
                               {p.playerName}
@@ -1743,10 +2067,11 @@ export default function Tournament({
                 </div>
               )}
 
-              {/* Transition to Knockout Button — only for combined tournaments */}
-              {tournament?.type === "knockout + group stage" &&
-                tournament?.currentStage !== "knockout" &&
-                tournament?.currentStage !== "completed" && (
+              {/* Transition to Knockout Button — only for combined tournaments
+                  STEP 17b.ii: per-sport reads (sports[0] default on legacy variant) */}
+              {getTournamentType(tournament) === "knockout + group stage" &&
+                getCurrentStage(tournament) !== "knockout" &&
+                getCurrentStage(tournament) !== "completed" && (
                 <div className="mt-4">
                   <button
                     className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1763,7 +2088,7 @@ export default function Tournament({
                     )}
                   </button>
                   <p className="text-[11px] text-gray-400 text-center mt-1">
-                    All group matches must be completed. Top {tournament?.qualifyPerGroup || 2} per group will qualify.
+                    All group matches must be completed. Top {getQualifyPerGroup(tournament)} per group will qualify.
                   </p>
                 </div>
               )}
@@ -1779,172 +2104,167 @@ export default function Tournament({
                     </h5>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {matchesData[activeGroup].map((match, index) => (
-                        <div
-                          key={index}
-                          className={`shadow-md rounded-lg p-4 cursor-pointer ${(match.status === 'completed' || match.status === 'COMPLETED') ? 'bg-green-50 border-l-4 border-green-500' :
-                            (match.status === 'in_progress' || match.status === 'IN_PROGRESS') ? 'bg-yellow-50 border-l-4 border-yellow-500' :
-                              'bg-[#F5F7FA]'
+                      {matchesData[activeGroup].map((match, index) => {
+                        const isCompleted = match.status === 'completed' || match.status === 'COMPLETED';
+                        const isLive = match.status === 'in_progress' || match.status === 'IN_PROGRESS';
+                        const p1Name = match.player1?.userName || match.player1?.playerName || 'Player 1';
+                        const p2Name = match.player2?.userName || match.player2?.playerName || 'Player 2';
+                        const p1Won = isCompleted && (
+                          match.winner?.playerId?.toString() === match.player1?.playerId?.toString() ||
+                          match.winner?.playerName === p1Name
+                        );
+                        const p2Won = isCompleted && (
+                          match.winner?.playerId?.toString() === match.player2?.playerId?.toString() ||
+                          match.winner?.playerName === p2Name
+                        );
+                        const p1Sets = match.result?.finalScore?.player1Sets;
+                        const p2Sets = match.result?.finalScore?.player2Sets;
+                        const liveP1 = match.liveScore?.player1Points ?? 0;
+                        const liveP2 = match.liveScore?.player2Points ?? 0;
+                        const umpireName = getUmpireName(match.referee);
+
+                        const statusChip = isCompleted ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            COMPLETED
+                          </span>
+                        ) : isLive ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            LIVE
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
+                            SCHEDULED
+                          </span>
+                        );
+
+                        const renderPlayerRow = (name, won, avatar, align = "left") => (
+                          <div className={`flex items-center gap-2 ${align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                            {avatar ? (
+                              <img src={`/uploads/profiles/${avatar}`} alt={name}
+                                className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${won ? "bg-emerald-500" : "bg-orange-400"}`}>
+                                {name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                            )}
+                            <span className={`font-semibold text-sm truncate ${won ? "text-emerald-700" : "text-gray-800"}`}>
+                              {name}
+                            </span>
+                            {won && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold flex-shrink-0">WON</span>}
+                          </div>
+                        );
+
+                        return (
+                          <div
+                            key={index}
+                            className={`relative bg-white rounded-xl border cursor-pointer transition-all hover:shadow-md ${
+                              isCompleted ? "border-emerald-200" : isLive ? "border-amber-200" : "border-gray-200"
                             }`}
-                          onClick={(e) => {
-                            e.stopPropagation(); // prevent parent click
-                            openModal(match);    // ✅ open with match data
-                          }}
-                        >
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-orange-100 text-orange-600 rounded-full text-[12px] font-[500] px-2 py-1">
-                                R1 - M{match.matchNumber}
-                              </span>
-                              <span className="bg-gray-200 text-gray-700 rounded-full text-[12px] font-[400] px-2 py-1">
-                                Court {match.courtNumber || 'TBD'}
-                              </span>
-                              {(match.status === 'completed' || match.status === 'COMPLETED') && (
-                                <span className="bg-green-500 text-white md:text-[12px] sm:text-[10px] px-2 py-1 rounded-full text-xs">
-                                  Completed
-                                </span>
-                              )}
-                              {(match.status === 'in_progress' || match.status === 'IN_PROGRESS') && (
-                                <span className="bg-yellow-500 text-white md:text-[12px] sm:text-[10px] px-2 py-1 rounded-full text-xs">
-                                  In Progress
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openModal(match);
-                                }} className="text-gray-500 hover:bg-transparent focus:outline-none w-auto bg-transparent">
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm(`Delete match M${match.matchNumber}?`)) {
-                                    axios.delete(`/api/tournaments/matches/${match._id}`)
-                                      .then(() => fetchMatches())
-                                      .catch((err) => toast.info("Delete failed: " + (err.response?.data?.message || err.message)));
-                                  }
-                                }} className="text-red-400 hover:text-red-600 hover:bg-transparent focus:outline-none w-auto bg-transparent">
-                                <FiTrash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
+                            onClick={(e) => { e.stopPropagation(); openModal(match); }}
+                          >
+                            {/* Status accent strip */}
+                            <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${
+                              isCompleted ? "bg-emerald-500" : isLive ? "bg-amber-500" : "bg-gray-200"
+                            }`} />
 
-                          <p className="text-center md:text-[16px] sm:text-[14px] text-gray-900 font-[400] matchtime">
-                            {formatDate(match.startTime)} • {MatchformatTime(match.startTime)}
-                          </p>
-
-                          <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="flex items-center gap-2">
-                                {match.player1?.playerId?.profileImage ? (
-                                  <img
-                                    src={`/uploads/profiles/${match.player1.playerId.profileImage}`}
-                                    alt={match.player1?.userName}
-                                    className="w-8 h-8 rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
-                                    {match.player1?.userName?.charAt(0) || '?'}
-                                  </div>
-                                )}
-                                <span className={`font-[500] text-[14px] ${match.winner?.playerId?.toString() === match.player1?.playerId?.toString() ||
-                                  match.winner?.playerName === match.player1?.userName ? 'text-green-600' : 'text-orange-500'
-                                  }`}>
-                                  {match.player1?.userName}
-                                  {match.matchType === "doubles" && match.player1?.partner?.userName && (
-                                    <span className="text-gray-400 font-normal"> & {match.player1.partner.userName}</span>
-                                  )}
-                                </span>
+                            <div className="p-4 pt-4">
+                              {/* Header — match id / court / status + actions */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                                    R1 · M{match.matchNumber}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded">
+                                    Court {match.courtNumber || 'TBD'}
+                                  </span>
+                                  {statusChip}
+                                </div>
+                                <div className="flex items-center gap-0.5">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openModal(match); }}
+                                    className="p-1.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 w-auto bg-transparent"
+                                    title="View details"
+                                  >
+                                    <FiEdit2 size={13} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (window.confirm(`Delete match M${match.matchNumber}?`)) {
+                                        axios.delete(`/api/tournaments/matches/${match._id}`)
+                                          .then(() => fetchMatches())
+                                          .catch((err) => toast.info("Delete failed: " + (err.response?.data?.message || err.message)));
+                                      }
+                                    }}
+                                    className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 w-auto bg-transparent"
+                                    title="Delete match"
+                                  >
+                                    <FiTrash2 size={13} />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="text-gray-900 text-[14px] font-[400] my-1 flex items-center gap-2">
-                              VS
-                              {(match.status === 'completed' || match.status === 'COMPLETED') && match.result?.finalScore && (
-                                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                  {match.result.finalScore.player1Sets}-{match.result.finalScore.player2Sets}
-                                </span>
-                              )}
-                            </div>
+                              {/* Time */}
+                              <p className="text-[11px] text-gray-500 mb-3">
+                                {formatDate(match.startTime)} · {MatchformatTime(match.startTime)}
+                              </p>
 
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
-                                {match.player2?.playerId?.profileImage ? (
-                                  <img
-                                    src={`/uploads/profiles/${match.player2.playerId.profileImage}`}
-                                    alt={match.player2?.userName}
-                                    className="w-8 h-8 rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
-                                    {match.player2?.userName?.charAt(0) || '?'}
-                                  </div>
-                                )}
-                                <span className={`font-[500] text-[14px] ${match.winner?.playerId?.toString() === match.player2?.playerId?.toString() ||
-                                  match.winner?.playerName === match.player2?.userName ? 'text-green-600' : 'text-orange-500'
-                                  }`}>
-                                  {match.player2?.userName}
-                                  {match.matchType === "doubles" && match.player2?.partner?.userName && (
-                                    <span className="text-gray-400 font-normal"> & {match.player2.partner.userName}</span>
+                              {/* Players with score in the middle */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  {renderPlayerRow(p1Name, p1Won, match.player1?.playerId?.profileImage, "left")}
+                                </div>
+                                <div className="flex-shrink-0 text-center">
+                                  {isCompleted && p1Sets != null ? (
+                                    <div className="flex items-center gap-1">
+                                      <span className={`text-lg font-bold ${p1Won ? "text-emerald-600" : "text-gray-400"}`}>{p1Sets}</span>
+                                      <span className="text-gray-300">-</span>
+                                      <span className={`text-lg font-bold ${p2Won ? "text-emerald-600" : "text-gray-400"}`}>{p2Sets}</span>
+                                    </div>
+                                  ) : isLive ? (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-lg font-bold text-amber-600">{liveP1}</span>
+                                      <span className="text-gray-300">-</span>
+                                      <span className="text-lg font-bold text-amber-600">{liveP2}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs font-bold text-gray-400">VS</span>
                                   )}
-                                </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  {renderPlayerRow(p2Name, p2Won, match.player2?.playerId?.profileImage, "right")}
+                                </div>
+                              </div>
+
+                              {/* Footer — umpire + assign */}
+                              <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between">
+                                {umpireName ? (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-gray-600 min-w-0">
+                                    <FiShield className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                                    <span className="truncate">{umpireName}</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                    <FiShield className="w-3 h-3" />
+                                    <span>No umpire</span>
+                                  </span>
+                                )}
+                                {!umpireName && !isCompleted && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setAssignModalMatch(match); }}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-white hover:bg-orange-500 px-2 py-1 rounded w-auto bg-orange-50 transition-colors"
+                                  >
+                                    <FiUserPlus size={11} />
+                                    Assign
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
-
-                          {/* Enhanced Live Score Display for League */}
-                          {(match.status === 'in_progress' || match.status === 'IN_PROGRESS') && match.liveScore && (
-                            <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                              <div className="text-center">
-                                <div className="text-sm text-yellow-700 font-medium mb-1 flex items-center justify-center gap-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                                  Live Score - Round 1
-                                </div>
-                                <div className="text-lg font-bold text-gray-800">
-                                  {match.liveScore.player1Points || 0} - {match.liveScore.player2Points || 0}
-                                </div>
-                                <div className="text-xs text-yellow-600 mt-1">
-                                  Set {match.currentSet || 1}, Game {match.currentGame || 1}
-                                </div>
-                                <div className="text-xs text-orange-500 mt-1 bg-orange-50 px-2 py-1 rounded">
-                                  Group standings impact
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Legacy Score Format with Group Context */}
-                          {(match.status === 'completed' || match.status === 'COMPLETED') && match.currentScore && !match.result && (
-                            <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
-                              <div className="text-center">
-                                <div className="text-sm text-green-700 font-medium mb-1">Round 1 Complete</div>
-                                <div className="text-xs space-y-1">
-                                  {match.currentScore.setOne && (
-                                    <div>Set 1: {Array.isArray(match.currentScore.setOne) ? `${match.currentScore.setOne[0]}-${match.currentScore.setOne[1]}` : match.currentScore.setOne}</div>
-                                  )}
-                                  {match.currentScore.setTwo && (
-                                    <div>Set 2: {Array.isArray(match.currentScore.setTwo) ? `${match.currentScore.setTwo[0]}-${match.currentScore.setTwo[1]}` : match.currentScore.setTwo}</div>
-                                  )}
-                                  {match.currentScore.setThree && (
-                                    <div>Set 3: {Array.isArray(match.currentScore.setThree) ? `${match.currentScore.setThree[0]}-${match.currentScore.setThree[1]}` : match.currentScore.setThree}</div>
-                                  )}
-                                </div>
-                                {match.winner && (
-                                  <div className="text-xs text-green-600 mt-1 font-semibold">
-                                    Winner: {typeof match.winner === 'object' ? (match.winner.playerName || match.winner.name || match.winner.userName || 'Unknown') : match.winner}
-                                  </div>
-                                )}
-                                <div className="text-xs text-orange-500 mt-1 bg-orange-50 px-2 py-1 rounded">
-                                  Points updated in group standings
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2233,6 +2553,37 @@ export default function Tournament({
                                   </div>
                                 </div>
                               )}
+
+                              {/* Umpire status + Assign (Phase 2) */}
+                              {(() => {
+                                const umpireName = getUmpireName(match.referee);
+                                const isComp = match.status === 'completed' || match.status === 'COMPLETED';
+                                return (
+                                  <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                                    {umpireName ? (
+                                      <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                                        <FiShield className="w-3.5 h-3.5 text-blue-500" />
+                                        <span className="font-semibold">Umpire:</span>
+                                        <span className="text-gray-800 truncate max-w-[120px]">{umpireName}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                                        <FiShield className="w-3.5 h-3.5 text-gray-300" />
+                                        <span>No umpire</span>
+                                      </span>
+                                    )}
+                                    {!umpireName && !isComp && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setAssignModalMatch(match); }}
+                                        className="flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-700 px-2 py-0.5 rounded hover:bg-orange-50 w-auto"
+                                      >
+                                        <FiUserPlus className="w-3.5 h-3.5" />
+                                        Assign
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           ))}
                         </div>
@@ -2429,295 +2780,306 @@ export default function Tournament({
         </div>
       )}
 
-      {/* 🔹 Knockout Content */}
+      {/* Knockout Stage */}
       {
         activeSubGroupTab === "Knockout" && (
-          <div className="w-full p-4 bg-white rounded-2xl">
+          <div>
             {Object.keys(knockoutMatchesByRound).length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-gray-400 mb-4">
-                  <FiFlag size={48} className="mx-auto" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">No Knockout Matches</h3>
-                <p className="text-gray-500 mb-4">Generate knockout matches from the Super Players section to see brackets here.</p>
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <FiFlag size={40} className="mx-auto text-gray-300 mb-3" />
+                <h3 className="text-base font-bold text-gray-700 mb-1">No knockout matches yet</h3>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">
+                  Generate knockout matches from the <strong>Super Players</strong> section to see brackets here.
+                </p>
               </div>
-            ) : (
+            ) : (() => {
+              const allMatches = Object.values(knockoutMatchesByRound).flat();
+              const completedCount = allMatches.filter(x => x.status === 'completed' || x.status === 'COMPLETED').length;
+              const totalCount = allMatches.length;
+              const roundCount = Object.keys(knockoutMatchesByRound).length;
+              return (
               <>
-              {/* Delete All Knockout Matches */}
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Knockout Bracket</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {Object.values(knockoutMatchesByRound).flat().length} total matches across {Object.keys(knockoutMatchesByRound).length} rounds
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    const totalMatches = Object.values(knockoutMatchesByRound).flat().length;
-                    if (!window.confirm(`Delete ALL ${totalMatches} knockout matches? This cannot be undone.`)) return;
-                    axios.delete(`/api/tournaments/knockout/${tournamentId}/all`)
-                      .then((res) => {
-                        toast.success(res.data.message || "Knockout matches deleted");
-                        fetchKnockoutMatches();
-                      })
-                      .catch((err) => toast.error(err.response?.data?.message || "Failed to delete knockout matches"));
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-red-500 bg-red-50 border border-red-200 hover:bg-red-100 transition flex items-center gap-2 w-auto"
-                >
-                  <FiTrash2 className="w-3.5 h-3.5" />
-                  Delete All Knockout
-                </button>
-              </div>
-              {Object.entries(knockoutMatchesByRound).map(([roundName, matches], roundIndex) => (
-                <div key={roundName} className="mb-6">
-                  <div
-                    className={`p-3 rounded-lg cursor-pointer flex justify-between items-center ${openIndex === roundIndex ? "bg-orange-500" : "bg-gray-100"
-                      }`}
-                    onClick={() => toggleAccordion(roundIndex)}
-                  >
-                    <h2
-                      className={`md:text-[18px] text-[16px] font-[600] mb-0 ${openIndex === roundIndex ? "text-white" : "text-gray-900"
-                        }`}
-                    >
-                      {roundName.charAt(0).toUpperCase() + roundName.slice(1).replace('-', ' ')} ({matches.length} matches)
-                    </h2>
-                    {/* Bulk Score Upload for this knockout round */}
-                    {matches.some(m => m.status !== 'completed' && m.status !== 'COMPLETED') && (
-                      <button
-                        className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 mr-8 w-auto"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openBulkScoreModal(matches, null, `Bulk Score Upload — ${roundName.charAt(0).toUpperCase() + roundName.slice(1).replace('-', ' ')}`);
-                        }}
-                      >
-                        Bulk Upload
-                      </button>
-                    )}
-                    <span
-                      className={`transform transition-transform duration-300 ${openIndex === roundIndex ? "rotate-180 text-white" : "text-gray-900"
-                        }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                        <path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" />
-                      </svg>
-                    </span>
+                {/* Summary header */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Knockout Bracket</h3>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <span>{totalCount} matches</span>
+                      <span className="text-gray-300">·</span>
+                      <span>{roundCount} rounds</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-emerald-600 font-semibold">{completedCount}/{totalCount} completed</span>
+                    </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      // Pending = not completed and not a bye walkover.
+                      const pending = allMatches.filter((m) => {
+                        const s = (m.status || "").toUpperCase();
+                        return s !== "COMPLETED" && !m.isBye;
+                      });
+                      if (pending.length === 0) return null;
+                      return (
+                        <button
+                          onClick={() =>
+                            openBulkScoreModal(pending, null, `Bulk Score Upload — Knockout (${pending.length} match${pending.length === 1 ? "" : "es"})`)
+                          }
+                          className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 flex items-center gap-1.5 w-auto"
+                        >
+                          <FiUpload size={13} />
+                          Bulk Upload
+                        </button>
+                      );
+                    })()}
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(`Delete ALL ${totalCount} knockout matches? This cannot be undone.`)) return;
+                        axios.delete(`/api/tournaments/knockout/${tournamentId}/all`)
+                          .then((res) => {
+                            toast.success(res.data.message || "Knockout matches deleted");
+                            fetchKnockoutMatches();
+                          })
+                          .catch((err) => toast.error(err.response?.data?.message || "Failed to delete knockout matches"));
+                      }}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 flex items-center gap-1.5 w-auto"
+                    >
+                      <FiTrash2 size={13} />
+                      Delete All
+                    </button>
+                  </div>
+                </div>
 
-                  <div
-                    className={`overflow-scroll transition-all duration-300 ${openIndex === roundIndex
-                      ? "max-h-[1000px] opacity-100"
-                      : "max-h-0 opacity-0"
-                      }`}
-                  >
-                    <div className="space-y-4 mt-6">
-                      {matches.map((match) => {
-                        const isP1Winner = (match.winner?.playerId?.toString() === match.player1?.playerId?.toString()) ||
-                          (match.winner?.playerName === match.player1?.playerName && match.player1?.playerName);
-                        const isP2Winner = (match.winner?.playerId?.toString() === match.player2?.playerId?.toString()) ||
-                          (match.winner?.playerName === match.player2?.playerName && match.player2?.playerName);
-                        const isCompleted = match.status === 'completed' || match.status === 'COMPLETED';
-                        const isInProgress = match.status === 'in-progress' || match.status === 'IN_PROGRESS';
+                {/* Bracket Tree (horizontal scroll) */}
+                {(() => {
+                  const entries = Object.entries(knockoutMatchesByRound);
+                  // Sort each round's matches by matchNumber so pairs align correctly
+                  entries.forEach(([, arr]) => arr.sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0)));
 
-                        return (
-                          <div
-                            key={match._id}
-                            className={`relative bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 group overflow-hidden ${isCompleted ? 'border-l-4 border-l-green-500' : isInProgress ? 'border-l-4 border-l-yellow-500' : ''}`}
-                            onClick={() => openModal(match)}
-                          >
-                            <div className="flex flex-col lg:flex-row items-center gap-6">
-                              {/* Left: Match Branding */}
-                              <div className="flex-shrink-0 w-full lg:w-44 border-b lg:border-b-0 lg:border-r border-gray-100 pb-4 lg:pb-0 flex flex-col items-center lg:items-start pr-2">
-                                <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                  <span className="bg-[#F97316]/10 text-[#F97316] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
-                                    {(match.roundName || match.round || "Knockout").replace('-', ' ')}
-                                  </span>
-                                  <span className="bg-gray-100 text-gray-500 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
-                                    M{match.matchNumber}
-                                  </span>
+                  // Compute the champion (if final is done)
+                  const finalRound = entries[entries.length - 1];
+                  const finalMatch = finalRound && finalRound[1].length === 1 ? finalRound[1][0] : null;
+                  const finalDone = finalMatch && (finalMatch.status === 'completed' || finalMatch.status === 'COMPLETED');
+                  const champion = finalDone
+                    ? (typeof finalMatch.winner === 'object'
+                        ? (finalMatch.winner?.playerName || finalMatch.winner?.name)
+                        : (finalMatch.winner || finalMatch.result?.winner?.playerName))
+                    : null;
+
+                  // Bracket layout constants
+                  const CARD_W = 220;
+                  const CARD_H = 76;
+                  const BASE_GAP = 16; // vertical gap between round-1 cards
+                  const COL_GAP = 40;  // horizontal gap between rounds
+
+                  return (
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900">Bracket</h4>
+                          <p className="text-[11px] text-gray-500 mt-0.5">Scroll horizontally to see all rounds</p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto p-6 bg-gray-50 overflow-y-scroll max-h-screen">
+                        <div className="flex" style={{ gap: COL_GAP }}>
+                          {entries.map(([roundName, matches], roundIdx) => {
+                            const pow = Math.pow(2, roundIdx);
+                            // Vertical pitch (distance between successive cards' top edges)
+                            const pitch = (CARD_H + BASE_GAP) * pow;
+                            // Margin on the first card of this column so pairs align with feeders
+                            const firstTop = (pitch - CARD_H - BASE_GAP) / 2;
+                            const roundTitle = roundName.charAt(0).toUpperCase() + roundName.slice(1).replace('-', ' ');
+                            const rDone = matches.filter(x => x.status === 'completed' || x.status === 'COMPLETED').length;
+                            const rTotal = matches.length;
+
+                            return (
+                              <div key={roundName} className="flex-shrink-0" style={{ width: CARD_W }}>
+                                {/* Column header */}
+                                <div className="text-center mb-4">
+                                  <div className="text-[11px] font-extrabold text-orange-600 uppercase tracking-wider">
+                                    {roundTitle}
+                                  </div>
+                                  <div className="text-[10px] text-gray-500 mt-0.5 font-semibold">
+                                    {rDone}/{rTotal} done
+                                  </div>
                                 </div>
-                                <div className="text-xl font-black text-gray-800 leading-tight">
-                                  {MatchformatTime(match.matchStartTime || match.startTime)}
-                                </div>
-                                <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 font-bold">
-                                  <FiFlag size={12} className="text-[#F97316]" /> COURT {match.courtNumber || 'TBD'}
+
+                                {/* Match cards */}
+                                <div style={{ paddingTop: roundIdx === 0 ? 0 : firstTop }}>
+                                  {matches.map((match, mIdx) => {
+                                    const isCompleted = match.status === 'completed' || match.status === 'COMPLETED';
+                                    const isInProgress = match.status === 'in-progress' || match.status === 'IN_PROGRESS';
+                                    const p1Name = match.player1?.playerName || match.player1?.userName || 'TBD';
+                                    const p2Name = match.player2?.playerName || match.player2?.userName || 'TBD';
+                                    const p1Won = isCompleted && (
+                                      match.winner?.playerId?.toString() === match.player1?.playerId?.toString() ||
+                                      match.winner?.playerName === p1Name
+                                    );
+                                    const p2Won = isCompleted && (
+                                      match.winner?.playerId?.toString() === match.player2?.playerId?.toString() ||
+                                      match.winner?.playerName === p2Name
+                                    );
+                                    const p1Sets = match.result?.finalScore?.player1Sets ?? match.score?.player1Sets;
+                                    const p2Sets = match.result?.finalScore?.player2Sets ?? match.score?.player2Sets;
+                                    const liveP1 = match.liveScore?.player1Points ?? 0;
+                                    const liveP2 = match.liveScore?.player2Points ?? 0;
+                                    const marginTop = mIdx === 0 ? 0 : (pitch - CARD_H);
+
+                                    return (
+                                      <div
+                                        key={match._id}
+                                        onClick={() => openModal(match)}
+                                        className={`relative bg-white rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                                          isCompleted ? "border-emerald-200" : isInProgress ? "border-amber-200" : "border-gray-200"
+                                        }`}
+                                        style={{ height: CARD_H, marginTop }}
+                                      >
+                                        {/* Round badge on top */}
+                                        <div className="absolute -top-2 left-2 flex items-center gap-1">
+                                          <span className="text-[9px] font-bold text-white bg-orange-500 px-1.5 py-0.5 rounded">
+                                            M{match.matchNumber}
+                                          </span>
+                                          {isInProgress && (
+                                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded">
+                                              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />LIVE
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Player 1 row */}
+                                        <div className={`flex items-center justify-between px-3 h-[38px] border-b border-gray-100 ${
+                                          p1Won ? "bg-emerald-50" : ""
+                                        }`}>
+                                          <span className={`text-xs font-semibold truncate pr-2 ${p1Won ? "text-emerald-700" : "text-gray-800"}`}>
+                                            {p1Name}
+                                          </span>
+                                          <span className={`text-sm font-bold flex-shrink-0 ${p1Won ? "text-emerald-600" : "text-gray-400"}`}>
+                                            {isCompleted && p1Sets != null ? p1Sets : (isInProgress ? liveP1 : '—')}
+                                          </span>
+                                        </div>
+                                        {/* Player 2 row */}
+                                        <div className={`flex items-center justify-between px-3 h-[38px] ${
+                                          p2Won ? "bg-emerald-50" : ""
+                                        }`}>
+                                          <span className={`text-xs font-semibold truncate pr-2 ${p2Won ? "text-emerald-700" : "text-gray-800"}`}>
+                                            {p2Name}
+                                          </span>
+                                          <span className={`text-sm font-bold flex-shrink-0 ${p2Won ? "text-emerald-600" : "text-gray-400"}`}>
+                                            {isCompleted && p2Sets != null ? p2Sets : (isInProgress ? liveP2 : '—')}
+                                          </span>
+                                        </div>
+
+                                        {/* Bracket connector lines */}
+                                        {roundIdx < entries.length - 1 && (
+                                          <>
+                                            {/* Horizontal stub: card right edge -> mid-gutter */}
+                                            <div
+                                              className="absolute bg-gray-300"
+                                              style={{ top: '50%', right: -COL_GAP / 2, width: COL_GAP / 2, height: 1 }}
+                                            />
+                                            {/* Vertical line from this card's midpoint toward the pair's midpoint */}
+                                            <div
+                                              className="absolute bg-gray-300"
+                                              style={{
+                                                right: -COL_GAP / 2 - 1,
+                                                width: 1,
+                                                height: (CARD_H + BASE_GAP) * pow / 2 + 1,
+                                                top: mIdx % 2 === 0 ? '50%' : 'auto',
+                                                bottom: mIdx % 2 === 1 ? '50%' : 'auto',
+                                              }}
+                                            />
+                                            {/* Horizontal stub from gutter midpoint into next column (draw once per pair) */}
+                                            {mIdx % 2 === 1 && (
+                                              <div
+                                                className="absolute bg-gray-300"
+                                                style={{
+                                                  top: `-${(CARD_H + BASE_GAP) * pow / 2 - CARD_H / 2}px`,
+                                                  right: -COL_GAP,
+                                                  width: COL_GAP / 2,
+                                                  height: 1,
+                                                }}
+                                              />
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
+                            );
+                          })}
 
-                              {/* Center: The Matchup */}
-                              <div className="flex-1 flex items-center justify-between w-full px-4 sm:px-10">
-                                {/* Player 1 */}
-                                <div className={`flex flex-col items-center text-center flex-1 transition-all duration-500 ${isP1Winner ? 'scale-110' : isCompleted ? 'opacity-40 grayscale-[0.5]' : ''}`}>
-                                  <div className="relative">
-                                    {match.player1.playerId?.profileImage ? (
-                                      <img
-                                        src={`/uploads/profiles/${match.player1.playerId.profileImage}`}
-                                        alt={match.player1.playerName}
-                                        className={`w-16 h-16 rounded-full object-cover border-4 transition-all ${isP1Winner ? 'border-green-400 shadow-xl' : 'border-gray-100'}`}
-                                      />
-                                    ) : (
-                                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-black border-4 transition-all ${isP1Winner ? 'border-green-400 bg-green-500 shadow-xl' : 'border-gray-100 bg-[#F97316]'}`}>
-                                        {match.player1.playerName?.charAt(0) || '?'}
-                                      </div>
-                                    )}
-                                    {isP1Winner && (
-                                      <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
-                                        <FaMedal size={14} />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className={`mt-3 font-black text-sm uppercase tracking-tighter ${isP1Winner ? 'text-green-700' : 'text-gray-900'}`}>
-                                    {match.player1.playerName}
-                                  </div>
-                                  {match.player1.seed && <div className="text-[10px] text-[#F97316] font-bold">SEED #{match.player1.seed}</div>}
-                                </div>
-
-                                {/* VS DIVIDER */}
-                                <div className="flex flex-col items-center px-4 min-w-[80px]">
-                                  <div className="text-[11px] font-black text-gray-300 italic mb-2 tracking-[0.2em]">VS</div>
-                                  {isCompleted ? (
-                                    <div className="bg-gray-900 text-white px-4 py-1.5 rounded-xl font-mono text-xl font-bold tracking-widest shadow-2xl transform rotate-1 transition-transform group-hover:rotate-0">
-                                      {match.result?.finalScore ? `${match.result.finalScore.player1Sets}-${match.result.finalScore.player2Sets}` :
-                                        (match.score ? `${match.score.player1Sets}-${match.score.player2Sets}` :
-                                          (match.currentScore?.setOne ? `${match.currentScore.setOne[0]}-${match.currentScore.setOne[1]}` : '0-0'))
-                                      }
-                                    </div>
-                                  ) : isInProgress ? (
-                                    <div className="flex flex-col items-center animate-pulse">
-                                      <div className="text-yellow-600 font-black text-lg">
-                                        {match.liveScore?.player1Points || 0} : {match.liveScore?.player2Points || 0}
-                                      </div>
-                                      <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest">Live Now</div>
-                                    </div>
-                                  ) : (
-                                    <div className="w-16 h-1 bg-gray-100 rounded-full"></div>
-                                  )}
-                                </div>
-
-                                {/* Player 2 */}
-                                <div className={`flex flex-col items-center text-center flex-1 transition-all duration-500 ${isP2Winner ? 'scale-110' : isCompleted ? 'opacity-40 grayscale-[0.5]' : ''}`}>
-                                  <div className="relative">
-                                    {match.player2.playerId?.profileImage ? (
-                                      <img
-                                        src={`/uploads/profiles/${match.player2.playerId.profileImage}`}
-                                        alt={match.player2.playerName}
-                                        className={`w-16 h-16 rounded-full object-cover border-4 transition-all ${isP2Winner ? 'border-green-400 shadow-xl' : 'border-gray-100'}`}
-                                      />
-                                    ) : (
-                                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-black border-4 transition-all ${isP2Winner ? 'border-green-400 bg-green-500 shadow-xl' : 'border-gray-100 bg-[#F97316]'}`}>
-                                        {match.player2.playerName?.charAt(0) || '?'}
-                                      </div>
-                                    )}
-                                    {isP2Winner && (
-                                      <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
-                                        <FaMedal size={14} />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className={`mt-3 font-black text-sm uppercase tracking-tighter ${isP2Winner ? 'text-green-700' : 'text-gray-900'}`}>
-                                    {match.player2.playerName}
-                                  </div>
-                                  {match.player2.seed && <div className="text-[10px] text-[#F97316] font-bold">SEED #{match.player2.seed}</div>}
+                          {/* Champion column */}
+                          {champion && (
+                            <div className="flex-shrink-0 flex flex-col items-center" style={{ width: CARD_W }}>
+                              <div className="text-center mb-4">
+                                <div className="text-[11px] font-extrabold text-yellow-600 uppercase tracking-wider">
+                                  Champion
                                 </div>
                               </div>
-
-                              {/* Right: Actions */}
-                              <div className="flex-shrink-0 flex flex-row lg:flex-col items-center gap-3 lg:border-l border-gray-100 lg:pl-6 w-full lg:w-auto justify-center lg:justify-start pt-4 lg:pt-0">
-                                <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isCompleted ? 'bg-green-100 text-green-700' : isInProgress ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                                  {match.status?.toUpperCase()}
+                              <div
+                                style={{ paddingTop: ((CARD_H + BASE_GAP) * Math.pow(2, entries.length - 1) - CARD_H - BASE_GAP) / 2 }}
+                                className="flex flex-col items-center"
+                              >
+                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white shadow-md mb-2">
+                                  <FaMedal size={24} />
+                                </div>
+                                <div className="bg-white rounded-lg border-2 border-yellow-300 px-4 py-2 text-center shadow-sm">
+                                  <div className="text-sm font-extrabold text-gray-900">{champion}</div>
                                 </div>
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openModal(match);
-                                  }}
-                                  className="w-10 h-10 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all shadow-sm"
-                                  title="Edit Match"
+                                  onClick={() => navigate(`/tournament-management/group-stage/${tournamentId}/leaderboard`)}
+                                  className="mt-3 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white bg-orange-500 hover:bg-orange-600 w-auto"
                                 >
-                                  <FiEdit2 size={18} />
+                                  Final Rankings
                                 </button>
                               </div>
                             </div>
+                          )}
+                        </div>
 
-                            {/* Progression Indicator for Completed Matches */}
-                            {isCompleted && (
-                              <div className="flex items-center justify-center gap-3 mt-5 pt-4 border-t border-gray-50 border-dashed opacity-80 group-hover:opacity-100 transition-opacity">
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                                  <FiCheck className="text-green-600" size={14} />
-                                  <span className="text-[11px] font-black text-green-700 uppercase tracking-widest">
-                                    {(isP1Winner ? match.player1.playerName : match.player2.playerName)} Advances
-                                  </span>
+                        {/* Next round action */}
+                        {(() => {
+                          const currentMaxRound = Math.max(...knockoutMatches.map(x => x.roundNumber || 0), 0);
+                          const lastRound = entries[entries.length - 1];
+                          if (!lastRound) return null;
+                          const [, lastMatches] = lastRound;
+                          const isLatestRound = lastMatches[0]?.roundNumber === currentMaxRound;
+                          const allCompleted = lastMatches.every(x => x.status === 'completed' || x.status === 'COMPLETED');
+                          if (!isLatestRound || !allCompleted) return null;
+                          if (lastMatches.length >= 2) {
+                            return (
+                              <div className="mt-4 flex items-center justify-between p-4 bg-white border border-orange-200 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                                    <FiFlag size={16} />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-gray-900">Round complete</p>
+                                    <p className="text-xs text-gray-500">{lastMatches.length} winners ready for the next stage</p>
+                                  </div>
                                 </div>
-                                <div className="w-8 h-[1px] bg-gray-200"></div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Next Stage Ready</span>
+                                <button
+                                  onClick={() => handleInitiateNextRound(lastMatches)}
+                                  className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 flex items-center gap-1.5 w-auto"
+                                >
+                                  <FiPlus size={14} />
+                                  Generate Next Round
+                                </button>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     </div>
-                  </div>
-                  {/* Table View End */}
-
-                  {/* Next Round Action Button */}
-                  {(() => {
-                    // Only show button if this is the highest round created so far
-                    const currentMaxRound = Math.max(...knockoutMatches.map(m => m.roundNumber || 0), 0);
-                    const isLatestRound = matches[0]?.roundNumber === currentMaxRound;
-                    const allCompleted = matches.every(m => m.status === 'completed' || m.status === 'COMPLETED');
-
-                    if (isLatestRound && allCompleted) {
-                      const winnersCount = matches.length; // Winners = count of matches in knockout
-
-                      if (winnersCount >= 2) {
-                        return (
-                          <div className="mt-8 flex flex-col items-center p-6 bg-orange-50 border-2 border-dashed border-orange-200 rounded-xl">
-                            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mb-4 shadow-lg text-white">
-                              <FiFlag className="text-xl" />
-                            </div>
-                            <h4 className="text-gray-900 font-bold text-lg mb-1">Round Complete!</h4>
-                            <p className="text-orange-600 text-sm mb-6 text-center">
-                              All {matches.length} matches finished. {winnersCount} winners are ready for the next stage.
-                            </p>
-                            <button
-                              onClick={() => handleInitiateNextRound(matches)}
-                              className="bg-[#F97316] text-white px-8 py-3 rounded-full font-semibold hover:bg-orange-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
-                            >
-                              <FiPlus className="text-xl" />
-                              Generate Next Round Matches
-                            </button>
-                          </div>
-                        );
-                      } else if (winnersCount === 1) {
-                        // Finale!
-                        return (
-                          <div className="mt-8 flex flex-col items-center p-8 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl">
-                            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mb-4 shadow-xl text-white transform rotate-12">
-                              <FiTable className="text-2xl" />
-                            </div>
-                            <h4 className="text-orange-900 font-black text-2xl mb-1">🏆 Tournament Complete!</h4>
-                            <p className="text-orange-700 font-medium mb-4">
-                              Winner: <span className="font-bold text-orange-900">{matches[0].winner || matches[0].result?.winner?.playerName}</span>
-                            </p>
-                            <div className="flex gap-4">
-                              <button
-                                onClick={() => navigate(`/tournament-management/group-stage/${tournamentId}/leaderboard`)}
-                                className="bg-orange-500 text-white px-6 py-2 rounded-full font-semibold text-sm hover:bg-orange-600 transition"
-                              >
-                                View Final Rankings
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
-                </div>
-              ))}
+                  );
+                })()}
               </>
-            )
-            }
-          </div >
+              );
+            })()}
+          </div>
         )
       }
 
@@ -2980,453 +3342,266 @@ export default function Tournament({
 
       {/* Popup Modal */}
       {
-        isPopupOpen && selectedMatch && (
+        isPopupOpen && selectedMatch && (() => {
+          const m = selectedMatch;
+          const isComp = m.status === 'completed' || m.status === 'COMPLETED';
+          const isLive = m.status === 'in_progress' || m.status === 'IN_PROGRESS' || m.status === 'in-progress' || m.status === 'IN-PROGRESS';
+          const p1Name = m.player1?.userName || m.player1?.playerName || 'Player 1';
+          const p2Name = m.player2?.userName || m.player2?.playerName || 'Player 2';
+          const p1Img = m.player1?.playerId?.profileImage;
+          const p2Img = m.player2?.playerId?.profileImage;
+          const p1Sets = m.result?.finalScore?.player1Sets ?? m.score?.player1Sets ?? 0;
+          const p2Sets = m.result?.finalScore?.player2Sets ?? m.score?.player2Sets ?? 0;
+          const winnerName = typeof m.winner === 'object' ? (m.winner?.playerName || m.winner?.userName || m.winner?.name) : m.winner;
+          const p1Won = isComp && (
+            m.winner?.playerId?.toString() === m.player1?.playerId?.toString() ||
+            winnerName === p1Name
+          );
+          const p2Won = isComp && (
+            m.winner?.playerId?.toString() === m.player2?.playerId?.toString() ||
+            winnerName === p2Name
+          );
+          const statusChip = isComp ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              COMPLETED
+            </span>
+          ) : isLive ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              LIVE
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600">
+              SCHEDULED
+            </span>
+          );
+          const roundLabel = m.round
+            ? m.round.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())
+            : m.roundName || m.tournamentId?.type || m.tournament?.type || 'Group Stage';
+
+          const renderPlayerCard = (name, img, won, accent) => (
+            <div className={`flex-1 rounded-xl p-4 border ${won ? "bg-emerald-50 border-emerald-200" : "bg-gray-50 border-gray-200"}`}>
+              <div className="flex items-center gap-3">
+                {img ? (
+                  <img src={`/uploads/profiles/${img}`} alt={name}
+                    className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 ${won ? "bg-emerald-500" : accent === "p1" ? "bg-orange-400" : "bg-blue-400"}`}>
+                    {name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h3 className={`font-bold text-base truncate ${won ? "text-emerald-700" : "text-gray-800"}`}>
+                    {name}
+                  </h3>
+                  {won && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                      <FaMedal className="text-yellow-300" size={10} /> WINNER
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+
+          return (
           <div
-            className="fixed top-[35px] left-0 w-full h-full bg-black bg-opacity-10 flex justify-center items-center"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-40 p-4"
             onClick={closeModal}
           >
             <div
-              className="bg-white rounded-lg bg-[#fff] p-6 rounded-lg w-full max-w-[1400px] md:w-[95vw] max-h-[80vh] overflow-y-auto relative"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-[880px] max-h-[90vh] overflow-hidden flex flex-col relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                className="absolute top-4 right-4 text-2xl bg-transparent text-gray-600 hover:bg-transparent w-auto"
-                onClick={closeModal}
-              >
-                <FiX />
-              </button>
-              <div className="flex justify-between">
-                <div className="flex gap-2 mt-4">
-                  <button className="px-4 py-2 rounded-full border w-auto bg-[#E6E5E8] text-gray-900 md:text-[16px] sm:text-[14px] font-[400]">
-                    Match {selectedMatch.matchNumber}
-                  </button>
-                  <button className="px-3 py-2 rounded-full border w-auto bg-[#E6E5E8] text-gray-900 md:text-[16px] sm:text-[14px] font-[400]">
-                    Court {selectedMatch.courtNumber || "Court TBD"}
-                  </button>
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded">
+                    Match {m.matchNumber}
+                  </span>
+                  <span className="text-sm text-gray-600 bg-gray-100 px-2.5 py-1 rounded">
+                    Court {m.courtNumber || 'TBD'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {formatDate(m.startTime || m.matchStartTime)} · {MatchformatTime(m.startTime || m.matchStartTime)}
+                  </span>
+                  {statusChip}
                 </div>
-                <button className="bg-transparent hover:bg-transparent w-auto text-black p-0">
-                  <FiEdit2 />
+                <button
+                  className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 bg-transparent w-auto"
+                  onClick={closeModal}
+                  aria-label="Close"
+                >
+                  <FiX size={18} />
                 </button>
               </div>
-              <div className="oponentmatches">
-                <div className="oponent1">
-                  <div className="flex w-full justify-between items-center">
-                    <div className="bg-[#F5F7FA] rounded-lg w-1/2 flex flex-col opponet1match">
-                      <div className="flex items-start mb-2 gap-[10px]">
-                        <img
-                          src="https://via.placeholder.com/50"
-                          alt="Player"
-                          className="rounded-full w-[52px] h-[52px] mr-2"
-                        />
-                        <div className="flex flex-col">
-                          <h2 className="text-orange-500 font-[600] md:text-[18px] sm:text-[14px] player1name">
-                            {selectedMatch.player1?.userName || selectedMatch.player1?.playerName || 'Player 1'}
-                          </h2>
-                          <p>Win: 00 Lose: 00 Draw: 00 Total: 00</p>
-                          <div className="text-gray-900 md:text-[16px] sm:text-[14px] items-start achievement font-[400]">
-                            <div className="mt-2 flex items-start flex-row gap-[8px]">
-                              <img src={medal} />
-                              <div>
-                                <p>Achievement</p>
-                                <p>State level Player</p>
-                                <p>3x District Champion- 2 Gold, </p>
-                                <p>1 Silver</p>
-                              </div>
-                            </div>
-                            <p className="mt-2 flex items-center gap-[8px]">
-                              <img src={sports_tennis} /> FC Table Tennis Academy
-                            </p>
-                          </div>
-                        </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Players vs + big set score */}
+                <div className="flex items-stretch gap-3">
+                  {renderPlayerCard(p1Name, p1Img, p1Won, "p1")}
+                  <div className="flex-shrink-0 flex flex-col items-center justify-center px-2">
+                    {(isComp || isLive) ? (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-4xl font-extrabold ${p1Won ? "text-emerald-600" : "text-gray-400"}`}>{p1Sets}</span>
+                        <span className="text-2xl text-gray-300">–</span>
+                        <span className={`text-4xl font-extrabold ${p2Won ? "text-emerald-600" : "text-gray-400"}`}>{p2Sets}</span>
                       </div>
-                    </div>
-                    <div className="text-gray-900 font-[600] text-gray-900 mx-4">
-                      VS
-                    </div>
-                    <div className="bg-[#F5F7FA] rounded-lg w-1/2 flex flex-col opponet1match">
-                      <div className="flex items-start mb-2 gap-[10px]">
-                        <img
-                          src="https://via.placeholder.com/50"
-                          alt="Player"
-                          className="rounded-full w-[52px] h-[52px] mr-2"
-                        />
-                        <div className="flex flex-col">
-                          <h2 className="text-orange-500 font-[600] md:text-[18px] sm:text-[14px] player1name">
-                            {selectedMatch.player2?.userName || selectedMatch.player2?.playerName || 'Player 2'}
-                          </h2>
-                          <p>Win: 00 Lose: 00 Draw: 00 Total: 00</p>
-                          <div className="text-gray-900 md:text-[16px] sm:text-[14px] items-start achievement font-[400]">
-                            <div className="mt-2 flex items-start flex-row gap-[8px]">
-                              <img src={medal} />
-                              <div>
-                                <p>Achievement</p>
-                                <p>State level Player</p>
-                                <p>3x District Champion- 2 Gold, </p>
-                                <p>1 Silver</p>
-                              </div>
-                            </div>
-                            <p className="mt-2 flex items-center gap-[8px]">
-                              <img src={sports_tennis} /> FC Table Tennis Academy
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    ) : (
+                      <span className="text-xl font-bold text-gray-400">VS</span>
+                    )}
+                    <span className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wider">Sets</span>
                   </div>
+                  {renderPlayerCard(p2Name, p2Img, p2Won, "p2")}
                 </div>
-              </div>
-              <div className="oponent1">
-                <div className="bg-gray-100 w-full p-4 rounded-lg mb-4">
-                  <h3 className="text-gray-700 font-semibold mb-2">
-                    Match Details
-                  </h3>
-                  <div className="flex justify-between md:text-[16px] sm:text-[14px] font-[400]">
-                    <p>
-                      Tournament Name:
-                      <strong>{selectedMatch.tournamentId?.title || selectedMatch.tournament?.title || 'Tournament'}</strong>
-                    </p>
-                    <p>
-                      Date: <strong>{formatDate(selectedMatch.startTime || selectedMatch.matchStartTime)}</strong>
-                    </p>
-                    <p>
-                      {selectedMatch.round || selectedMatch.roundName ? 'Round Type:' : 'Elimination Type:'}
-                      <strong>
-                        {selectedMatch.round
-                          ? selectedMatch.round.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())
-                          : selectedMatch.roundName
-                            ? selectedMatch.roundName
-                            : selectedMatch.tournamentId?.type || selectedMatch.tournament?.type || 'Single Elimination'
-                        }
-                      </strong>
+
+                {/* Meta strip */}
+                <div className="bg-gray-50 rounded-xl px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider">Tournament</p>
+                    <p className="font-semibold text-gray-800 truncate">{m.tournamentId?.title || m.tournament?.title || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider">Round</p>
+                    <p className="font-semibold text-gray-800 truncate">{roundLabel}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider">Type</p>
+                    <p className="font-semibold text-gray-800 truncate">
+                      {m.nextMatchId ? 'Knockout' : (activeSubGroupTab || 'League')}
                     </p>
                   </div>
                 </div>
 
-                {/* Universal Player Scorecard Section - Works for League, Top Players & Knockout */}
-                {(selectedMatch.hasScores || selectedMatch.status === 'in-progress' || selectedMatch.status === 'IN_PROGRESS' || selectedMatch.status === 'completed' || selectedMatch.status === 'COMPLETED') && (
-                  <div className="bg-white border border-gray-200 w-full p-4 rounded-lg mb-4">
-                    <h3 className="text-gray-700 font-semibold mb-4 flex items-center gap-2">
-                      <span className="bg-orange-100 p-2 rounded-lg">🏓</span>
-                      Player Scorecard
-                      {/* Match Type Indicator */}
-                      <span className={`text-xs px-2 py-1 rounded-full ${selectedMatch.nextMatchId ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-600'
-                        }`}>
-                        {selectedMatch.nextMatchId ? 'Knockout' : activeSubGroupTab || 'League'}
+                {/* Live points (in-progress only) */}
+                {isLive && (m.liveScore || m.liveMatchData?.liveScore) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="font-bold text-amber-700 text-sm">LIVE POINTS</span>
+                      </div>
+                      <span className="text-xs text-amber-600">
+                        Set {m.currentSet || m.liveMatchData?.currentSet || 1} · Game {m.currentGame || m.liveMatchData?.currentGame || 1}
                       </span>
-                    </h3>
-
-                    {/* Live Status Dashboard - Universal for all match types */}
-                    {(selectedMatch.status === 'in-progress' || selectedMatch.status === 'IN_PROGRESS') && (
-                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-4 rounded-lg mb-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                            <span className="text-yellow-700 font-semibold text-sm">LIVE MATCH</span>
-                          </div>
-                          <div className="text-xs text-yellow-600">
-                            Set {selectedMatch.currentSet || selectedMatch.liveMatchData?.currentSet || 1},
-                            Game {selectedMatch.currentGame || selectedMatch.liveMatchData?.currentGame || 1}
-                            {!selectedMatch.nextMatchId && (
-                              <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-600 rounded">
-                                Group Match
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4 items-center">
-                          <div className="text-center">
-                            <p className="text-orange-500 font-semibold text-sm mb-1">
-                              {selectedMatch.player1?.userName || selectedMatch.player1?.playerName || 'Player 1'}
-                            </p>
-                            <div className="bg-white rounded-lg py-2 px-3 border">
-                              <span className="text-2xl font-bold text-gray-800">
-                                {selectedMatch.liveScore?.player1Points || selectedMatch.liveMatchData?.liveScore?.player1Points || 0}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="text-center">
-                            <div className="bg-white rounded-lg py-2 px-3 border">
-                              <span className="text-sm text-gray-600 block">Current Score</span>
-                              <span className="text-lg font-bold text-gray-800">VS</span>
-                            </div>
-                          </div>
-
-                          <div className="text-center">
-                            <p className="text-orange-500 font-semibold text-sm mb-1">
-                              {selectedMatch.player2?.userName || selectedMatch.player2?.playerName || 'Player 2'}
-                            </p>
-                            <div className="bg-white rounded-lg py-2 px-3 border">
-                              <span className="text-2xl font-bold text-gray-800">
-                                {selectedMatch.liveScore?.player2Points || selectedMatch.liveMatchData?.liveScore?.player2Points || 0}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Group Context for League/Top Players */}
-                        {!selectedMatch.nextMatchId && (
-                          <div className="mt-3 p-2 bg-orange-50 rounded-lg">
-                            <div className="text-center text-sm">
-                              <span className="text-orange-600 font-medium">
-                                {activeSubGroupTab === "Top Players" ? "Round 2" : "Round 1"} Group Match
-                              </span>
-                              <span className="text-orange-500 ml-2">
-                                • Points affect group standings
-                              </span>
-                            </div>
-                          </div>
-                        )}
+                    </div>
+                    <div className="flex items-center justify-around">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-600 mb-1">{p1Name}</p>
+                        <p className="text-3xl font-extrabold text-gray-900">
+                          {m.liveScore?.player1Points ?? m.liveMatchData?.liveScore?.player1Points ?? 0}
+                        </p>
                       </div>
-                    )}
+                      <span className="text-xl text-gray-400">–</span>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-600 mb-1">{p2Name}</p>
+                        <p className="text-3xl font-extrabold text-gray-900">
+                          {m.liveScore?.player2Points ?? m.liveMatchData?.liveScore?.player2Points ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                    {/* Match Completed Status */}
-                    {(selectedMatch.status === 'completed' || selectedMatch.status === 'COMPLETED') && selectedMatch.winner && (
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 rounded-lg mb-4">
-                        <div className="text-center">
-                          <div className="bg-green-500 text-white px-4 py-2 rounded-full inline-flex items-center gap-2 mb-3">
-                            <FaMedal className="text-yellow-300" />
-                            <span className="font-semibold">
-                              Winner: {typeof selectedMatch.winner === 'object' ?
-                                (selectedMatch.winner?.playerName || selectedMatch.winner?.name) :
-                                selectedMatch.winner}
-                            </span>
-                          </div>
-                          {selectedMatch.score && (
-                            <div className="text-sm text-green-700">
-                              Final Score: {selectedMatch.score.player1Sets || 0} - {selectedMatch.score.player2Sets || 0} Sets
+                {/* Set-by-set breakdown */}
+                {(m.sets || m.liveMatchData?.sets) && (m.sets?.length > 0 || m.liveMatchData?.sets?.length > 0) && (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-gray-700">Set-by-Set Breakdown</h4>
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                        {(m.sets || m.liveMatchData?.sets || []).length} set{(m.sets || m.liveMatchData?.sets || []).length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {(m.sets || m.liveMatchData?.sets || []).map((set, idx) => {
+                        const setDone = set.status === 'COMPLETED';
+                        const setWinnerName = set.winner?.playerName || set.winner?.userName;
+                        const setWonByP1 = setWinnerName === p1Name;
+                        const setWonByP2 = setWinnerName === p2Name;
+                        const games = Array.isArray(set.games) ? set.games : [];
+                        return (
+                          <div key={idx} className="px-4 py-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-bold text-gray-700">Set {set.setNumber || idx + 1}</span>
+                              {setDone ? (
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">COMPLETED</span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">IN PROGRESS</span>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Universal Set-wise Summary - Works for all match types */}
-                    {(selectedMatch.sets || selectedMatch.liveMatchData?.sets) && (
-                      <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                        <h4 className="text-gray-700 font-semibold mb-3 flex items-center gap-2">
-                          <span>📊</span> Set-wise Progress
-                          {!selectedMatch.nextMatchId && (
-                            <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                              Group Points: Win=3, Lose=0
-                            </span>
-                          )}
-                        </h4>
-                        <div className="space-y-3">
-                          {(selectedMatch.sets || selectedMatch.liveMatchData?.sets || []).map((set, index) => {
-                            // Universal game counting - works for both SuperMatch and regular Match
-                            const player1Games = set.games?.filter(game => {
-                              const gameWinnerName = game.winner?.playerName || game.winner?.userName;
-                              const player1Name = selectedMatch.player1?.playerName || selectedMatch.player1?.userName;
-                              return gameWinnerName === player1Name ||
-                                game.winner?.playerId?.toString() === selectedMatch.player1?.playerId?.toString();
-                            }).length || 0;
-
-                            const player2Games = set.games?.filter(game => {
-                              const gameWinnerName = game.winner?.playerName || game.winner?.userName;
-                              const player2Name = selectedMatch.player2?.playerName || selectedMatch.player2?.userName;
-                              return gameWinnerName === player2Name ||
-                                game.winner?.playerId?.toString() === selectedMatch.player2?.playerId?.toString();
-                            }).length || 0;
-
-                            // Determine set winner
-                            const setWinnerName = set.winner?.playerName || set.winner?.userName;
-                            const player1Name = selectedMatch.player1?.playerName || selectedMatch.player1?.userName;
-                            const player2Name = selectedMatch.player2?.playerName || selectedMatch.player2?.userName;
-
-                            const setWinner = setWinnerName ||
-                              (player1Games > player2Games ? player1Name :
-                                player2Games > player1Games ? player2Name : null);
-
-                            return (
-                              <div key={index} className="bg-white p-3 rounded border">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="font-semibold text-sm">Set {set.setNumber || index + 1}</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`text-xs px-2 py-1 rounded ${set.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                      }`}>
-                                      {set.status === 'COMPLETED' ? 'Completed' : 'In Progress'}
-                                    </span>
-                                    {!selectedMatch.nextMatchId && setWinner && (
-                                      <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                                        +3 pts
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 text-sm">
-                                  <div className="text-center">
-                                    <div className={`font-semibold ${setWinner === player1Name ? 'text-green-600' : 'text-gray-600'}`}>
-                                      {player1Name || 'Player 1'}
-                                    </div>
-                                    <div className="bg-gray-100 rounded py-1 mt-1">
-                                      {player1Games} games
-                                    </div>
-                                  </div>
-
-                                  <div className="text-center text-gray-500">
-                                    VS
-                                  </div>
-
-                                  <div className="text-center">
-                                    <div className={`font-semibold ${setWinner === player2Name ? 'text-green-600' : 'text-gray-600'}`}>
-                                      {player2Name || 'Player 2'}
-                                    </div>
-                                    <div className="bg-gray-100 rounded py-1 mt-1">
-                                      {player2Games} games
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {setWinner && (
-                                  <div className="mt-2 text-center">
-                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                      Set Winner: {setWinner}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Universal Game-by-Game Breakdown */}
-                    {(selectedMatch.sets || selectedMatch.liveMatchData?.sets) && (
-                      <div className="bg-orange-50 p-4 rounded-lg">
-                        <h4 className="text-gray-700 font-semibold mb-3 flex items-center gap-2">
-                          <span>🎯</span> Game-by-Game Breakdown
-                          {!selectedMatch.nextMatchId && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                              Group Match History
-                            </span>
-                          )}
-                        </h4>
-                        <div className="space-y-4">
-                          {(selectedMatch.sets || selectedMatch.liveMatchData?.sets || []).map((set, setIndex) => (
-                            <div key={setIndex} className="bg-white p-3 rounded border">
-                              <h5 className="font-semibold text-sm mb-3 text-gray-700 flex items-center justify-between">
-                                <span>Set {set.setNumber || setIndex + 1} Games</span>
-                                {!selectedMatch.nextMatchId && (
-                                  <span className="text-xs text-orange-500">
-                                    Affects {activeSubGroupTab === "Top Players" ? "Round 2" : "Round 1"} standings
-                                  </span>
-                                )}
-                              </h5>
-
-                              {set.games && set.games.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                  {set.games.map((game, gameIndex) => {
-                                    const gameWinnerName = game.winner?.playerName || game.winner?.userName;
-                                    const player1Name = selectedMatch.player1?.playerName || selectedMatch.player1?.userName;
-                                    const player2Name = selectedMatch.player2?.playerName || selectedMatch.player2?.userName;
-
+                            {games.length > 0 ? (
+                              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                <div className={`text-sm font-semibold truncate ${setWonByP1 ? "text-emerald-700" : "text-gray-700"}`}>{p1Name}</div>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                  {games.map((game, gi) => {
+                                    const p1s = game.finalScore?.player1 ?? 0;
+                                    const p2s = game.finalScore?.player2 ?? 0;
+                                    const gameDone = game.status === 'COMPLETED';
                                     return (
-                                      <div key={gameIndex} className={`p-2 rounded text-center text-xs border ${game.status === 'COMPLETED' ? 'bg-gray-50 border-gray-200' : 'bg-yellow-50 border-yellow-200'
-                                        }`}>
-                                        <div className="font-semibold mb-1">Game {game.gameNumber || gameIndex + 1}</div>
-                                        <div className="text-sm font-bold">
-                                          {game.finalScore?.player1 || 0} - {game.finalScore?.player2 || 0}
-                                        </div>
-                                        {gameWinnerName && (
-                                          <div className={`text-xs mt-1 font-semibold ${gameWinnerName === player1Name ? 'text-orange-500' :
-                                            gameWinnerName === player2Name ? 'text-green-600' : 'text-gray-600'
-                                            }`}>
-                                            {gameWinnerName}
-                                          </div>
-                                        )}
-                                        {game.status !== 'COMPLETED' && (
-                                          <div className="text-xs text-yellow-600 mt-1 flex items-center justify-center gap-1">
-                                            <div className="w-1 h-1 bg-yellow-500 rounded-full animate-pulse"></div>
-                                            Live
-                                          </div>
-                                        )}
-                                        {game.endTime && (
-                                          <div className="text-xs text-gray-400 mt-1">
-                                            {new Date(game.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                          </div>
-                                        )}
-                                      </div>
+                                      <span key={gi}
+                                        className={`text-xs font-bold px-2 py-1 rounded font-mono ${gameDone ? "bg-gray-100 text-gray-800" : "bg-amber-50 text-amber-700 border border-amber-200"}`}
+                                        title={`Game ${game.gameNumber || gi + 1}`}>
+                                        {p1s}–{p2s}
+                                      </span>
                                     );
                                   })}
                                 </div>
-                              ) : (
-                                <div className="text-center text-gray-500 text-sm py-4">
-                                  <div className="text-gray-400 mb-2">⏱️</div>
-                                  Set not started yet
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Fallback for matches without detailed data */}
-                    {!selectedMatch.sets && !selectedMatch.liveMatchData?.sets && selectedMatch.hasScores && (
-                      <div className="bg-gray-50 p-4 rounded-lg text-center">
-                        <div className="text-gray-600 mb-2">Basic Score Information</div>
-                        {selectedMatch.currentScore && (
-                          <div className="space-y-2 text-sm">
-                            {selectedMatch.currentScore.setOne && (
-                              <div>Set 1: {Array.isArray(selectedMatch.currentScore.setOne) ?
-                                `${selectedMatch.currentScore.setOne[0]}-${selectedMatch.currentScore.setOne[1]}` :
-                                selectedMatch.currentScore.setOne}
+                                <div className={`text-sm font-semibold truncate text-right ${setWonByP2 ? "text-emerald-700" : "text-gray-700"}`}>{p2Name}</div>
                               </div>
-                            )}
-                            {selectedMatch.currentScore.setTwo && (
-                              <div>Set 2: {Array.isArray(selectedMatch.currentScore.setTwo) ?
-                                `${selectedMatch.currentScore.setTwo[0]}-${selectedMatch.currentScore.setTwo[1]}` :
-                                selectedMatch.currentScore.setTwo}
-                              </div>
-                            )}
-                            {selectedMatch.currentScore.setThree && (
-                              <div>Set 3: {Array.isArray(selectedMatch.currentScore.setThree) ?
-                                `${selectedMatch.currentScore.setThree[0]}-${selectedMatch.currentScore.setThree[1]}` :
-                                selectedMatch.currentScore.setThree}
-                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 italic">Set not started yet</p>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
+                {/* Legacy fallback for older records */}
+                {!m.sets && !m.liveMatchData?.sets && m.hasScores && m.currentScore && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <h4 className="text-sm font-bold text-gray-700 mb-2">Score</h4>
+                    <div className="space-y-1 text-sm text-gray-700 font-mono">
+                      {['setOne', 'setTwo', 'setThree'].map((k, i) => {
+                        const val = m.currentScore[k];
+                        if (!val) return null;
+                        const label = `Set ${i + 1}`;
+                        const text = Array.isArray(val) ? `${val[0]}–${val[1]}` : val;
+                        return <div key={k}><span className="text-gray-500 mr-2">{label}:</span>{text}</div>;
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-end w-full items-center mt-4 gap-[7px]">
+              {/* Footer */}
+              <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-2">
                 <button
-                  onClick={handleStartMatch}
-                  className={`px-6 py-2 w-auto rounded-lg ${(selectedMatch?.status === 'completed' || selectedMatch?.status === 'COMPLETED')
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : (selectedMatch?.status === 'in_progress' || selectedMatch?.status === 'IN_PROGRESS' ||
-                      selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'IN-PROGRESS' ||
-                      (selectedMatch?.liveScore && (selectedMatch.liveScore.player1Points > 0 || selectedMatch.liveScore.player2Points > 0)) ||
-                      (selectedMatch?.currentScore && (selectedMatch.currentScore.setOne || selectedMatch.currentScore.setTwo || selectedMatch.currentScore.setThree)) ||
-                      (selectedMatch?.liveMatchData?.liveScore && (selectedMatch.liveMatchData.liveScore.player1Points > 0 || selectedMatch.liveMatchData.liveScore.player2Points > 0)))
-                      ? 'bg-orange-500 text-white hover:bg-orange-500'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
-                    }`}
-                  disabled={selectedMatch?.status === 'completed' || selectedMatch?.status === 'COMPLETED'}
+                  onClick={closeModal}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 w-auto"
                 >
-                  {(selectedMatch?.status === 'completed' || selectedMatch?.status === 'COMPLETED')
-                    ? 'Match Complete'
-                    : (selectedMatch?.status === 'in_progress' || selectedMatch?.status === 'IN_PROGRESS' ||
-                      selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'IN-PROGRESS' ||
-                      (selectedMatch?.liveScore && (selectedMatch.liveScore.player1Points > 0 || selectedMatch.liveScore.player2Points > 0)) ||
-                      (selectedMatch?.currentScore && (selectedMatch.currentScore.setOne || selectedMatch.currentScore.setTwo || selectedMatch.currentScore.setThree)) ||
-                      (selectedMatch?.liveMatchData?.liveScore && (selectedMatch.liveMatchData.liveScore.player1Points > 0 || selectedMatch.liveMatchData.liveScore.player2Points > 0)))
-                      ? 'Resume Match'
-                      : 'Start Match'}
+                  Close
                 </button>
+                {!isComp && (
+                  <button
+                    onClick={handleStartMatch}
+                    className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 w-auto"
+                  >
+                    {isLive ||
+                      (m.liveScore && (m.liveScore.player1Points > 0 || m.liveScore.player2Points > 0)) ||
+                      (m.currentScore && (m.currentScore.setOne || m.currentScore.setTwo || m.currentScore.setThree)) ||
+                      (m.liveMatchData?.liveScore && (m.liveMatchData.liveScore.player1Points > 0 || m.liveMatchData.liveScore.player2Points > 0))
+                        ? 'Resume Match' : 'Start Match'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        )
+          );
+        })()
       }
 
       {/* \ud83d\ude80 ENHANCED EDIT GROUP MODAL - With Match Format Configuration */}
@@ -4048,6 +4223,23 @@ export default function Tournament({
         tournamentId={tournamentId}
         matchType="player"
         title="Bulk Result Upload (CSV/Excel)"
+      />
+
+      {/* Assign Umpire Modal (Phase 2 — shared across League / Top Players / Knockout sub-tabs) */}
+      <AssignUmpireModal
+        isOpen={!!assignModalMatch}
+        onClose={() => setAssignModalMatch(null)}
+        matchId={assignModalMatch?._id}
+        tournamentId={tournamentId}
+        matchLabel={assignModalMatch ? `M${assignModalMatch.matchNumber || ""} • ${assignModalMatch.player1?.userName || assignModalMatch.player1?.playerName || "P1"} vs ${assignModalMatch.player2?.userName || assignModalMatch.player2?.playerName || "P2"}` : ""}
+        onAssigned={() => {
+          // Refetch all three sub-tabs so the umpire chip updates regardless of
+          // where Assign was clicked. Matches the BulkResultUploadModal pattern above.
+          fetchMatches();
+          if (round2Groups.length > 0) fetchRound2Groups();
+          fetchKnockoutMatches();
+          toast.success("Umpire assigned. Awaiting their response.");
+        }}
       />
     </div >
   );

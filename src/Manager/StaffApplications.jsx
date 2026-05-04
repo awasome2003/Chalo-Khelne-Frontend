@@ -37,6 +37,8 @@ export default function StaffApplications({ tournamentId, managerId }) {
   const [filterRole, setFilterRole] = useState("");
   const [filterStatus, setFilterStatus] = useState("pending");
   const [respondNote, setRespondNote] = useState("");
+  // Phase 4d: stage grants for referee applications (default both = backward-compat "all stages")
+  const [respondStages, setRespondStages] = useState(["group-stage", "knockout"]);
   const [verifyNote, setVerifyNote] = useState("");
 
   // Fetch applications
@@ -63,8 +65,18 @@ export default function StaffApplications({ tournamentId, managerId }) {
   });
 
   const acceptMut = useMutation({
-    mutationFn: (id) => axios.put(`/api/staff-applications/${id}/accept`, { managerId, managerNote: respondNote }),
-    onSuccess: () => { qc.invalidateQueries(["staffApps"]); setRespondNote(""); setExpandedId(null); },
+    mutationFn: ({ id, stages }) =>
+      axios.put(`/api/staff-applications/${id}/accept`, {
+        managerId,
+        managerNote: respondNote,
+        stages,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries(["staffApps"]);
+      setRespondNote("");
+      setRespondStages(["group-stage", "knockout"]);
+      setExpandedId(null);
+    },
   });
 
   const rejectMut = useMutation({
@@ -226,8 +238,63 @@ export default function StaffApplications({ tournamentId, managerId }) {
                         <textarea value={respondNote} onChange={(e) => setRespondNote(e.target.value)}
                           placeholder="Add a note to the applicant (optional)..."
                           className="w-full text-sm px-4 py-3 rounded-xl border border-gray-200 bg-white resize-none h-16 focus:ring-2 focus:ring-orange-100 focus:border-orange-300 outline-none transition" />
+
+                        {/* Phase 4d: Stage scope (referee applications only) */}
+                        {app.role === "referee" && (
+                          <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                            <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wide mb-2">
+                              Authorize scoring for:
+                            </p>
+                            <div className="flex gap-3 flex-wrap">
+                              {[
+                                { key: "group-stage", label: "Group Stage" },
+                                { key: "knockout", label: "Knockout" },
+                              ].map((s) => {
+                                const checked = respondStages.includes(s.key);
+                                return (
+                                  <label
+                                    key={s.key}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition border ${
+                                      checked
+                                        ? "bg-orange-500 text-white border-orange-500"
+                                        : "bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setRespondStages((prev) =>
+                                            prev.includes(s.key) ? prev : [...prev, s.key]
+                                          );
+                                        } else {
+                                          setRespondStages((prev) => prev.filter((x) => x !== s.key));
+                                        }
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    {checked && <Check className="w-3 h-3" />}
+                                    {s.label}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-2">
+                              Umpire will be authorized to score matches in the selected stage(s). Uncheck both → no match access.
+                            </p>
+                          </div>
+                        )}
+
                         <div className="flex gap-2">
-                          <button onClick={() => acceptMut.mutate(app._id)} disabled={acceptMut.isPending}
+                          <button
+                            onClick={() =>
+                              acceptMut.mutate({
+                                id: app._id,
+                                stages: app.role === "referee" ? respondStages : undefined,
+                              })
+                            }
+                            disabled={acceptMut.isPending}
                             className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50">
                             {acceptMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
                           </button>

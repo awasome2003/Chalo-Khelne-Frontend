@@ -5,6 +5,12 @@ import Breadcrumbs from "./Breadcrumbs";
 import TournamentStepper from "./TournamentStepper";
 import axios from "axios";
 import { useState, useEffect } from "react";
+import {
+  getTournamentType,
+  getGroupStageFormat,
+  getKnockoutFormat,
+  getQualifyPerGroup,
+} from "../../utils/sportTrack";
 
 export default function TournamentOverviewPage() {
   const { tournamentId } = useParams();
@@ -133,11 +139,36 @@ export default function TournamentOverviewPage() {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Type</span>
-            <span className="font-medium text-gray-800">{tournament?.type}</span>
+            <span className="font-medium text-gray-800">{getTournamentType(tournament)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Level</span>
-            <span className="font-medium text-gray-800 capitalize">{tournament?.tournamentLevel}</span>
+            {(() => {
+              // Per-sport tournamentLevel (Plan A). Show plain when all sports
+              // share the same level; show "Mixed" with a hover tooltip listing
+              // each sport's level when they differ. Falls back to legacy root
+              // value when sports[] is empty or missing per-sport levels.
+              const sports = Array.isArray(tournament?.sports) ? tournament.sports : [];
+              const levels = sports.map((s) => s?.tournamentLevel).filter(Boolean);
+              const uniq = Array.from(new Set(levels));
+              if (uniq.length === 0) {
+                return <span className="font-medium text-gray-800 capitalize">{tournament?.tournamentLevel || "—"}</span>;
+              }
+              if (uniq.length === 1) {
+                return <span className="font-medium text-gray-800 capitalize">{uniq[0]}</span>;
+              }
+              const tooltip = sports
+                .map((s) => `${s?.sportName || "?"}: ${s?.tournamentLevel || "—"}`)
+                .join(" · ");
+              return (
+                <span
+                  className="font-medium text-gray-800 underline decoration-dotted underline-offset-2 cursor-help"
+                  title={tooltip}
+                >
+                  Mixed
+                </span>
+              );
+            })()}
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Organizer</span>
@@ -146,12 +177,12 @@ export default function TournamentOverviewPage() {
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Format</span>
             <span className="font-medium text-gray-800">
-              {tournament?.groupStageFormat} → {tournament?.knockoutFormat}
+              {getGroupStageFormat(tournament)} → {getKnockoutFormat(tournament)}
             </span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Qualify/Group</span>
-            <span className="font-medium text-gray-800">{tournament?.qualifyPerGroup || 2}</span>
+            <span className="font-medium text-gray-800">{getQualifyPerGroup(tournament)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Fee</span>

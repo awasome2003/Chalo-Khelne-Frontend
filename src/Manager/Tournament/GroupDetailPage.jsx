@@ -1,13 +1,14 @@
 import { toast } from "react-toastify";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Flag, Table, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Flag, Table, RefreshCcw, UserPlus, Shield } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import keys from "../../config/queryKeys";
 import useTournament from "./useTournament";
 import { useGroups, useGroupMatches, useStandings } from "./useGroups";
 import Breadcrumbs from "./Breadcrumbs";
+import AssignUmpireModal from "./AssignUmpireModal";
 
 export default function GroupDetailPage() {
   const { tournamentId, groupId } = useParams();
@@ -20,6 +21,7 @@ export default function GroupDetailPage() {
 
   const { data: matches = [], isLoading: matchesLoading } = useGroupMatches(tournamentId, groupId);
   const [showStandings, setShowStandings] = useState(false);
+  const [assignModalMatch, setAssignModalMatch] = useState(null);
   const { data: standings, refetch: refetchStandings } = useStandings(tournamentId, groupId, showStandings);
 
   const generateMutation = useMutation({
@@ -138,33 +140,65 @@ export default function GroupDetailPage() {
             {matches.map((match, idx) => {
               const isComp = match.status === "COMPLETED" || match.status === "completed";
               const isLive = match.status === "IN_PROGRESS" || match.status === "in_progress";
+              const umpireName = match.referee?.name;
               return (
-                <button
-                  key={match._id || idx}
-                  onClick={() => navigate(`/tournament-management/match/${tournamentId}/${match._id}/score`, {
-                    state: { backTo: `/tournaments/${tournamentId}/groups/${groupId}` },
-                  })}
-                  className={`bg-white rounded-xl border p-4 text-left hover:shadow-md transition-all w-full ${
-                    isComp ? "border-green-200 bg-green-50/50" : isLive ? "border-yellow-200 bg-yellow-50/50" : "border-gray-100"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">M{match.matchNumber}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isComp ? "bg-green-100 text-green-700" : isLive ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"
-                    }`}>{match.status?.replace(/_/g, " ").toUpperCase()}</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="font-semibold text-sm text-gray-800">{match.player1?.userName || "P1"}</span>
-                    <span className="mx-2 text-gray-400 text-xs">vs</span>
-                    <span className="font-semibold text-sm text-gray-800">{match.player2?.userName || "P2"}</span>
-                  </div>
-                  {isComp && (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r?.completed ? (
-                    <div className="text-center mt-1 text-xs text-green-700 font-bold">
-                      {r.player1Score}-{r.player2Score}
+                <div key={match._id || idx} className="flex flex-col gap-0">
+                  <button
+                    onClick={() => navigate(`/tournament-management/match/${tournamentId}/${match._id}/score`, {
+                      state: { backTo: `/tournaments/${tournamentId}/groups/${groupId}` },
+                    })}
+                    className={`bg-white rounded-t-xl border p-4 text-left hover:shadow-md transition-all w-full ${
+                      isComp ? "border-green-200 bg-green-50/50" : isLive ? "border-yellow-200 bg-yellow-50/50" : "border-gray-100"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">M{match.matchNumber}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isComp ? "bg-green-100 text-green-700" : isLive ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"
+                      }`}>{match.status?.replace(/_/g, " ").toUpperCase()}</span>
                     </div>
-                  ) : null; })()}
-                </button>
+                    <div className="text-center">
+                      <span className="font-semibold text-sm text-gray-800">{match.player1?.userName || "P1"}</span>
+                      <span className="mx-2 text-gray-400 text-xs">vs</span>
+                      <span className="font-semibold text-sm text-gray-800">{match.player2?.userName || "P2"}</span>
+                    </div>
+                    {isComp && (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r?.completed ? (
+                      <div className="text-center mt-1 text-xs text-green-700 font-bold">
+                        {r.player1Score}-{r.player2Score}
+                      </div>
+                    ) : null; })()}
+                  </button>
+
+                  {/* Umpire status bar (sibling of the score button) */}
+                  <div className="bg-gray-50 border border-t-0 border-gray-100 rounded-b-xl px-3 py-2 flex items-center justify-between">
+                    {umpireName ? (
+                      <>
+                        <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                          <Shield className="w-3.5 h-3.5 text-blue-500" />
+                          <span className="font-semibold">Umpire:</span>
+                          <span className="text-gray-800">{umpireName}</span>
+                        </span>
+                        <span className="text-[10px] text-gray-400">assigned</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Shield className="w-3.5 h-3.5 text-gray-300" />
+                          <span>No umpire</span>
+                        </span>
+                        {!isComp && (
+                          <button
+                            onClick={() => setAssignModalMatch(match)}
+                            className="flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-700 px-2 py-0.5 rounded hover:bg-orange-50 w-auto"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            Assign
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -175,6 +209,18 @@ export default function GroupDetailPage() {
           <p className="text-gray-500 font-medium">No matches generated yet</p>
         </div>
       )}
+
+      <AssignUmpireModal
+        isOpen={!!assignModalMatch}
+        onClose={() => setAssignModalMatch(null)}
+        matchId={assignModalMatch?._id}
+        tournamentId={tournamentId}
+        matchLabel={assignModalMatch ? `M${assignModalMatch.matchNumber} • ${assignModalMatch.player1?.userName || "P1"} vs ${assignModalMatch.player2?.userName || "P2"}` : ""}
+        onAssigned={() => {
+          queryClient.invalidateQueries({ queryKey: keys.groupMatches(tournamentId, groupId) });
+          toast.success("Umpire assigned. Awaiting their response.");
+        }}
+      />
     </div>
   );
 }

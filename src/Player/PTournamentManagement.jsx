@@ -4,6 +4,7 @@ import { FaStar, FaCheck } from "react-icons/fa";
 import { FiPlus } from "react-icons/fi";
 import axios from "axios";
 import GroupsTab from "../Manager/MGrouptabs";
+import { getTournamentType } from "../utils/sportTrack";
 const tournaments = [
   { id: 1, name: "Tournament 1", type: "Knockout" },
   { id: 2, name: "Tournament 2", type: "League" },
@@ -264,7 +265,7 @@ const TournamentList = () => {
                         : "text-gray-500"
                     }`}
                   >
-                    {tournament.type}
+                    {getTournamentType(tournament)}
                   </p>
                 </div>
               </div>

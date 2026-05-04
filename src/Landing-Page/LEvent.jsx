@@ -5,6 +5,7 @@ import {
   Share2, X, LogIn, MapPin, Calendar, Award, ArrowRight, IndianRupee, Users, Loader2, Trophy,
 } from "lucide-react";
 import Carousel from "./LCarousel.jsx";
+import { getTournamentType } from "../utils/sportTrack";
 import defaultImg from "../assets/tournament.avif";
 
 // ─── Tournament Detail Modal ─────────────────────────────────
@@ -47,7 +48,7 @@ const TournamentDetailModal = ({ tournament, onClose, onSignInPrompt }) => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute bottom-5 left-6 right-16">
             <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 inline-block">
-              {tournament.type || "Tournament"}
+              {getTournamentType(tournament) || "Tournament"}
             </span>
             <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
               {tournament.title}
@@ -354,7 +355,7 @@ const TournamentCards = ({ onTournamentClick }) => {
 
             <div className="absolute top-3 left-3">
               <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-                {tournament.type || "Tournament"}
+                {getTournamentType(tournament) || "Tournament"}
               </span>
             </div>
 
