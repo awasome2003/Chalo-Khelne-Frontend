@@ -265,6 +265,11 @@ const GroupStageManagement = () => {
   // 🔥 DIRECT KNOCKOUT MODAL STATES - SEQUENTIAL FLOW
   const [showDirectKnockoutPlayerModal, setShowDirectKnockoutPlayerModal] = useState(false);
   const [showDirectKnockoutScheduleModal, setShowDirectKnockoutScheduleModal] = useState(false);
+  // In-flight guard for the Round-2 → Direct Knockout submit. Without this,
+  // a fast double-tap on the Confirm button fires `/superplayers/save` twice
+  // concurrently — both saves race past the existence check and create
+  // duplicate SuperPlayers docs (TOCTOU). Disable the button while busy.
+  const [isSubmittingKnockout, setIsSubmittingKnockout] = useState(false);
   const [selectedDirectKnockoutPlayers, setSelectedDirectKnockoutPlayers] = useState([]);
   const [knockoutSchedule, setKnockoutSchedule] = useState({
     startDate: '',
@@ -1163,43 +1168,31 @@ const GroupStageManagement = () => {
   };
 
   // 🔥 HANDLE DIRECT KNOCKOUT MATCH CREATION
+  // Bug fix: previously POSTed to /direct-knockout/create-matches which
+  // creates DirectKnockoutMatch records — wrong collection for a tournament
+  // whose sport.type is "knockout + group stage". Bracket would then appear
+  // in the wrong UI surface (Singles Knockout instead of Groups → Knockout).
+  //
+  // Fixed flow mirrors the production "Round 2 mini-group-stage → Super
+  // Players → Start Knockout" path:
+  //   1. /round2/initiate         — stage flag (unchanged)
+  //   2. /superplayers/save       — promote selected TopPlayers into a
+  //                                 sport-scoped SuperPlayers doc
+  //   3. /knockout/generate       — same endpoint the "Start Knockout"
+  //                                 button uses; creates SuperMatch records
+  //
+  // The redundant /direct-knockout/validate-players call is removed —
+  // /knockout/generate does its own draw-size + seed validation.
   const handleDirectKnockoutCreation = async () => {
+    // Re-entry guard — if a previous submit is still in flight, ignore the
+    // duplicate click. Pairs with the disabled button state below; this is
+    // the safety net for cases where the click registers before the disabled
+    // attribute paints.
+    if (isSubmittingKnockout) return;
+    setIsSubmittingKnockout(true);
     try {
       if (!knockoutSchedule.startDate || !knockoutSchedule.startTime) {
         toast.warn("Please fill in start date and time");
-        return;
-      }
-
-      // First initiate Round 2 (stage update) — only now, not earlier
-      await axios.post(
-        `/api/tournaments/round2/initiate`,
-        {
-          tournamentId,
-          sportId: activeSportId,
-          option: 'knockout',
-          topPlayers: topPlayers.map(player => ({
-            playerId: player.playerId,
-            playerName: player.playerName,
-            category: player.category
-          }))
-        }
-      );
-
-      // Validate player count is power of 2
-      const validationResponse = await axios.post(
-        `/api/tournaments/direct-knockout/validate-players`,
-        {
-          tournamentId,
-          sportId: activeSportId,
-          selectedPlayers: selectedDirectKnockoutPlayers.map(player => ({
-            playerId: player.playerId || player._id,
-            userName: player.userName || player.name
-          }))
-        }
-      );
-
-      if (!validationResponse.data.success) {
-        toast.info(validationResponse.data.message);
         return;
       }
 
@@ -1216,37 +1209,75 @@ const GroupStageManagement = () => {
         return ai - bi;
       });
 
-      // Create the matches
-      const matchResponse = await axios.post(
-        `/api/tournaments/direct-knockout/create-matches`,
+      // Step 1: Round 2 stage flag — unchanged. Sets currentStage to
+      // qualifier_knockout so downstream knows the tournament has advanced.
+      await axios.post(
+        `/api/tournaments/round2/initiate`,
         {
           tournamentId,
           sportId: activeSportId,
-          selectedPlayers: orderedSelection.map(player => ({
-            playerId: player.playerId || player._id,
-            userName: player.userName || player.name
+          option: 'knockout',
+          topPlayers: topPlayers.map(player => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            category: player.category
+          }))
+        }
+      );
+
+      // Step 2: Promote the selected TopPlayers into a SuperPlayers doc
+      // for this sport. The endpoint upserts (de-dupes by playerId) and is
+      // sport-scoped server-side. Player shape matches the SuperPlayers
+      // schema so /knockout/generate can read them in the next step.
+      await axios.post(
+        `/api/tournaments/superplayers/save`,
+        {
+          tournamentId,
+          sportId: activeSportId,
+          players: orderedSelection.map((p) => ({
+            playerId: p.playerId || p._id,
+            playerName: p.playerName || p.userName || p.name,
+            category: p.category || 'Open',
+            points: p.points || 0,
+            setsWon: p.setsWon || 0,
+            setsLost: p.setsLost || 0,
+            won: p.won || 0,
+            lost: p.lost || 0,
+            played: p.played || 0,
+            status: 'super_player',
+            sourceRound: 1,
+            sourceGroupId: p.groupId ? String(p.groupId) : null,
           })),
-          schedule: {
-            startDate: knockoutSchedule.startDate,
-            startTime: knockoutSchedule.startTime,
-            courtNumber: knockoutSchedule.courtNumber,
-            intervalMinutes: knockoutSchedule.intervalMinutes,
-            drawSize: knockoutSchedule.drawSize, // backend reads schedule.drawSize
-          },
-          // Translate the cosmetic Global/Local setting into a backend-valid
-          // drawMethod. When seeds > 0, use hybrid (top-N locked + rest shuffled).
-          drawMethod: knockoutSchedule.numberOfSeeds > 0 ? 'hybrid' : 'standard',
+        }
+      );
+
+      // Step 3: Generate the SuperMatch bracket — same endpoint the
+      // production "Start Knockout" button on the Super Players sub-tab uses.
+      const matchStartTime = `${knockoutSchedule.startDate}T${knockoutSchedule.startTime}`;
+      const matchResponse = await axios.post(
+        `/api/tournaments/knockout/generate`,
+        {
+          tournamentId,
+          sportId: activeSportId,
+          courtNumber: knockoutSchedule.courtNumber,
+          matchStartTime,
+          intervalMinutes: knockoutSchedule.intervalMinutes,
+          drawSize: knockoutSchedule.drawSize,
           numberOfSeeds: knockoutSchedule.numberOfSeeds,
-          seededPlayers, // list of seeded player IDs for reference
+          // Explicit player order so backend Mirror & Flip placement matches
+          // the preview the user just confirmed.
+          playerOrder: orderedSelection.map((p) => p.playerId || p._id),
         }
       );
 
       if (matchResponse.data.success) {
         setShowDirectKnockoutScheduleModal(false);
         setRound2Progress({ option: 'knockout', status: 'matches_created' });
-        toast.info(`Direct Knockout matches created successfully! ${matchResponse.data.bracket.totalMatches} matches scheduled.`);
+        const created = matchResponse.data.matchesCreated || matchResponse.data.matches?.length || 0;
+        toast.info(`Knockout matches created — ${created} matches scheduled.`);
 
         // Switch to Groups tab to see the matches in Knockout sub-tab
+        // (which fetches from /knockout/matches → SuperMatch collection).
         setSelectedTab("Groups");
       } else {
         toast.error("Failed to create knockout matches");
@@ -1254,6 +1285,8 @@ const GroupStageManagement = () => {
     } catch (error) {
       console.error("Error creating Direct Knockout matches:", error);
       toast.info(`Failed to create matches: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsSubmittingKnockout(false);
     }
   };
 
@@ -3686,15 +3719,15 @@ const GroupStageManagement = () => {
               </button>
               <button
                 onClick={handleDirectKnockoutCreation}
-                disabled={!knockoutSchedule.startDate || !knockoutSchedule.startTime}
+                disabled={!knockoutSchedule.startDate || !knockoutSchedule.startTime || isSubmittingKnockout}
                 className={`px-5 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2 w-auto transition-colors ${
-                  knockoutSchedule.startDate && knockoutSchedule.startTime
+                  knockoutSchedule.startDate && knockoutSchedule.startTime && !isSubmittingKnockout
                     ? 'bg-orange-500 hover:bg-orange-600'
                     : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
                 <MdFlashOn className="w-4 h-4" />
-                Create Matches
+                {isSubmittingKnockout ? 'Creating…' : 'Create Matches'}
               </button>
             </div>
           </div>

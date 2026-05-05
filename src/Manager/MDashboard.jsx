@@ -1,324 +1,446 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import tournamentImage from "../assets/tournament.avif";
 import {
-  Trophy,
-  MapPin,
-  Clock,
-  Calendar,
-  ChevronRight,
-  Users,
-  TrendingUp,
-  Activity,
-  Zap,
+  AlertCircle, ArrowUpRight, Calendar, ChevronRight,
+  MapPin, Plus, Radio, RotateCw, Search, Trophy, Users,
 } from "lucide-react";
-import { StatCard, Badge, SectionCard, EmptyState, Button } from "../shared/ui";
 import { getCategories } from "../utils/sportTrack";
 
-const Dashboard = () => {
-  const [tournaments, setTournaments] = useState([]);
-  const [whitelistedEmployees, setWhitelistedEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const SIG = "#5E6AD2";
+
+const fmtTime = (d) =>
+  d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+const fmtDateLong = (d) =>
+  d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+
+const MDashboard = () => {
   const navigate = useNavigate();
+  const now = useMemo(() => new Date(), []);
+  const [tournaments, setTournaments] = useState([]);
+  const [whitelist, setWhitelist] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchTournamentsData = async () => {
-      setLoading(true);
-      setError(null);
-
+    let cancelled = false;
+    (async () => {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
+        const user = JSON.parse(localStorage.getItem("user") || "null");
         const managerId = user?._id;
-
-        if (!managerId) {
-          setTournaments([]);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch all tournaments specifically for this manager
-        const response = await axios.get(`/api/tournaments/manager/${managerId}`);
-        const allTournaments = response.data.tournaments || [];
-
-        // Aggregate whitelist from all tournaments
-        const allWhitelisted = [];
-        allTournaments.forEach(t => {
-          if (t.whitelist && Array.isArray(t.whitelist)) {
-            t.whitelist.forEach(emp => {
-              allWhitelisted.push({
-                ...emp,
-                tournamentTitle: t.title,
-                tournamentId: t._id
-              });
-            });
-          }
-        });
-        setWhitelistedEmployees(allWhitelisted);
-
-        const sortedRecentTournaments = [...allTournaments]
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 3); // latest 3
-
-        setTournaments(sortedRecentTournaments);
-      } catch (err) {
-        console.error("Error fetching tournaments:", err);
-        setTournaments([]);
+        if (!managerId) { setLoading(false); return; }
+        const { data } = await axios.get(`/api/tournaments/manager/${managerId}`);
+        if (cancelled) return;
+        const list = data?.tournaments || [];
+        const wl = [];
+        list.forEach((t) =>
+          (t.whitelist || []).forEach((emp) =>
+            wl.push({ ...emp, tournamentTitle: t.title, tournamentId: t._id })
+          )
+        );
+        setTournaments(list);
+        setWhitelist(wl);
+      } catch (e) {
+        if (!cancelled) setError(e?.message || "Failed to load dashboard");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchTournamentsData();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const handleViewAllTournaments = () => navigate("/mtournament-management");
-  const handleTournamentClick = () => navigate("/mtournament-management");
+  const liveNow = tournaments.filter((t) => {
+    if (!t.startDate || !t.endDate) return false;
+    const s = new Date(t.startDate);
+    const e = new Date(t.endDate);
+    return s <= now && now <= e;
+  });
+  const startingToday = tournaments.filter((t) =>
+    t.startDate && sameDay(new Date(t.startDate), now)
+  );
+  const upcoming = [...tournaments]
+    .filter((t) => t.startDate && new Date(t.startDate) > now)
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    .slice(0, 5);
+  const drafts = tournaments.filter((t) =>
+    String(t.status || "").toLowerCase() === "draft"
+  );
 
-  if (loading)
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-[3px] border-orange-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400 font-medium">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+  const goTournaments = () => navigate("/mtournament-management");
 
-  if (error)
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-red-100 max-w-md w-full text-center">
-          <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-red-100">
-            <Activity className="text-red-500 w-6 h-6" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Something went wrong</h3>
-          <p className="text-sm text-red-500 mb-6">{error}</p>
-          <Button variant="danger" onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
+  if (loading) return <Skeleton />;
+  if (error) return <ErrorPanel message={error} />;
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 animate-fadeIn">
+    <div className="p-6 max-w-[1320px] mx-auto">
+      <Header now={now} onSearch={goTournaments} onCreate={goTournaments} />
 
-      {/* ─── Hero Header ─── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-400 rounded-2xl p-6 lg:p-8 text-white">
-        {/* Decorative sport shapes */}
-        <div className="absolute top-0 right-0 w-64 h-64 opacity-[0.06]">
-          <svg viewBox="0 0 200 200" fill="currentColor">
-            <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="3" fill="none" />
-            <circle cx="100" cy="100" r="60" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="100" cy="100" r="30" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          </svg>
-        </div>
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full" />
-
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-5 h-5 text-[#FF9D32]" />
-              <span className="text-xs font-bold text-white/70 uppercase tracking-widest">Manager Hub</span>
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-black leading-tight">
-              Welcome back!
-            </h1>
-            <p className="text-white/60 mt-1 text-sm">
-              Here's your tournament activity at a glance.
-            </p>
-          </div>
-          <Button
-            variant="accent"
-            size="lg"
-            onClick={handleViewAllTournaments}
-            className="flex-shrink-0"
-          >
-            <Trophy className="w-4 h-4" />
-            Manage Tournaments
-          </Button>
-        </div>
-
-        {/* Inline stats row */}
-        <div className="relative mt-6 grid grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-            <div className="text-2xl font-black">{tournaments.length}</div>
-            <div className="text-xs text-white/60 font-medium">Active Tournaments</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-            <div className="text-2xl font-black">{whitelistedEmployees.length}</div>
-            <div className="text-xs text-white/60 font-medium">Whitelisted Players</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-emerald-300" />
-              <span className="text-2xl font-black">High</span>
-            </div>
-            <div className="text-xs text-white/60 font-medium">Activity Level</div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <Kpi label="Live now" value={liveNow.length} accent={liveNow.length > 0} pulse={liveNow.length > 0} />
+        <Kpi label="Starting today" value={startingToday.length} />
+        <Kpi label="Pending approvals" value={whitelist.length} />
+        <Kpi label="Active tournaments" value={tournaments.length} />
       </div>
 
-      {/* ─── Recent Tournaments ─── */}
-      <SectionCard
-        title="Recent Tournaments"
-        icon={Trophy}
-        iconColor="text-orange-500"
-        action={{ label: "View All", onClick: handleViewAllTournaments }}
-        noPadding
+      <Section
+        title="Now"
+        subtitle={liveNow.length ? `${liveNow.length} live this moment` : "Nothing happening right now"}
+        action={liveNow.length ? { label: "Open broadcast", onClick: goTournaments } : null}
       >
-        {tournaments.length === 0 ? (
-          <EmptyState
-            icon={Trophy}
-            title="No tournaments yet"
-            description="Create your first tournament to get started."
-            action={
-              <Button variant="accent" onClick={handleViewAllTournaments}>
-                Create Tournament
-              </Button>
-            }
+        {liveNow.length === 0 ? (
+          <Empty
+            icon={Radio}
+            title="The Now strip is quiet"
+            body="When a tournament or session is live under your management, it surfaces here in real time."
           />
         ) : (
-          <div className="divide-y divide-gray-50">
-            {tournaments.map((tournament) => {
-              // Formatting Date Logic
-              const startDateStr = tournament.startDate
-                ? new Date(tournament.startDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-                : "";
-              const endDateStr = tournament.endDate
-                ? new Date(tournament.endDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })
-                : "";
-
-              const dateDisplay = startDateStr
-                ? (endDateStr && startDateStr !== endDateStr ? `${startDateStr} – ${endDateStr}` : startDateStr)
-                : "TBA";
-
-              // Fee Calculation Logic — STEP 17b.ii: per-sport via helper
-              const parsedCats = getCategories(tournament);
-
-              const fees = parsedCats.map(cat => Number(cat.fee) || 0);
-              const minFee = fees.length ? Math.min(...fees) : 0;
-              const maxFee = fees.length ? Math.max(...fees) : 0;
-
-              const feeDisplay = (minFee > 0 || maxFee > 0)
-                ? (minFee === maxFee ? `₹${minFee}` : `₹${minFee} – ₹${maxFee}`)
-                : "Free";
-
-              return (
-                <div
-                  key={tournament._id || tournament.id}
-                  onClick={handleTournamentClick}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/80 transition-colors cursor-pointer group"
-                >
-                  {/* Thumbnail */}
-                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 ring-1 ring-gray-100">
-                    <img
-                      src={
-                        tournament.tournamentLogo
-                          ? `/uploads/tournaments/${tournament.tournamentLogo.split("\\").pop()}`
-                          : tournamentImage
-                      }
-                      alt={tournament.title}
-                      onError={(e) => { e.currentTarget.src = tournamentImage; }}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-orange-500 transition-colors">
-                      {tournament.title}
-                    </h4>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> {dateDisplay}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> {tournament.eventLocation?.[0] || "TBA"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Fee + Arrow */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <Badge variant={feeDisplay === "Free" ? "success" : "accent"} size="sm">
-                      {feeDisplay}
-                    </Badge>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-orange-500 transition-colors" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ul className="divide-y divide-neutral-100">
+            {liveNow.slice(0, 4).map((t) => (
+              <NowRow key={t._id} t={t} onOpen={goTournaments} />
+            ))}
+          </ul>
         )}
-      </SectionCard>
+      </Section>
 
-      {/* ─── Whitelisted Employees ─── */}
-      <SectionCard
-        title="Whitelisted Employees"
-        subtitle={whitelistedEmployees.length > 0 ? `${whitelistedEmployees.length} total` : undefined}
-        icon={Users}
-        iconColor="text-emerald-600"
-        noPadding
-      >
-        {whitelistedEmployees.length === 0 ? (
-          <EmptyState
+      <Section title="Inbox" subtitle="Items that need a decision from you">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
+          <InboxTile
             icon={Users}
-            title="No whitelisted employees"
-            description="Employees will appear here once added to a tournament."
+            label="Whitelist requests"
+            count={whitelist.length}
+            cta="Review"
+            onClick={goTournaments}
+            disabled={whitelist.length === 0}
+          />
+          <InboxTile
+            icon={Trophy}
+            label="Tournaments to publish"
+            count={drafts.length}
+            cta="Publish"
+            onClick={goTournaments}
+            disabled={drafts.length === 0}
+          />
+          <InboxTile
+            icon={AlertCircle}
+            label="Refunds & disputes"
+            count={0}
+            cta="Open queue"
+            disabled
+          />
+        </div>
+      </Section>
+
+      <Section
+        title={startingToday.length ? "Today" : "Upcoming"}
+        subtitle={
+          startingToday.length
+            ? `${startingToday.length} tournament${startingToday.length === 1 ? "" : "s"} starting today`
+            : "Next 5 tournaments under your management"
+        }
+        action={tournaments.length ? { label: "View all", onClick: goTournaments } : null}
+      >
+        {(startingToday.length ? startingToday : upcoming).length === 0 ? (
+          <Empty
+            icon={Calendar}
+            title="No tournaments scheduled"
+            body="Create a tournament — your next five will appear here, ordered by start date."
           />
         ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Employee</th>
-                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">ID</th>
-                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Mobile</th>
-                    <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tournament</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {whitelistedEmployees.slice(0, 5).map((emp, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {emp.name?.charAt(0) || "E"}
-                          </div>
-                          <span className="text-sm font-semibold text-gray-800">{emp.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5 whitespace-nowrap text-xs text-gray-400 font-mono">
-                        {emp.employeeId}
-                      </td>
-                      <td className="px-6 py-3.5 whitespace-nowrap text-xs text-gray-500 font-medium">
-                        {emp.mobile}
-                      </td>
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <Badge variant="primary" size="xs">
-                          {emp.tournamentTitle}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {whitelistedEmployees.length > 5 && (
-              <div className="px-6 py-3 border-t border-gray-50 text-center">
-                <p className="text-xs text-gray-400">
-                  Showing 5 of <span className="font-bold text-gray-600">{whitelistedEmployees.length}</span> employees
-                </p>
-              </div>
-            )}
-          </>
+          <ul className="divide-y divide-neutral-100">
+            {(startingToday.length ? startingToday : upcoming).map((t) => (
+              <TournamentRow key={t._id} t={t} onClick={goTournaments} />
+            ))}
+          </ul>
         )}
-      </SectionCard>
+      </Section>
+
+      {whitelist.length > 0 && (
+        <Section
+          title="Whitelisted players"
+          subtitle={`${whitelist.length} total · showing ${Math.min(5, whitelist.length)}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  <Th>Player</Th><Th>ID</Th><Th>Mobile</Th><Th>Tournament</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {whitelist.slice(0, 5).map((emp, i) => (
+                  <tr key={i} className="hover:bg-neutral-50/60 transition">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-neutral-100 inline-flex items-center justify-center text-[11px] font-semibold text-neutral-700">
+                          {(emp.name || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-[13px] font-medium text-neutral-900">{emp.name || "—"}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-[12px] font-mono tabular-nums text-neutral-500">
+                      {emp.employeeId || "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-[12px] font-mono tabular-nums text-neutral-500">
+                      {emp.mobile || "—"}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium text-neutral-700 bg-neutral-100">
+                        {emp.tournamentTitle}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
     </div>
   );
 };
 
-export default Dashboard;
+export default MDashboard;
+
+/* ────────────────────────────────────────────────────── */
+
+const Header = ({ now, onSearch, onCreate }) => (
+  <header className="flex items-end justify-between gap-4 flex-wrap mb-6">
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1.5">
+        Manager · {fmtTime(now)}
+      </p>
+      <h1 className="text-[28px] leading-[1.1] font-semibold tracking-tight text-neutral-950">
+        {fmtDateLong(now)}
+      </h1>
+    </div>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onSearch}
+        className="h-8 px-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition"
+      >
+        <Search className="w-3.5 h-3.5" />
+        Search
+        <span className="ml-1.5 font-mono text-[10px] text-neutral-400 border border-neutral-200 rounded px-1 py-px">
+          ⌘K
+        </span>
+      </button>
+      <button
+        onClick={onCreate}
+        className="h-8 px-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-white rounded-lg transition active:scale-[0.98]"
+        style={{ backgroundColor: SIG }}
+      >
+        <Plus className="w-3.5 h-3.5" />
+        New tournament
+      </button>
+    </div>
+  </header>
+);
+
+const Kpi = ({ label, value, accent = false, pulse = false }) => (
+  <div className="bg-white border border-neutral-200 rounded-2xl p-4">
+    <div className="flex items-start justify-between mb-3">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+        {label}
+      </span>
+      {pulse && (
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+          <span className="relative flex w-1.5 h-1.5">
+            <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+            <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          </span>
+          Live
+        </span>
+      )}
+    </div>
+    <div
+      className="font-mono tabular-nums text-[28px] leading-none font-semibold"
+      style={{ color: accent ? SIG : "#0A0A0A" }}
+    >
+      {value}
+    </div>
+  </div>
+);
+
+const Section = ({ title, subtitle, action, children }) => (
+  <section className="mb-5">
+    <div className="flex items-end justify-between mb-2.5">
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+          {title}
+        </h2>
+        {subtitle && <p className="text-[12px] text-neutral-500 mt-0.5">{subtitle}</p>}
+      </div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="text-[12px] font-medium hover:underline"
+          style={{ color: SIG }}
+        >
+          {action.label} →
+        </button>
+      )}
+    </div>
+    <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+      {children}
+    </div>
+  </section>
+);
+
+const Empty = ({ icon: Icon, title, body }) => (
+  <div className="px-6 py-10 text-center">
+    <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center mb-3">
+      <Icon className="w-5 h-5 text-neutral-400" />
+    </div>
+    <h3 className="text-[14px] font-semibold text-neutral-900">{title}</h3>
+    <p className="text-[13px] text-neutral-500 mt-1 max-w-md mx-auto">{body}</p>
+  </div>
+);
+
+const NowRow = ({ t, onOpen }) => {
+  const start = t.startDate ? new Date(t.startDate) : null;
+  const end = t.endDate ? new Date(t.endDate) : null;
+  const venue = t.eventLocation?.[0] || t.location || "";
+  return (
+    <li>
+      <button
+        onClick={onOpen}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50/60 transition text-left"
+      >
+        <span className="relative flex w-2 h-2 flex-shrink-0">
+          <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+          <span className="relative w-2 h-2 rounded-full bg-emerald-500" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-neutral-900 truncate">{t.title}</p>
+          <p className="text-[12px] text-neutral-500 mt-0.5">
+            <span className="font-mono tabular-nums">
+              {start && fmtTime(start)} – {end && fmtTime(end)}
+            </span>
+            {venue && <span> · {venue}</span>}
+          </p>
+        </div>
+        <span
+          className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded"
+          style={{ backgroundColor: "rgba(16,185,129,0.12)", color: "#047857" }}
+        >
+          Live
+        </span>
+        <ArrowUpRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+      </button>
+    </li>
+  );
+};
+
+const InboxTile = ({ icon: Icon, label, count, cta, disabled = false, onClick }) => (
+  <button
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
+    className="text-left p-4 bg-neutral-50/60 border border-neutral-200 rounded-xl hover:bg-white hover:border-neutral-300 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-50/60 disabled:hover:border-neutral-200"
+  >
+    <div className="flex items-start justify-between mb-2.5">
+      <div className="w-7 h-7 rounded-lg bg-white border border-neutral-200 inline-flex items-center justify-center">
+        <Icon className="w-3.5 h-3.5 text-neutral-700" />
+      </div>
+      <span className="font-mono tabular-nums text-[20px] leading-none font-semibold text-neutral-900">
+        {count}
+      </span>
+    </div>
+    <p className="text-[13px] font-medium text-neutral-900">{label}</p>
+    <span
+      className="text-[12px] font-medium mt-0.5 inline-flex items-center gap-0.5"
+      style={{ color: disabled ? "#737373" : SIG }}
+    >
+      {cta}
+      <ChevronRight className="w-3 h-3" />
+    </span>
+  </button>
+);
+
+const TournamentRow = ({ t, onClick }) => {
+  const start = t.startDate ? new Date(t.startDate) : null;
+  const cats = getCategories(t) || [];
+  const fees = cats.map((c) => Number(c.fee) || 0).filter((n) => n > 0);
+  const feeText = !fees.length
+    ? "Free"
+    : Math.min(...fees) === Math.max(...fees)
+      ? `₹${Math.min(...fees)}`
+      : `₹${Math.min(...fees)}–${Math.max(...fees)}`;
+  const venue = t.eventLocation?.[0] || t.location || "";
+
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-neutral-50/60 transition text-left"
+      >
+        <div className="flex-shrink-0 w-11 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+            {start ? start.toLocaleDateString("en-IN", { month: "short" }) : "—"}
+          </p>
+          <p className="font-mono tabular-nums text-[20px] leading-none font-semibold text-neutral-900 mt-0.5">
+            {start ? start.getDate() : "—"}
+          </p>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-neutral-900 truncate">{t.title}</p>
+          <p className="text-[12px] text-neutral-500 mt-0.5 inline-flex items-center gap-2">
+            {start && <span className="font-mono tabular-nums">{fmtTime(start)}</span>}
+            {venue && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {venue}
+              </span>
+            )}
+          </p>
+        </div>
+        <span className="font-mono tabular-nums text-[12px] font-medium text-neutral-700 flex-shrink-0">
+          {feeText}
+        </span>
+        <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+      </button>
+    </li>
+  );
+};
+
+const Th = ({ children }) => (
+  <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+    {children}
+  </th>
+);
+
+const Skeleton = () => (
+  <div className="p-6 max-w-[1320px] mx-auto">
+    <div className="animate-pulse space-y-5">
+      <div className="space-y-2">
+        <div className="h-3 w-24 bg-neutral-200 rounded" />
+        <div className="h-7 w-72 bg-neutral-200 rounded" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-24 bg-neutral-100 rounded-2xl" />
+        ))}
+      </div>
+      <div className="h-32 bg-neutral-100 rounded-2xl" />
+      <div className="h-32 bg-neutral-100 rounded-2xl" />
+    </div>
+  </div>
+);
+
+const ErrorPanel = ({ message }) => (
+  <div className="p-6 max-w-[1320px] mx-auto">
+    <div className="bg-white border border-rose-200 rounded-2xl p-8 text-center max-w-md mx-auto">
+      <div className="w-10 h-10 rounded-xl bg-rose-50 inline-flex items-center justify-center mb-3">
+        <AlertCircle className="w-5 h-5 text-rose-600" />
+      </div>
+      <h3 className="text-[15px] font-semibold text-neutral-900">Couldn't load your dashboard</h3>
+      <p className="text-[13px] text-neutral-500 mt-1 mb-4">{message}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="inline-flex items-center gap-1.5 h-8 px-3 text-[13px] font-medium bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition"
+      >
+        <RotateCw className="w-3.5 h-3.5" /> Retry
+      </button>
+    </div>
+  </div>
+);
