@@ -1,7 +1,7 @@
 import { toast } from "react-toastify";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Flag, Table, RefreshCcw, UserPlus, Shield } from "lucide-react";
+import { ArrowLeft, Flag, Table, UserPlus, Shield } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import keys from "../../config/queryKeys";
@@ -9,6 +9,9 @@ import useTournament from "./useTournament";
 import { useGroups, useGroupMatches, useStandings } from "./useGroups";
 import Breadcrumbs from "./Breadcrumbs";
 import AssignUmpireModal from "./AssignUmpireModal";
+import { readMatchResult } from "../../shared/utils/matchResultUtils";
+
+const SIG = "#5E6AD2";
 
 export default function GroupDetailPage() {
   const { tournamentId, groupId } = useParams();
@@ -19,110 +22,231 @@ export default function GroupDetailPage() {
   const { data: allGroups = [] } = useGroups(tournamentId);
   const group = allGroups.find((g) => g._id === groupId);
 
-  const { data: matches = [], isLoading: matchesLoading } = useGroupMatches(tournamentId, groupId);
+  const { data: matches = [], isLoading: matchesLoading } = useGroupMatches(
+    tournamentId,
+    groupId
+  );
   const [showStandings, setShowStandings] = useState(false);
   const [assignModalMatch, setAssignModalMatch] = useState(null);
-  const { data: standings, refetch: refetchStandings } = useStandings(tournamentId, groupId, showStandings);
+  const { data: standings, refetch: refetchStandings } = useStandings(
+    tournamentId,
+    groupId,
+    showStandings
+  );
 
   const generateMutation = useMutation({
-    mutationFn: (schedule) => axios.post("/api/tournaments/matches/generate", { tournamentId, groupId, ...schedule }),
+    mutationFn: (schedule) =>
+      axios.post("/api/tournaments/matches/generate-group", {
+        tournamentId,
+        groupId,
+        ...schedule,
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: keys.groupMatches(tournamentId, groupId) });
-      toast.success("Matches generated!");
+      queryClient.invalidateQueries({
+        queryKey: keys.groupMatches(tournamentId, groupId),
+      });
+      toast.success("Matches generated.");
     },
     onError: (err) => toast.error(err.response?.data?.message || err.message),
   });
 
   const handleGenerate = () => {
     const court = prompt("Court number:", "1");
-    const interval = prompt("Interval (minutes):", "30");
+    const slotStr = prompt("Slot duration (mins):", "30");
+    const matchStr = prompt("Match duration (mins):", "20");
     const time = prompt("Start time (HH:MM):", "10:00");
     if (!court || !time) return;
-    generateMutation.mutate({ courtNumber: court, matchInterval: interval, startTime: time });
+    const slot = parseInt(slotStr, 10);
+    const match = parseInt(matchStr, 10);
+    if (!Number.isFinite(slot) || slot < 1 || !Number.isFinite(match) || match < 1) {
+      toast.error("Slot and match durations must be positive integers.");
+      return;
+    }
+    if (match > slot) {
+      toast.error("Match duration cannot exceed slot duration.");
+      return;
+    }
+    generateMutation.mutate({
+      courtNumber: court,
+      slotDurationMinutes: slot,
+      matchDurationMinutes: match,
+      startTime: time,
+    });
   };
 
-  const completedCount = matches.filter((m) => m.status === "COMPLETED" || m.status === "completed").length;
-  const liveCount = matches.filter((m) => m.status === "IN_PROGRESS" || m.status === "in_progress").length;
+  const completedCount = matches.filter(
+    (m) => m.status === "COMPLETED" || m.status === "completed"
+  ).length;
+  const liveCount = matches.filter(
+    (m) => m.status === "IN_PROGRESS" || m.status === "in_progress"
+  ).length;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-[1320px] mx-auto">
       <Breadcrumbs tournamentName={title} groupName={group?.groupName} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(`/tournaments/${tournamentId}/groups`)} className="p-2 hover:bg-gray-100 rounded-lg w-auto">
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
+        <div className="flex items-start gap-3 min-w-0">
+          <button
+            onClick={() => navigate(`/tournaments/${tournamentId}/groups`)}
+            className="h-8 w-8 inline-flex items-center justify-center bg-white border border-neutral-200 hover:border-neutral-300 rounded-lg transition flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-neutral-700" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">{group?.groupName || "Group"}</h1>
-            <p className="text-sm text-gray-500">
-              {group?.players?.length || 0} players • {matches.length} matches • {completedCount} completed
-              {liveCount > 0 && <span className="text-yellow-600"> • {liveCount} live</span>}
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-0.5">
+              Group
+            </p>
+            <h1 className="text-[22px] leading-tight font-semibold tracking-tight text-neutral-950 truncate">
+              {group?.groupName || "Group"}
+            </h1>
+            <p className="text-[12px] text-neutral-500 mt-1 inline-flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1">
+                <span className="font-mono tabular-nums">
+                  {group?.players?.length || 0}
+                </span>
+                <span>players</span>
+              </span>
+              <span className="text-neutral-300">·</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-mono tabular-nums">{matches.length}</span>
+                <span>matches</span>
+              </span>
+              <span className="text-neutral-300">·</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-mono tabular-nums text-emerald-700">
+                  {completedCount}
+                </span>
+                <span>done</span>
+              </span>
+              {liveCount > 0 && (
+                <>
+                  <span className="text-neutral-300">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="relative flex w-1.5 h-1.5">
+                      <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+                      <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    <span className="font-mono tabular-nums text-emerald-700">
+                      {liveCount}
+                    </span>
+                    <span className="text-emerald-700">live</span>
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {matches.length === 0 && (
-            <button onClick={handleGenerate} disabled={generateMutation.isPending}
-              className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-orange-600 w-auto disabled:opacity-50">
-              <Flag className="w-4 h-4" /> {generateMutation.isPending ? "Generating..." : "Generate Matches"}
+            <button
+              onClick={handleGenerate}
+              disabled={generateMutation.isPending}
+              className="h-8 px-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-white rounded-lg transition disabled:opacity-50 active:scale-[0.98]"
+              style={{ backgroundColor: SIG }}
+            >
+              <Flag className="w-3.5 h-3.5" />
+              {generateMutation.isPending ? "Generating…" : "Generate matches"}
             </button>
           )}
           <button
-            onClick={() => { setShowStandings(!showStandings); if (!showStandings) refetchStandings(); }}
-            className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 w-auto">
-            <Table className="w-4 h-4" /> {showStandings ? "Hide" : "Show"} Standings
+            onClick={() => {
+              setShowStandings(!showStandings);
+              if (!showStandings) refetchStandings();
+            }}
+            className="h-8 px-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition"
+          >
+            <Table className="w-3.5 h-3.5" />
+            {showStandings ? "Hide" : "Show"} standings
           </button>
           <button
-            onClick={() => navigate(`/tournament-management/group-stage/${tournamentId}/${groupId}/points-table`, { state: { tournamentId, groupId, round: 1 } })}
-            className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 w-auto">
-            Full Points Table
+            onClick={() =>
+              navigate(
+                `/tournament-management/group-stage/${tournamentId}/${groupId}/points-table`,
+                { state: { tournamentId, groupId, round: 1 } }
+              )
+            }
+            className="h-8 px-3 inline-flex items-center text-[12px] font-medium text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition"
+          >
+            Full points table
           </button>
         </div>
       </div>
 
-      {/* Players */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
-        <h3 className="font-bold text-gray-700 text-sm mb-2">Players</h3>
-        <div className="flex flex-wrap gap-2">
+      <div className="bg-white border border-neutral-200 rounded-2xl p-4 mb-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-3">
+          Players
+        </p>
+        <div className="flex flex-wrap gap-1.5">
           {group?.players?.map((p, i) => (
-            <span key={p._id || i} className="bg-orange-50 text-orange-600 text-sm px-3 py-1 rounded-full font-medium">
-              {i + 1}. {p.userId?.name || p.userName || `Player ${i + 1}`}
+            <span
+              key={p._id || i}
+              className="inline-flex items-center gap-1.5 px-2 py-1 bg-neutral-50 border border-neutral-200 text-[12px] text-neutral-800 rounded-md"
+            >
+              <span className="font-mono tabular-nums text-[10px] text-neutral-400">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="font-medium">
+                {p.userId?.name || p.userName || `Player ${i + 1}`}
+              </span>
             </span>
           ))}
         </div>
       </div>
 
-      {/* Standings */}
       {showStandings && standings && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5">
-            <h3 className="text-white text-sm font-bold">{standings.groupName} — Standings</h3>
+        <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden mb-5">
+          <div className="px-4 py-3 border-b border-neutral-100">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+              {standings.groupName} · Standings
+            </p>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-                <th className="px-3 py-2 text-left">#</th>
-                <th className="px-3 py-2 text-left">Player</th>
-                <th className="px-3 py-2 text-center">P</th>
-                <th className="px-3 py-2 text-center">W</th>
-                <th className="px-3 py-2 text-center">L</th>
-                <th className="px-3 py-2 text-center">Pts</th>
+              <tr className="border-b border-neutral-100">
+                <Th className="w-10">#</Th>
+                <Th>Player</Th>
+                <Th className="text-center">P</Th>
+                <Th className="text-center">W</Th>
+                <Th className="text-center">L</Th>
+                <Th className="text-right">Pts</Th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-neutral-100">
               {standings.standings?.map((s) => (
-                <tr key={s.playerId} className={`border-t border-gray-50 ${s.qualified ? "bg-green-50" : ""}`}>
-                  <td className="px-3 py-2 text-gray-500">{s.rank}</td>
-                  <td className="px-3 py-2 font-medium text-gray-800">
-                    {s.playerName}
-                    {s.qualified && <span className="text-[9px] bg-green-500 text-white ml-1 px-1 py-0.5 rounded-full">Q</span>}
+                <tr
+                  key={s.playerId}
+                  className={`hover:bg-neutral-50/60 transition ${
+                    s.qualified ? "bg-emerald-50/40" : ""
+                  }`}
+                >
+                  <td className="px-4 py-2.5 font-mono tabular-nums text-[12px] text-neutral-500">
+                    {s.rank}
                   </td>
-                  <td className="px-3 py-2 text-center">{s.played}</td>
-                  <td className="px-3 py-2 text-center text-green-600">{s.won}</td>
-                  <td className="px-3 py-2 text-center text-red-500">{s.lost}</td>
-                  <td className="px-3 py-2 text-center font-bold text-orange-600">{s.totalPoints}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-medium text-neutral-900">
+                        {s.playerName}
+                      </span>
+                      {s.qualified && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+                          Q
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-neutral-700">
+                    {s.played}
+                  </td>
+                  <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-emerald-700">
+                    {s.won}
+                  </td>
+                  <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-rose-600">
+                    {s.lost}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums text-[14px] font-semibold text-neutral-900">
+                    {s.totalPoints}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -130,83 +254,51 @@ export default function GroupDetailPage() {
         </div>
       )}
 
-      {/* Matches */}
       {matchesLoading ? (
-        <div className="text-center py-8 text-gray-400">Loading matches...</div>
-      ) : matches.length > 0 ? (
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3">Matches ({matches.length})</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {matches.map((match, idx) => {
-              const isComp = match.status === "COMPLETED" || match.status === "completed";
-              const isLive = match.status === "IN_PROGRESS" || match.status === "in_progress";
-              const umpireName = match.referee?.name;
-              return (
-                <div key={match._id || idx} className="flex flex-col gap-0">
-                  <button
-                    onClick={() => navigate(`/tournament-management/match/${tournamentId}/${match._id}/score`, {
-                      state: { backTo: `/tournaments/${tournamentId}/groups/${groupId}` },
-                    })}
-                    className={`bg-white rounded-t-xl border p-4 text-left hover:shadow-md transition-all w-full ${
-                      isComp ? "border-green-200 bg-green-50/50" : isLive ? "border-yellow-200 bg-yellow-50/50" : "border-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">M{match.matchNumber}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isComp ? "bg-green-100 text-green-700" : isLive ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"
-                      }`}>{match.status?.replace(/_/g, " ").toUpperCase()}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-semibold text-sm text-gray-800">{match.player1?.userName || "P1"}</span>
-                      <span className="mx-2 text-gray-400 text-xs">vs</span>
-                      <span className="font-semibold text-sm text-gray-800">{match.player2?.userName || "P2"}</span>
-                    </div>
-                    {isComp && (() => { const { readMatchResult } = require("../../shared/utils/matchResultUtils"); const r = readMatchResult(match); return r?.completed ? (
-                      <div className="text-center mt-1 text-xs text-green-700 font-bold">
-                        {r.player1Score}-{r.player2Score}
-                      </div>
-                    ) : null; })()}
-                  </button>
-
-                  {/* Umpire status bar (sibling of the score button) */}
-                  <div className="bg-gray-50 border border-t-0 border-gray-100 rounded-b-xl px-3 py-2 flex items-center justify-between">
-                    {umpireName ? (
-                      <>
-                        <span className="flex items-center gap-1.5 text-xs text-gray-600">
-                          <Shield className="w-3.5 h-3.5 text-blue-500" />
-                          <span className="font-semibold">Umpire:</span>
-                          <span className="text-gray-800">{umpireName}</span>
-                        </span>
-                        <span className="text-[10px] text-gray-400">assigned</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                          <Shield className="w-3.5 h-3.5 text-gray-300" />
-                          <span>No umpire</span>
-                        </span>
-                        {!isComp && (
-                          <button
-                            onClick={() => setAssignModalMatch(match)}
-                            className="flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-700 px-2 py-0.5 rounded hover:bg-orange-50 w-auto"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            Assign
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="bg-white border border-neutral-200 rounded-2xl p-12 text-center text-[13px] text-neutral-400">
+          Loading matches…
         </div>
+      ) : matches.length > 0 ? (
+        <section>
+          <div className="flex items-end justify-between mb-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+              Matches
+              <span className="ml-2 font-mono tabular-nums text-neutral-500">
+                {matches.length}
+              </span>
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {matches.map((match, idx) => (
+              <MatchCard
+                key={match._id || idx}
+                match={match}
+                onScore={() =>
+                  navigate(
+                    `/tournament-management/match/${tournamentId}/${match._id}/score`,
+                    {
+                      state: {
+                        backTo: `/tournaments/${tournamentId}/groups/${groupId}`,
+                      },
+                    }
+                  )
+                }
+                onAssign={() => setAssignModalMatch(match)}
+              />
+            ))}
+          </div>
+        </section>
       ) : (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <Flag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No matches generated yet</p>
+        <div className="bg-white border border-neutral-200 rounded-2xl px-6 py-14 text-center">
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center mb-3">
+            <Flag className="w-5 h-5 text-neutral-400" />
+          </div>
+          <h3 className="text-[14px] font-semibold text-neutral-900">
+            No matches generated yet
+          </h3>
+          <p className="text-[13px] text-neutral-500 mt-1">
+            Use “Generate matches” above to create the round-robin schedule.
+          </p>
         </div>
       )}
 
@@ -215,12 +307,130 @@ export default function GroupDetailPage() {
         onClose={() => setAssignModalMatch(null)}
         matchId={assignModalMatch?._id}
         tournamentId={tournamentId}
-        matchLabel={assignModalMatch ? `M${assignModalMatch.matchNumber} • ${assignModalMatch.player1?.userName || "P1"} vs ${assignModalMatch.player2?.userName || "P2"}` : ""}
+        matchLabel={
+          assignModalMatch
+            ? `M${assignModalMatch.matchNumber} · ${
+                assignModalMatch.player1?.userName || "P1"
+              } vs ${assignModalMatch.player2?.userName || "P2"}`
+            : ""
+        }
         onAssigned={() => {
-          queryClient.invalidateQueries({ queryKey: keys.groupMatches(tournamentId, groupId) });
+          queryClient.invalidateQueries({
+            queryKey: keys.groupMatches(tournamentId, groupId),
+          });
           toast.success("Umpire assigned. Awaiting their response.");
         }}
       />
     </div>
+  );
+}
+
+function MatchCard({ match, onScore, onAssign }) {
+  const isComp =
+    match.status === "COMPLETED" || match.status === "completed";
+  const isLive =
+    match.status === "IN_PROGRESS" || match.status === "in_progress";
+  const result = isComp ? readMatchResult(match) : null;
+  const umpireName = match.referee?.name;
+
+  return (
+    <div
+      className={`bg-white border rounded-2xl overflow-hidden transition ${
+        isComp
+          ? "border-emerald-200"
+          : isLive
+          ? "border-emerald-300"
+          : "border-neutral-200"
+      }`}
+    >
+      <button
+        onClick={onScore}
+        className="w-full p-4 text-left hover:bg-neutral-50/60 transition"
+      >
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="font-mono tabular-nums text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded">
+            M{match.matchNumber}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+              isComp
+                ? "bg-emerald-50 text-emerald-700"
+                : isLive
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-neutral-100 text-neutral-500"
+            }`}
+          >
+            {isLive && (
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+                <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              </span>
+            )}
+            {isComp ? "Done" : isLive ? "Live" : "Pending"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] font-semibold text-neutral-900 truncate">
+            {match.player1?.userName || "P1"}
+          </span>
+          {result?.completed ? (
+            <span className="font-mono tabular-nums text-[14px] font-semibold text-neutral-900 px-2">
+              {result.player1Score}–{result.player2Score}
+            </span>
+          ) : (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-300 px-2">
+              vs
+            </span>
+          )}
+          <span className="text-[13px] font-semibold text-neutral-900 truncate text-right">
+            {match.player2?.userName || "P2"}
+          </span>
+        </div>
+      </button>
+      <div className="border-t border-neutral-100 px-3 py-2 flex items-center justify-between bg-neutral-50/40">
+        {umpireName ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-600">
+              <Shield className="w-3 h-3" style={{ color: SIG }} />
+              <span className="font-medium">Umpire</span>
+              <span className="text-neutral-900">{umpireName}</span>
+            </span>
+            <span className="text-[10px] uppercase tracking-wider text-neutral-400">
+              Assigned
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-500">
+              <Shield className="w-3 h-3 text-neutral-300" />
+              <span>No umpire</span>
+            </span>
+            {!isComp && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAssign?.();
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold transition"
+                style={{ color: SIG }}
+              >
+                <UserPlus className="w-3 h-3" />
+                Assign
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Th({ children, className = "" }) {
+  return (
+    <th
+      className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400 ${className}`}
+    >
+      {children}
+    </th>
   );
 }

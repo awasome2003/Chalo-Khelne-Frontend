@@ -1,34 +1,35 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Bell,
-  Menu,
-  Plus,
-  LogOut,
-  User,
-  ChevronDown
+  Bell, Menu, LogOut, ChevronDown, Search,
 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 import { AuthContext } from "../context/AuthContext";
-import MCreateTournament from "./MCreateTournament";
+
+const SIG = "#5E6AD2";
 
 const Navbar = ({ toggleSidebar }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const dropdownRef = useRef(null);
   const { logout, auth } = useContext(AuthContext);
   const { unreadCount, markAllRead } = useNotifications();
   const navigate = useNavigate();
-  const role = auth?.role?.toLowerCase() || "player";
-  // Close dropdown when clicking outside
+  const role = auth?.role?.toLowerCase() || "manager";
+  const roleLabel =
+    role === "manager"
+      ? "Manager"
+      : role === "corporate_admin"
+      ? "Corporate"
+      : role.replace(/_/g, " ");
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsProfileOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleLogout = () => {
@@ -36,122 +37,122 @@ const Navbar = ({ toggleSidebar }) => {
     navigate("/");
   };
 
+  const homePath =
+    auth?.role === "corporate_admin" ? "/corporate-dashboard" : "/mdashboard";
+
   return (
-    <>
-      <header className="h-20 bg-white border-b border-gray-100 px-6 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-        {/* Left: Logo & Mobile Menu */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggleSidebar}
-            className="md:hidden p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-          >
-            <Menu size={24} />
-          </button>
+    <header className="h-14 bg-white border-b border-neutral-200 px-4 flex items-center justify-between sticky top-0 z-40">
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          onClick={toggleSidebar}
+          className="md:hidden h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-neutral-100 text-neutral-700"
+          aria-label="Open menu"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
 
-          <Link
-            to={auth?.role === 'corporate_admin' ? "/corporate-dashboard" : "/mdashboard"}
-            className="flex items-center gap-2"
-          >
-            <img
-              src="/sportapp_logo.png"
-              alt="Logo"
-              className="h-10 w-auto object-contain"
-            />
-          </Link>
+        <Link to={homePath} className="flex items-center gap-2 flex-shrink-0">
+          <img
+            src="/sportapp_logo.png"
+            alt="ChaloKhelne"
+            className="h-7 w-auto object-contain"
+          />
+        </Link>
+
+        <span className="hidden md:inline-flex items-center h-6 px-1.5 rounded text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-600 bg-neutral-100">
+          {roleLabel}
+        </span>
+      </div>
+
+      <div className="hidden md:flex flex-1 max-w-md mx-6">
+        <div
+          role="button"
+          tabIndex={0}
+          className="w-full h-8 inline-flex items-center gap-2 px-2.5 rounded-lg bg-neutral-100 hover:bg-neutral-200/60 transition cursor-pointer"
+          aria-label="Search (Cmd+K)"
+        >
+          <Search className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+          <span className="flex-1 text-[12px] text-neutral-500 text-left">
+            Search venues, tournaments, players…
+          </span>
+          <span className="font-mono text-[10px] text-neutral-500 bg-white border border-neutral-200 rounded px-1 py-px">
+            ⌘K
+          </span>
         </div>
+      </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-4 md:gap-6">
+      <div className="flex items-center gap-1">
+        <button
+          className="md:hidden h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-neutral-100 text-neutral-700"
+          aria-label="Search"
+        >
+          <Search className="w-4 h-4" />
+        </button>
 
-          {/* Create Tournament Button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="hidden md:flex items-center gap-2 bg-[#FF5B04] hover:bg-[#E04F00] text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg shadow-orange-500/20 active:scale-95"
-          >
-            <Plus size={18} />
-            <span>Create Tournament</span>
-          </button>
-
-          {/* Mobile Create Button (Icon only) */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="md:hidden flex items-center justify-center bg-[#FF5B04] text-white w-10 h-10 rounded-full shadow-md active:scale-95"
-          >
-            <Plus size={20} />
-          </button>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-
-          {/* Notifications */}
-          <button
-            onClick={() => { navigate("/notification"); markAllRead(); }}
-            className="relative p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
-          >
-            <Bell size={22} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* User Profile */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-200"
+        <button
+          onClick={() => {
+            navigate("/notification");
+            markAllRead();
+          }}
+          className="relative h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-neutral-100 text-neutral-700 transition"
+          aria-label="Notifications"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 inline-flex items-center justify-center font-mono tabular-nums text-[9px] font-semibold rounded-full text-white border border-white"
+              style={{ backgroundColor: SIG }}
             >
-              <div className="w-9 h-9 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center text-gray-600 border border-white shadow-sm ring-1 ring-gray-100">
-                <User size={18} />
-              </div>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-semibold text-gray-900 leading-none">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        <div className="relative ml-1" ref={dropdownRef}>
+          <button
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="flex items-center gap-2 h-8 pl-1 pr-2 rounded-md hover:bg-neutral-100 transition"
+          >
+            <div className="w-6 h-6 rounded-full bg-neutral-100 inline-flex items-center justify-center text-[11px] font-semibold text-neutral-700 border border-neutral-200">
+              {(auth?.name || "M").charAt(0).toUpperCase()}
+            </div>
+            <span className="hidden md:inline text-[12px] font-medium text-neutral-900 max-w-[140px] truncate">
+              {auth?.name || "Manager"}
+            </span>
+            <ChevronDown
+              className={`w-3 h-3 text-neutral-400 transition-transform ${
+                isProfileOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {isProfileOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-xl border border-neutral-200 shadow-[0_12px_32px_rgba(0,0,0,0.10)] overflow-hidden z-50">
+              <div className="px-3 py-2.5 border-b border-neutral-100">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-0.5">
+                  Signed in as
+                </p>
+                <p className="text-[13px] font-medium text-neutral-900 truncate">
                   {auth?.name || "Manager"}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">{role || "Manager"}</p>
+                <p className="text-[12px] text-neutral-500 truncate">
+                  {auth?.email || "manager@example.com"}
+                </p>
               </div>
-              <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isProfileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-4 border-b border-gray-50">
-                  <p className="font-semibold text-gray-900">Signed in as</p>
-                  <p className="text-sm text-gray-500 truncate">{auth?.email || "manager@example.com"}</p>
-                </div>
-                <div className="p-2">
-                  {/* <button
-                    onClick={() => {
-                      navigate("/profile");
-                      setIsProfileOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors text-left"
-                  >
-                    <User size={16} className="text-gray-400" />
-                    My Profile
-                  </button> */}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
-                  >
-                    <LogOut size={16} className="text-red-500" />
-                    Sign Out
-                  </button>
-                </div>
+              <div className="p-1">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 h-8 px-2.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 rounded-md transition text-left"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign out
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </header>
-
-      {/* Create Tournament Modal */}
-      <MCreateTournament
-        showPopup={showCreateModal}
-        setShowPopup={setShowCreateModal}
-      />
-    </>
+      </div>
+    </header>
   );
 };
 

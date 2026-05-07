@@ -1,92 +1,66 @@
-import { toast } from "react-toastify";
-// TournamentList.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 import { QRCodeCanvas } from "qrcode.react";
 import {
-  Edit2,
-  Trash2,
-  Share2,
-  X,
-  Trophy,
-  Calendar,
-  MapPin,
-  Clock,
-  Users,
-  Plus,
-  Type,
-  Image as ImageIcon,
-  DollarSign,
-  AlignLeft,
-  CheckCircle,
-  AlertCircle,
-  QrCode,
-  UserPlus,
-  Lock,
-  Shield,
-  ChevronDown,
-  Target,
+  Edit2, Trash2, Share2, X, Trophy, Calendar, MapPin, Users, Plus,
+  QrCode, UserPlus, Lock, Target, Search, Download, LayoutGrid,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import MCreateTournament from "./MCreateTournament";
 import {
-  getSportName,
-  getTournamentType,
-  getCategories,
-  getQualifyPerGroup,
-  getGroupStageFormat,
-  getKnockoutFormat,
-  getCurrentStage,
+  getSportName, getTournamentType, getKnockoutFormat, getCurrentStage,
 } from "../utils/sportTrack";
+
+const SIG = "#5E6AD2";
+
+const STAGE_PILL = {
+  group_stage: { bg: "bg-neutral-100", text: "text-neutral-700", label: "Group stage" },
+  group_completed: { bg: "bg-amber-50", text: "text-amber-700", label: "Groups done" },
+  knockout: { bg: "bg-neutral-900", text: "text-white", label: "Knockout" },
+  completed: { bg: "bg-emerald-50", text: "text-emerald-700", label: "Completed" },
+};
 
 const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
   const { user } = useContext(AuthContext);
-  const [tournaments, setTournaments] = useState([]);
-  const [activeTab, setActiveTab] = useState("Live"); // Live, Upcoming, History
-  const [displayData, setDisplayData] = useState([]);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTournament, setEditingTournament] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
-  const [editImage, setEditImage] = useState(null);
-  const [editImageFile, setEditImageFile] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const [tournaments, setTournaments] = useState([]);
+  const [activeTab, setActiveTab] = useState("Live");
+  const [search, setSearch] = useState("");
+  const [displayData, setDisplayData] = useState([]);
 
-  // Sports & Rules state (for edit modal)
-  const [sportsList, setSportsList] = useState([]);
-  const [availableLevels, setAvailableLevels] = useState([]);
-  const [sportRules, setSportRules] = useState(null);
-  const [loadingRules, setLoadingRules] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingTournament, setEditingTournament] = useState(null);
+
+  const [showFlowChooser, setShowFlowChooser] = useState(false);
+  const [flowChooserTournamentId, setFlowChooserTournamentId] = useState(null);
+
+  const [showQRCodeModal, setShowQRCodeModal] = useState(false);
+  const [qrCodeTournament, setQrCodeTournament] = useState(null);
+
+  const fetchTournaments = async () => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      const managerId = u?._id;
+      if (!managerId) {
+        setTournaments([]);
+        return;
+      }
+      const response = await axios.get(`/api/tournaments/manager/${managerId}`);
+      setTournaments(response.data.tournaments || []);
+    } catch (error) {
+      console.error("Error fetching tournaments:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        const managerId = user?._id;
-
-        if (!managerId) {
-          setTournaments([]);
-          return;
-        }
-
-        const response = await axios.get(`/api/tournaments/manager/${managerId}`);
-        const data = response.data.tournaments || [];
-        setTournaments(data);
-      } catch (error) {
-        console.error("Error fetching tournaments:", error);
-      }
-    };
-
     fetchTournaments();
   }, []);
 
   useEffect(() => {
     if (tournaments.length > 0 && !selectedTournament) {
-      onTournamentSelect(tournaments[0]._id);
+      onTournamentSelect?.(tournaments[0]._id);
     }
   }, [tournaments, selectedTournament, onTournamentSelect]);
 
@@ -94,116 +68,66 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let filtered = tournaments.filter(tournament => {
-      if (!tournament.startDate) return false;
-
-      const start = new Date(tournament.startDate);
+    let filtered = tournaments.filter((t) => {
+      if (!t.startDate) return false;
+      const start = new Date(t.startDate);
       start.setHours(0, 0, 0, 0);
-
-      const end = tournament.endDate ? new Date(tournament.endDate) : new Date(tournament.startDate);
+      const end = t.endDate ? new Date(t.endDate) : new Date(t.startDate);
       end.setHours(23, 59, 59, 999);
 
-      if (activeTab === "Live") {
-        return start <= today && end >= today;
-      } else if (activeTab === "Upcoming") {
-        return start > today;
-      } else if (activeTab === "History") {
-        return end < today;
-      }
+      if (activeTab === "Live") return start <= today && end >= today;
+      if (activeTab === "Upcoming") return start > today;
+      if (activeTab === "History") return end < today;
       return false;
     });
 
-    // Sorting logic
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.startDate);
-      const dateB = new Date(b.startDate);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      filtered = filtered.filter((t) =>
+        (t.title || "").toLowerCase().includes(q) ||
+        (getSportName(t) || "").toLowerCase().includes(q)
+      );
+    }
 
-      if (activeTab === "Upcoming") {
-        return dateA - dateB; // Show soonest upcoming first
-      } else {
-        return dateB - dateA; // Show most recent first (Live or History)
-      }
+    filtered.sort((a, b) => {
+      const da = new Date(a.startDate);
+      const db = new Date(b.startDate);
+      return activeTab === "Upcoming" ? da - db : db - da;
     });
 
     setDisplayData(filtered);
-  }, [activeTab, tournaments]);
+  }, [activeTab, tournaments, search]);
 
-  // Fetch active sports on mount
-  useEffect(() => {
-    const fetchSports = async () => {
-      try {
-        const res = await axios.get("/api/sports/active");
-        setSportsList(res.data.data || res.data || []);
-      } catch (err) {
-        console.error("Failed to fetch sports:", err);
-      }
-    };
-    fetchSports();
-  }, []);
-
-  // When sport changes in edit form, fetch available levels
-  useEffect(() => {
-    if (!editFormData.sportsType) {
-      setAvailableLevels([]);
-      setSportRules(null);
-      return;
-    }
-
-    const fetchLevels = async () => {
-      try {
-        const res = await axios.get(`/api/sport-rules/sport/${editFormData.sportsType}/levels`);
-        setAvailableLevels(res.data.data || []);
-      } catch (err) {
-        console.error("Failed to fetch levels:", err);
-        setAvailableLevels([]);
-      }
-    };
-    fetchLevels();
-  }, [editFormData.sportsType]);
-
-  // When both sport and level are selected, fetch locked rules
-  useEffect(() => {
-    if (!editFormData.sportsType || !editFormData.tournamentLevel) {
-      setSportRules(null);
-      return;
-    }
-
-    const fetchRules = async () => {
-      setLoadingRules(true);
-      try {
-        const res = await axios.get(
-          `/api/sport-rules/sport/${editFormData.sportsType}/${editFormData.tournamentLevel}`
-        );
-        setSportRules(res.data.data || null);
-      } catch (err) {
-        console.error("Failed to fetch rules:", err);
-        setSportRules(null);
-      } finally {
-        setLoadingRules(false);
-      }
-    };
-    fetchRules();
-  }, [editFormData.sportsType, editFormData.tournamentLevel]);
-
-  // Helper: render a rule value
-  const renderRuleValue = (val) => {
-    if (val === null || val === undefined) return null;
-    if (typeof val === "boolean") return val ? "Yes" : "No";
-    return val;
-  };
-
-  // Helper: format label from camelCase
-  const formatLabel = (key) => {
-    return key
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (s) => s.toUpperCase())
-      .trim();
+  const counts = {
+    Live: tournaments.filter((t) => {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const s = t.startDate ? new Date(t.startDate) : null;
+      const e = t.endDate ? new Date(t.endDate) : s;
+      if (!s) return false;
+      s.setHours(0, 0, 0, 0); e?.setHours(23, 59, 59, 999);
+      return s <= now && e >= now;
+    }).length,
+    Upcoming: tournaments.filter((t) => {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const s = t.startDate ? new Date(t.startDate) : null;
+      if (!s) return false;
+      s.setHours(0, 0, 0, 0);
+      return s > now;
+    }).length,
+    History: tournaments.filter((t) => {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const e = t.endDate ? new Date(t.endDate) : t.startDate ? new Date(t.startDate) : null;
+      if (!e) return false;
+      e.setHours(23, 59, 59, 999);
+      return e < now;
+    }).length,
   };
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`/api/tournaments/${id}`);
-      setTournaments(tournaments.filter((tournament) => tournament._id !== id));
+      setTournaments((prev) => prev.filter((t) => t._id !== id));
+      toast.success("Tournament deleted.");
     } catch (error) {
       console.error("Error deleting tournament:", error);
       toast.error("Failed to delete tournament");
@@ -212,232 +136,24 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
   const handleEditClick = async (tournamentId, e) => {
     e.stopPropagation();
-
     try {
       const response = await axios.get(`/api/tournaments/${tournamentId}`);
-      const tournamentData = response.data.tournament;
-
-      // STEP 17b.ii — load form fields from sports[0] (single-sport edit
-      // modal). type / sportName / categories / formats / qualifyPerGroup
-      // all read off the active sport-track. Multi-sport edit on the
-      // list page is out of scope for v1 (use Manager UI instead).
-      const tType = (getTournamentType(tournamentData) || "group stage").toLowerCase();
-      const _cats = getCategories(tournamentData);
-      const formData = {
-        title: tournamentData.title || "",
-        hasGroupStage: tType.includes("group stage"),
-        hasKnockout: tType.includes("knockout"),
-        sportsType: getSportName(tournamentData) || "",
-        description: tournamentData.description || "",
-        organizerName: tournamentData.organizerName || "",
-        cancellationPolicy: tournamentData.cancellationPolicy || "NO",
-        eventLocation: Array.isArray(tournamentData.eventLocation)
-          ? tournamentData.eventLocation.join(", ")
-          : tournamentData.eventLocation || "",
-        startDate: tournamentData.startDate ? tournamentData.startDate.split('T')[0] : "",
-        endDate: tournamentData.endDate ? tournamentData.endDate.split('T')[0] : "",
-        termsAndConditions: tournamentData.termsAndConditions || "",
-        tournamentLevel: tournamentData.tournamentLevel || "",
-        groupStageFormat: getGroupStageFormat(tournamentData) || "Singles",
-        knockoutFormat: getKnockoutFormat(tournamentData) || "Singles",
-        setsFormat: tournamentData.setFormat === 3 ? "bestOf3" :
-          tournamentData.setFormat === 5 ? "bestOf5" :
-            tournamentData.setFormat === 7 ? "bestOf7" : "",
-        category: _cats.length > 0 ? _cats : [{ name: "Open Category", fee: 0 }],
-        selectedTime: tournamentData.selectedTime || { startTime: "10:00", endTime: "18:00" },
-        numTeams: tournamentData.numTeams || "",
-        playerNoValue: tournamentData.playerNoValue || "2",
-        setNo: tournamentData.setNo || "3",
-        tournamentFee: tournamentData.tournamentFee || "0",
-        qualifyPerGroup: getQualifyPerGroup(tournamentData).toString()
-      };
-
-      setEditFormData(formData);
-      setEditingTournament(tournamentData);
-
-      if (tournamentData.tournamentLogo) {
-        setEditImage(`/uploads/tournaments/${tournamentData.tournamentLogo.split("\\").pop()}`);
-      } else {
-        setEditImage(null);
-      }
-
-      setShowEditModal(true);
+      setEditingTournament(response.data.tournament);
+      setShowCreate(true);
     } catch (error) {
       console.error("Error fetching tournament details:", error);
       toast.error("Failed to load tournament details");
     }
   };
 
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditFormData({
-      ...editFormData,
-      [name]: value,
-    });
-  };
-
-  const handleCategoryChange = (index, field, value) => {
-    const updatedCategories = [...editFormData.category];
-    updatedCategories[index][field] = field === "fee" ? Math.max(0, Number(value)) : value;
-    setEditFormData({ ...editFormData, category: updatedCategories });
-  };
-
-  const addCategory = () => {
-    setEditFormData({
-      ...editFormData,
-      category: [...editFormData.category, { name: "", fee: 0 }],
-    });
-  };
-
-  const handleTimeChange = (field, value) => {
-    setEditFormData({
-      ...editFormData,
-      selectedTime: {
-        ...editFormData.selectedTime,
-        [field]: value,
-      },
-    });
-  };
-
-  const handleEditImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setEditImageFile(file);
-      setEditImage(URL.createObjectURL(file));
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      // Compute tournament type from checkboxes
-      const tournamentType = editFormData.hasGroupStage && editFormData.hasKnockout
-        ? "knockout + group stage"
-        : editFormData.hasKnockout
-          ? "knockout"
-          : editFormData.hasGroupStage
-            ? "group stage"
-            : "";
-
-      if (!editFormData.title || !tournamentType || !editFormData.sportsType) {
-        setError("Title, Type, and Sports Type are required");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const tournamentFormData = new FormData();
-
-      if (editImageFile) {
-        tournamentFormData.append("tournamentLogo", editImageFile);
-      }
-
-      tournamentFormData.append("title", editFormData.title.trim());
-      tournamentFormData.append("type", tournamentType);
-      tournamentFormData.append("sportsType", editFormData.sportsType);
-      tournamentFormData.append("description", editFormData.description || "");
-      tournamentFormData.append("organizerName", editFormData.organizerName || "");
-      tournamentFormData.append("cancellationPolicy", editFormData.cancellationPolicy || "NO");
-      tournamentFormData.append("termsAndConditions", editFormData.termsAndConditions || "");
-
-      // Tournament level
-      if (editFormData.tournamentLevel) {
-        tournamentFormData.append("tournamentLevel", editFormData.tournamentLevel);
-      }
-
-      tournamentFormData.append("numTeams", editFormData.numTeams || "0");
-      tournamentFormData.append("playerNoValue", editFormData.playerNoValue || "2");
-      tournamentFormData.append("setNo", editFormData.setNo || "3");
-      tournamentFormData.append("tournamentFee", editFormData.tournamentFee || "0");
-
-      if (editFormData.setsFormat) {
-        tournamentFormData.append("setsFormat", editFormData.setsFormat);
-      }
-
-      // Per-stage play formats
-      if (editFormData.hasGroupStage) {
-        tournamentFormData.append("groupStageFormat", editFormData.groupStageFormat);
-      }
-      if (editFormData.hasKnockout) {
-        tournamentFormData.append("knockoutFormat", editFormData.knockoutFormat);
-      }
-
-      // Qualify per group (for combined tournaments)
-      if (editFormData.hasGroupStage && editFormData.hasKnockout) {
-        tournamentFormData.append("qualifyPerGroup", editFormData.qualifyPerGroup || "2");
-      }
-
-      if (editFormData.startDate)
-        tournamentFormData.append("startDate", editFormData.startDate);
-      if (editFormData.endDate)
-        tournamentFormData.append("endDate", editFormData.endDate);
-
-      if (editFormData.selectedTime) {
-        tournamentFormData.append("selectedTime", JSON.stringify(editFormData.selectedTime));
-      }
-
-      if (editFormData.category && Array.isArray(editFormData.category)) {
-        tournamentFormData.append("category", JSON.stringify(editFormData.category));
-      }
-
-      if (editFormData.eventLocation) {
-        tournamentFormData.append("eventLocation", editFormData.eventLocation);
-      }
-
-      const response = await axios.put(
-        `/api/tournaments/edit/${editingTournament._id}`,
-        tournamentFormData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      const updatedTournaments = tournaments.map(tournament =>
-        tournament._id === editingTournament._id
-          ? { ...tournament, ...response.data.tournament }
-          : tournament
-      );
-      setTournaments(updatedTournaments);
-
-      setSuccess("Tournament updated successfully!");
-      setTimeout(() => {
-        setShowEditModal(false);
-        setEditImage(null);
-        setEditImageFile(null);
-        setSuccess("");
-      }, 1500);
-
-    } catch (error) {
-      console.error("Error updating tournament:", error);
-      setError(error.response?.data?.message || "Failed to update tournament");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleShareClick = (tournament, e) => {
     e.stopPropagation();
     const shareLink = `${window.location.origin}/tournament/${tournament._id}`;
-    navigator.clipboard.writeText(shareLink)
-      .then(() => toast.info(`Tournament link copied to clipboard!\n\n${shareLink}`))
-      .catch(err => {
-        console.error('Failed to copy: ', err);
-        toast.info(`Share this tournament link:\n\n${shareLink}`);
-      });
+    navigator.clipboard
+      .writeText(shareLink)
+      .then(() => toast.success("Link copied to clipboard"))
+      .catch(() => toast.info(`Share link:\n${shareLink}`));
   };
-
-  // Flow chooser for combined tournaments
-  const [showFlowChooser, setShowFlowChooser] = useState(false);
-  const [flowChooserTournamentId, setFlowChooserTournamentId] = useState(null);
-
-  const [showQRCodeModal, setShowQRCodeModal] = useState(false);
-  const [qrCodeTournament, setQrCodeTournament] = useState(null);
 
   const handleQRCodeClick = (tournament, e) => {
     e.stopPropagation();
@@ -447,355 +163,453 @@ const TournamentList = ({ onTournamentSelect, selectedTournament }) => {
 
   const downloadQRCode = () => {
     const canvas = document.getElementById("qr-code-canvas");
-    if (canvas) {
-      const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-      let downloadLink = document.createElement("a");
-      downloadLink.href = pngUrl;
-      downloadLink.download = `tournament_qr_${qrCodeTournament._id}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+    if (!canvas) return;
+    const url = canvas
+      .toDataURL("image/png")
+      .replace("image/png", "image/octet-stream");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tournament_qr_${qrCodeTournament._id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const openTournament = (tournament) => {
+    onTournamentSelect?.(tournament._id);
+    const t = (getTournamentType(tournament) || "").toLowerCase();
+    if (t.includes("group stage") && t.includes("knockout")) {
+      setFlowChooserTournamentId(tournament._id);
+      setShowFlowChooser(true);
+    } else if (t.includes("group stage")) {
+      navigate(`/tournament-management/group-stage?tournamentId=${tournament._id}`);
+    } else if (t.includes("knockout")) {
+      const kf = (getKnockoutFormat(tournament) || "").toLowerCase();
+      if (kf.includes("team") || kf.includes("davis")) {
+        navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
+      } else {
+        navigate(`/tournament-management/direct-knockout?tournamentId=${tournament._id}`);
+      }
+    } else {
+      navigate(`/tournaments/${tournament._id}`);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Header & Tabs */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <h5 className="mb-4 text-xl font-bold text-gray-900 tracking-tight">Your Tournaments</h5>
-        <div className="flex bg-gray-100/50 p-1 rounded-xl">
+    <div className="p-6 max-w-[1320px] mx-auto">
+      <div className="flex items-end justify-between gap-3 flex-wrap mb-5">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1.5">
+            Tournaments
+          </p>
+          <h1 className="text-[28px] leading-[1.1] font-semibold tracking-tight text-neutral-950">
+            Your tournaments
+          </h1>
+        </div>
+        <button
+          onClick={() => {
+            setEditingTournament(null);
+            setShowCreate(true);
+          }}
+          className="h-9 px-3.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white rounded-lg transition active:scale-[0.98]"
+          style={{ backgroundColor: SIG }}
+        >
+          <Plus className="w-4 h-4" />
+          New tournament
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <div className="flex items-center gap-1 bg-neutral-100 p-0.5 rounded-lg">
           {["Live", "Upcoming", "History"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === tab
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/50"
-                }`}
+              className={`h-7 px-3 inline-flex items-center gap-1.5 rounded-md text-[12px] font-medium transition ${
+                activeTab === tab
+                  ? "bg-white text-neutral-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                  : "text-neutral-500 hover:text-neutral-900"
+              }`}
             >
               {tab}
+              <span className="font-mono tabular-nums text-[10px] text-neutral-500">
+                {counts[tab]}
+              </span>
             </button>
           ))}
         </div>
+        <div className="relative flex-1 min-w-[240px] max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tournaments"
+            className="w-full h-8 pl-8 pr-3 border border-neutral-200 rounded-lg text-[12px] bg-white focus:outline-none focus:border-[var(--sig)] focus:ring-2 focus:ring-[var(--sig-tint)]"
+            style={{ "--sig": SIG, "--sig-tint": "rgba(94,106,210,0.15)" }}
+          />
+        </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-        {displayData.length > 0 ? (
-          displayData.map((tournament) => (
-            <div
+      {displayData.length === 0 ? (
+        <div className="bg-white border border-neutral-200 rounded-2xl px-6 py-16 text-center">
+          <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center mb-3">
+            <Trophy className="w-5 h-5 text-neutral-400" />
+          </div>
+          <h3 className="text-[14px] font-semibold text-neutral-900">
+            No {activeTab.toLowerCase()} tournaments
+          </h3>
+          <p className="text-[13px] text-neutral-500 mt-1 max-w-md mx-auto">
+            {activeTab === "Live"
+              ? "No tournaments are running right now."
+              : activeTab === "Upcoming"
+              ? "Create a tournament to see it here."
+              : "Past tournaments will appear here once they end."}
+          </p>
+          <button
+            onClick={() => {
+              setEditingTournament(null);
+              setShowCreate(true);
+            }}
+            className="mt-4 h-8 px-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-white rounded-lg transition"
+            style={{ backgroundColor: SIG }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New tournament
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {displayData.map((tournament) => (
+            <TournamentCard
               key={tournament._id}
-              className={`group relative p-4 rounded-xl border transition-all duration-200 cursor-pointer ${selectedTournament === tournament._id
-                ? "bg-orange-50/50 border-orange-200 shadow-md ring-1 ring-orange-100"
-                : "bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md"
-                }`}
-              onClick={() => {
-                onTournamentSelect(tournament._id);
-                // STEP 17b.ii — read tournament type / knockoutFormat per
-                // sports[0]. List view has no sport-switcher; sports[0]
-                // is the headline.
-                const t = (getTournamentType(tournament) || "").toLowerCase();
-                if (t.includes("group stage") && t.includes("knockout")) {
-                  // Combined tournament: show flow chooser
-                  setFlowChooserTournamentId(tournament._id);
-                  setShowFlowChooser(true);
-                } else if (t.includes("group stage")) {
-                  navigate(`/tournament-management/group-stage?tournamentId=${tournament._id}`);
-                } else if (t.includes("knockout")) {
-                  // Check if it's Davis Cup / team knockout or singles knockout
-                  const kf = (getKnockoutFormat(tournament) || "").toLowerCase();
-                  if (kf.includes("team") || kf.includes("davis")) {
-                    navigate(`/tournament-management/team-knockouts?tournamentId=${tournament._id}`);
-                  } else {
-                    navigate(`/tournament-management/direct-knockout?tournamentId=${tournament._id}`);
-                  }
-                } else {
-                  onTournamentSelect(tournament._id);
+              tournament={tournament}
+              isSelected={selectedTournament === tournament._id}
+              onOpen={() => openTournament(tournament)}
+              onEdit={(e) => handleEditClick(tournament._id, e)}
+              onShare={(e) => handleShareClick(tournament, e)}
+              onQR={(e) => handleQRCodeClick(tournament, e)}
+              onDelete={(e) => {
+                e.stopPropagation();
+                if (window.confirm("Delete this tournament?")) {
+                  handleDelete(tournament._id);
                 }
               }}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedTournament === tournament._id
-                    ? "bg-orange-100 text-orange-600"
-                    : "bg-gray-100 text-gray-500"
-                    }`}>
-                    {(() => {
-                      const _t = getTournamentType(tournament);
-                      return _t === "knockout + group stage" ? "Group + Knockout" : _t;
-                    })()}
-                  </span>
-                  {tournament.isPrivate && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> Private
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                  {user?.isCorporate && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/invite-employees?tournamentId=${tournament._id}`);
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                      title="Invite Employees"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                    </button>
-                  )}
-                  {tournament.isPrivate && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/bulk-booking?tournamentId=${tournament._id}`);
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Bulk Register Players"
-                    >
-                      <Users className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => handleEditClick(tournament._id, e)}
-                    className="p-1.5 text-gray-500 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleQRCodeClick(tournament, e)}
-                    className="p-1.5 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
-                    title="QR Code"
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleShareClick(tournament, e)}
-                    className="p-1.5 text-gray-500 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
-                    title="Share Link"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
+              onInvite={
+                user?.isCorporate
+                  ? (e) => {
                       e.stopPropagation();
-                      if (window.confirm("Are you sure you want to delete this tournament?")) {
-                        handleDelete(tournament._id);
-                      }
-                    }}
-                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+                      navigate(`/invite-employees?tournamentId=${tournament._id}`);
+                    }
+                  : null
+              }
+              onBulkRegister={
+                tournament.isPrivate
+                  ? (e) => {
+                      e.stopPropagation();
+                      navigate(`/bulk-booking?tournamentId=${tournament._id}`);
+                    }
+                  : null
+              }
+              onCourts={(e) => {
+                e.stopPropagation();
+                navigate(`/tournaments/${tournament._id}/courts`);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-              <h3 className={`text-base font-bold mb-2 truncate ${selectedTournament === tournament._id
-                ? "text-gray-900"
-                : "text-gray-800"
-                }`}>
-                {tournament.title}
-              </h3>
-
-              <div className="space-y-1.5">
-                <div className={`text-xs flex items-center gap-2 ${selectedTournament === tournament._id ? "text-gray-900/80" : "text-gray-500"}`}>
-                  <Trophy className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>{getSportName(tournament) || "Sport"}</span>
-                </div>
-                {tournament.eventLocation && (
-                  <div className="text-xs flex items-center gap-2 text-gray-400">
-                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="truncate">{typeof tournament.eventLocation === "string" ? tournament.eventLocation : Array.isArray(tournament.eventLocation) ? tournament.eventLocation[0] : ""}</span>
-                  </div>
-                )}
-                {tournament.startDate && (
-                  <div className="text-xs flex items-center gap-2 text-gray-400">
-                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>
-                      {new Date(tournament.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      {tournament.endDate && tournament.endDate !== tournament.startDate && ` – ${new Date(tournament.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                    </span>
-                    {tournament.participants?.length > 0 && (
-                      <>
-                        <span className="text-gray-300">·</span>
-                        <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>{tournament.participants.length} players</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Current Stage Badge — STEP 17b.ii: per-sport (sports[0]) */}
-              {(() => {
-                const _stage = getCurrentStage(tournament);
-                return _stage && _stage !== "registration" && (
-                <div className="mt-2">
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide ${
-                    _stage === "group_stage"
-                      ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                      : _stage === "group_completed"
-                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : _stage === "knockout"
-                      ? "bg-orange-50 text-orange-600 border border-orange-200"
-                      : _stage === "completed"
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-gray-800 text-gray-500 border border-gray-700"
-                  }`}>
-                    {_stage === "group_stage" ? "Group Stage"
-                      : _stage === "group_completed" ? "Groups Done"
-                      : _stage === "knockout" ? "Knockout"
-                      : _stage === "completed" ? "Completed"
-                      : _stage.replace(/_/g, " ")}
-                  </span>
-                </div>
-                );
-              })()}
-            </div>
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center h-48 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
-              <Trophy className="w-7 h-7 text-orange-300" />
-            </div>
-            <p className="text-sm font-bold text-gray-700">No {activeTab.toLowerCase()} tournaments</p>
-            <p className="text-xs text-gray-400 mt-1">{activeTab === "Live" ? "No tournaments are currently active" : activeTab === "Upcoming" ? "Create a tournament to see it here" : "Past tournaments will appear here"}</p>
-          </div>
-        )}
-      </div>
-
-      {/* QR Code Modal */}
       {showQRCodeModal && qrCodeTournament && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
-            <div className="flex justify-end">
-              <button onClick={() => setShowQRCodeModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Booking QR Code</h3>
-              <p className="text-sm text-gray-500">{qrCodeTournament.title}</p>
-            </div>
-
-            <div className="flex justify-center mb-6 bg-white p-4 rounded-xl shadow-none border border-gray-200">
-              <QRCodeCanvas
-                id="qr-code-canvas"
-                value={`intent://tournament/details/${qrCodeTournament._id}#Intent;scheme=chalokhelne;package=com.chalokhelne.app;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.chalokhelne.app;end`}
-                size={200}
-                level={"H"}
-                includeMargin={true}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tactical Intent</p>
-              <p className="text-[10px] text-mono text-gray-400 bg-gray-50 p-3 rounded-xl break-all border border-black/5 font-bold">
-                chalokhelne://tournament/details/{qrCodeTournament._id}
-              </p>
-            </div>
-
+        <Modal
+          title="Booking QR code"
+          subtitle={qrCodeTournament.title}
+          onClose={() => setShowQRCodeModal(false)}
+          footer={
             <button
               onClick={downloadQRCode}
-              className="w-full py-2.5 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition flex items-center justify-center gap-2"
+              className="w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold text-white rounded-lg transition active:scale-[0.98]"
+              style={{ backgroundColor: SIG }}
             >
-              <Share2 className="w-4 h-4" /> Download QR Code
+              <Download className="w-4 h-4" />
+              Download QR code
             </button>
+          }
+        >
+          <div className="flex justify-center mb-4 p-4 bg-white rounded-xl border border-neutral-200">
+            <QRCodeCanvas
+              id="qr-code-canvas"
+              value={`intent://tournament/details/${qrCodeTournament._id}#Intent;scheme=chalokhelne;package=com.chalokhelne.app;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.chalokhelne.app;end`}
+              size={200}
+              level="H"
+              includeMargin
+            />
           </div>
-        </div>
-      )}
-
-      {/* Flow Chooser Modal for Combined Tournaments */}
-      {showFlowChooser && flowChooserTournamentId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Choose Stage</h3>
-              <button
-                onClick={() => setShowFlowChooser(false)}
-                className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">
-              This tournament has both Group Stage and Knockout phases. Select which stage you want to manage.
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1">
+              Deep link
             </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  setShowFlowChooser(false);
-                  navigate(`/tournament-management/group-stage?tournamentId=${flowChooserTournamentId}`);
-                }}
-                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-orange-200 bg-orange-50/50 hover:bg-orange-100 hover:border-orange-400 transition-all group"
-              >
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-orange-500" />
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-bold text-gray-900">Group Stage</p>
-                  <p className="text-xs text-orange-500/70">Manage groups, matches & player progression</p>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setShowFlowChooser(false);
-                  navigate(`/tournament-management/team-knockouts?tournamentId=${flowChooserTournamentId}`);
-                }}
-                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-orange-200 bg-orange-50/50 hover:bg-orange-100 hover:border-orange-400 transition-all group"
-              >
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Trophy className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-bold text-orange-900">Team Knockout</p>
-                  <p className="text-xs text-orange-600/70">Manage team knockout brackets & finals</p>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setShowFlowChooser(false);
-                  navigate(`/tournament-management/direct-knockout?tournamentId=${flowChooserTournamentId}`);
-                }}
-                className="flex items-center gap-4 p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400 transition-all group"
-              >
-                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Target className="w-6 h-6 text-emerald-600" />
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-bold text-emerald-900">Singles Knockout</p>
-                  <p className="text-xs text-emerald-600/70">Direct elimination bracket (16/32/64 draw)</p>
-                </div>
-              </button>
-            </div>
+            <p className="text-[11px] font-mono text-neutral-700 bg-neutral-50 border border-neutral-200 p-2.5 rounded-lg break-all">
+              chalokhelne://tournament/details/{qrCodeTournament._id}
+            </p>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* Edit Tournament — uses unified MCreateTournament in edit mode */}
-      <MCreateTournament
-        key={editingTournament?._id || "edit"}
-        showPopup={showEditModal}
-        setShowPopup={setShowEditModal}
-        mode="edit"
-        initialData={editingTournament}
-        onSuccess={() => {
-          // Refresh tournament list
-          const fetchTournaments = async () => {
-            try {
-              const user = JSON.parse(localStorage.getItem("user"));
-              const response = await axios.get(`/api/tournaments/manager/${user?._id}`);
-              setTournaments(response.data.tournaments || []);
-            } catch {}
-          };
-          fetchTournaments();
-        }}
-      />
+      {showFlowChooser && flowChooserTournamentId && (
+        <Modal
+          title="Choose a stage"
+          subtitle="This tournament has both Group Stage and Knockout phases. Pick which to manage."
+          onClose={() => setShowFlowChooser(false)}
+        >
+          <div className="space-y-2">
+            <FlowOption
+              icon={Users}
+              title="Group stage"
+              desc="Manage groups, matches, and progression"
+              onClick={() => {
+                setShowFlowChooser(false);
+                navigate(
+                  `/tournament-management/group-stage?tournamentId=${flowChooserTournamentId}`
+                );
+              }}
+            />
+            <FlowOption
+              icon={Trophy}
+              title="Team knockout"
+              desc="Team-based knockout brackets and finals"
+              onClick={() => {
+                setShowFlowChooser(false);
+                navigate(
+                  `/tournament-management/team-knockouts?tournamentId=${flowChooserTournamentId}`
+                );
+              }}
+            />
+            <FlowOption
+              icon={Target}
+              title="Singles knockout"
+              desc="Direct elimination bracket (16/32/64)"
+              onClick={() => {
+                setShowFlowChooser(false);
+                navigate(
+                  `/tournament-management/direct-knockout?tournamentId=${flowChooserTournamentId}`
+                );
+              }}
+            />
+          </div>
+        </Modal>
+      )}
 
-      {/* Old edit modal removed — MCreateTournament mode="edit" handles it */}
+      <MCreateTournament
+        key={editingTournament?._id || "create"}
+        showPopup={showCreate}
+        setShowPopup={setShowCreate}
+        mode={editingTournament ? "edit" : "create"}
+        initialData={editingTournament}
+        onSuccess={fetchTournaments}
+      />
     </div>
   );
 };
 
-
 export default TournamentList;
+
+function TournamentCard({
+  tournament,
+  isSelected,
+  onOpen,
+  onEdit,
+  onShare,
+  onQR,
+  onDelete,
+  onInvite,
+  onBulkRegister,
+  onCourts,
+}) {
+  const stage = getCurrentStage(tournament);
+  const stagePill = STAGE_PILL[stage];
+  const sport = getSportName(tournament) || "Sport";
+  const tType = getTournamentType(tournament);
+  const tTypeShort = tType === "knockout + group stage" ? "Group + KO" : tType;
+
+  const startDate = tournament.startDate ? new Date(tournament.startDate) : null;
+  const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+  const dateLabel = startDate
+    ? endDate && startDate.toDateString() !== endDate.toDateString()
+      ? `${startDate.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+        })} – ${endDate.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+        })}`
+      : startDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+    : "TBD";
+
+  const venue =
+    typeof tournament.eventLocation === "string"
+      ? tournament.eventLocation
+      : Array.isArray(tournament.eventLocation)
+      ? tournament.eventLocation[0]
+      : "";
+
+  return (
+    <div
+      onClick={onOpen}
+      className={`group relative bg-white border rounded-2xl p-4 cursor-pointer transition ${
+        isSelected
+          ? "border-transparent ring-2"
+          : "border-neutral-200 hover:border-neutral-300"
+      }`}
+      style={
+        isSelected
+          ? { "--tw-ring-color": SIG }
+          : undefined
+      }
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          {tTypeShort && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-700">
+              {tTypeShort}
+            </span>
+          )}
+          {tournament.isPrivate && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700">
+              <Lock className="w-2.5 h-2.5" />
+              Private
+            </span>
+          )}
+          {stagePill && (
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${stagePill.bg} ${stagePill.text}`}
+            >
+              {stagePill.label}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {onInvite && (
+            <IconButton onClick={onInvite} icon={UserPlus} title="Invite employees" />
+          )}
+          {onBulkRegister && (
+            <IconButton onClick={onBulkRegister} icon={Users} title="Bulk register" />
+          )}
+          {onCourts && (
+            <IconButton onClick={onCourts} icon={LayoutGrid} title="Courts" />
+          )}
+          <IconButton onClick={onEdit} icon={Edit2} title="Edit" />
+          <IconButton onClick={onQR} icon={QrCode} title="QR code" />
+          <IconButton onClick={onShare} icon={Share2} title="Share link" />
+          <IconButton onClick={onDelete} icon={Trash2} title="Delete" danger />
+        </div>
+      </div>
+
+      <h3 className="text-[15px] font-semibold text-neutral-950 truncate mb-2">
+        {tournament.title}
+      </h3>
+
+      <div className="space-y-1">
+        <Meta icon={Trophy}>{sport}</Meta>
+        {venue && <Meta icon={MapPin}>{venue}</Meta>}
+        <div className="flex items-center gap-3 text-[12px] text-neutral-500">
+          <span className="inline-flex items-center gap-1.5">
+            <Calendar className="w-3 h-3" />
+            <span className="font-mono tabular-nums">{dateLabel}</span>
+          </span>
+          {tournament.participants?.length > 0 && (
+            <>
+              <span className="text-neutral-300">·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="w-3 h-3" />
+                <span className="font-mono tabular-nums">
+                  {tournament.participants.length}
+                </span>
+                <span>players</span>
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Meta({ icon: Icon, children }) {
+  return (
+    <div className="text-[12px] text-neutral-500 inline-flex items-center gap-1.5">
+      <Icon className="w-3 h-3 flex-shrink-0" />
+      <span className="truncate">{children}</span>
+    </div>
+  );
+}
+
+function IconButton({ onClick, icon: Icon, title, danger = false }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`h-7 w-7 inline-flex items-center justify-center rounded-md transition ${
+        danger
+          ? "text-neutral-400 hover:text-rose-600 hover:bg-rose-50"
+          : "text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100"
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
+function Modal({ title, subtitle, onClose, children, footer }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl border border-neutral-200 shadow-[0_24px_64px_rgba(0,0,0,0.16)] max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between px-5 py-4 border-b border-neutral-100">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-neutral-950">{title}</p>
+            {subtitle && (
+              <p className="text-[12px] text-neutral-500 mt-0.5 truncate">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex-shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer && (
+          <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/60">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FlowOption({ icon: Icon, title, desc, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/60 transition text-left"
+    >
+      <div className="w-9 h-9 rounded-lg bg-neutral-100 inline-flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-neutral-700" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-neutral-950">{title}</p>
+        <p className="text-[12px] text-neutral-500">{desc}</p>
+      </div>
+    </button>
+  );
+}

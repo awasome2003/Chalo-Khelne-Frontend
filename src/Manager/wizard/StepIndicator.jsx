@@ -1,10 +1,8 @@
 import React, { Fragment } from "react";
 import { Check } from "lucide-react";
 
-// Pill-style step bar. Completed steps clickable; current/upcoming inert.
-// Connecting line: solid emerald between completed segments, dashed gray
-// for upcoming. Step count label always reflects steps.length (fixed count
-// per redesign — no more dynamic step insertion).
+const SIG = "#5E6AD2";
+
 export default function StepIndicator({ steps, currentStep, onStepClick }) {
   return (
     <div className="w-full">
@@ -14,17 +12,20 @@ export default function StepIndicator({ steps, currentStep, onStepClick }) {
           const isCurrent = idx === currentStep;
           const isClickable = isCompleted && typeof onStepClick === "function";
 
+          const circleStyle = isCurrent
+            ? { backgroundColor: SIG, color: "#FFFFFF" }
+            : undefined;
           const circleClass = isCompleted
             ? "bg-emerald-500 text-white"
             : isCurrent
-              ? "bg-orange-500 text-white"
-              : "border-2 border-gray-300 bg-white text-gray-400";
+            ? ""
+            : "border border-neutral-300 bg-white text-neutral-400";
 
           const labelClass = isCompleted
-            ? "text-emerald-600"
+            ? "text-emerald-700"
             : isCurrent
-              ? "text-orange-600"
-              : "text-gray-400";
+            ? "text-neutral-900"
+            : "text-neutral-400";
 
           return (
             <Fragment key={step.id}>
@@ -33,25 +34,30 @@ export default function StepIndicator({ steps, currentStep, onStepClick }) {
                 onClick={isClickable ? () => onStepClick(idx) : undefined}
                 disabled={!isClickable}
                 aria-current={isCurrent ? "step" : undefined}
-                className={`flex items-center gap-2 ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+                className={`flex items-center gap-2 ${
+                  isClickable ? "cursor-pointer" : "cursor-default"
+                }`}
               >
                 <span
-                  className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold transition-colors duration-150 ${circleClass}`}
+                  className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[12px] font-semibold font-mono tabular-nums transition ${circleClass}`}
+                  style={circleStyle}
                 >
-                  {isCompleted ? <Check className="w-4 h-4" /> : idx + 1}
+                  {isCompleted ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : idx + 1}
                 </span>
-                <span className={`text-sm font-medium hidden sm:block ${labelClass}`}>
+                <span
+                  className={`text-[12px] font-medium hidden sm:block ${labelClass}`}
+                >
                   {step.label}
                 </span>
               </button>
 
               {idx < steps.length - 1 && (
                 <div className="flex-1 mx-3 relative h-0">
-                  {idx < currentStep ? (
-                    <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-emerald-500" />
-                  ) : (
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-300" />
-                  )}
+                  <div
+                    className={`absolute inset-x-0 top-1/2 h-px -translate-y-1/2 ${
+                      idx < currentStep ? "bg-emerald-400" : "bg-neutral-200"
+                    }`}
+                  />
                 </div>
               )}
             </Fragment>
@@ -59,7 +65,7 @@ export default function StepIndicator({ steps, currentStep, onStepClick }) {
         })}
       </div>
 
-      <div className="mt-3 text-xs text-gray-500">
+      <div className="mt-3 text-[11px] text-neutral-500 font-mono tabular-nums">
         Step {currentStep + 1} of {steps.length}
       </div>
     </div>

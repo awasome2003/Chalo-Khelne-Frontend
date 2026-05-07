@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import axios from "axios";
 import groupTabsApi from "./groupTabsApi";
 import { getMatchFormat as getMatchFormatHelper } from "../../utils/sportTrack";
 
@@ -51,6 +52,11 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
   // ---- Direct Knockout ----
   const [directKnockoutMatches, setDirectKnockoutMatches] = useState([]);
   const [availablePlayersForKnockout, setAvailablePlayersForKnockout] = useState([]);
+
+  // ---- Sub-step 5 — Court catalog for the active sport ----
+  // Drives the inline <CourtPicker> on group-stage and knockout match cards.
+  // Empty array → picker degrades to a static badge (no catalog).
+  const [tournamentCourts, setTournamentCourts] = useState([]);
 
   // ================================================
   // DATA FETCHING
@@ -207,6 +213,24 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
     fetchRound2Groups();
   }, [tournamentId, activeSportId, fetchGroups, fetchKnockoutMatches, fetchRound2Groups]);
 
+  // Sub-step 5 — court catalog fetch. Active courts only, sport-scoped.
+  // Re-fires on tournament + sport change so the picker stays in sync.
+  const fetchTournamentCourts = useCallback(async () => {
+    if (!tournamentId) return;
+    try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : "";
+      const res = await axios.get(`/api/tournaments/${tournamentId}/courts${sportQuery}`);
+      setTournamentCourts(res.data?.courts || []);
+    } catch (err) {
+      console.error("Failed to fetch courts:", err.message);
+      setTournamentCourts([]);
+    }
+  }, [tournamentId, activeSportId]);
+
+  useEffect(() => {
+    fetchTournamentCourts();
+  }, [fetchTournamentCourts]);
+
   useEffect(() => {
     if (activeGroup) fetchMatches(activeGroup);
   }, [activeGroup, fetchMatches]);
@@ -290,11 +314,15 @@ export function GroupTabsProvider({ tournamentId: propTournamentId, children }) 
     currentRound2Group,
 
     // Knockout
-    knockoutMatchesByRound,
+    knockoutMatchesByRound, setKnockoutMatchesByRound,
 
     // Direct Knockout
     directKnockoutMatches,
     availablePlayersForKnockout,
+
+    // Sub-step 5 — Court catalog for the inline picker
+    tournamentCourts,
+    fetchTournamentCourts,
 
     // Derived
     getMatchFormat,

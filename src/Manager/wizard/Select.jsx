@@ -1,6 +1,9 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 
+const SIG = "#5E6AD2";
+const SIG_TINT = "rgba(94,106,210,0.15)";
+
 export default function Select({
   id,
   value,
@@ -13,8 +16,8 @@ export default function Select({
   ...rest
 }) {
   const errorClass = error
-    ? "border-red-200 border-l-4 border-l-red-500 bg-red-50/30"
-    : "border-gray-200 bg-white";
+    ? "border-rose-300 bg-rose-50/40"
+    : "border-neutral-200 bg-white hover:border-neutral-300";
 
   return (
     <div>
@@ -25,7 +28,18 @@ export default function Select({
           onChange={onChange}
           disabled={disabled}
           aria-invalid={!!error || undefined}
-          className={`w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border ${errorClass} text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-[border-color,background-color,border-left-width] duration-100 ease-out disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${className}`}
+          className={`w-full appearance-none h-9 px-3 pr-9 rounded-lg border ${errorClass} text-[13px] text-neutral-900 focus:outline-none focus:ring-2 transition disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed ${className}`}
+          style={{
+            "--tw-ring-color": error ? "rgba(244,63,94,0.18)" : SIG_TINT,
+          }}
+          onFocus={(e) => {
+            if (!error) e.currentTarget.style.borderColor = SIG;
+            rest.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "";
+            rest.onBlur?.(e);
+          }}
           {...rest}
         >
           {placeholder && (
@@ -43,9 +57,11 @@ export default function Select({
             );
           })}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
       </div>
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && (
+        <p className="text-[11px] text-rose-600 mt-1 font-medium">{error}</p>
+      )}
     </div>
   );
 }

@@ -125,6 +125,13 @@ export function setupAxiosInterceptors() {
             // Let the component handle auth endpoint errors (e.g. wrong password)
             return Promise.reject(error);
           }
+          // Per-call opt-out: callers can set `_skipAuthInterceptor: true` on the
+          // axios config to treat a 401 as a recoverable error instead of forcing
+          // a global logout. Used by the command-palette search so a transient
+          // search failure never boots the user out of the app.
+          if (error.config?._skipAuthInterceptor) {
+            return Promise.reject(error);
+          }
           forceLogout(data?.message || "Session expired. Please login again.");
           return Promise.reject(error);
         }

@@ -3,11 +3,31 @@ import { useNavigate } from "react-router-dom";
 import { FiFlag, FiEdit2, FiCheck, FiPlus, FiTable } from "react-icons/fi";
 import { FaMedal } from "react-icons/fa";
 import { useGroupTabs } from "./GroupTabsContext";
+import CourtPicker from "../components/CourtPicker";
 
 export default function KnockoutPanel({ onOpenMatchModal, onOpenBulkScore }) {
   const navigate = useNavigate();
-  const { tournamentId, knockoutMatchesByRound } = useGroupTabs();
+  const {
+    tournamentId,
+    knockoutMatchesByRound,
+    setKnockoutMatchesByRound,
+    tournamentCourts,
+  } = useGroupTabs();
   const [openIndex, setOpenIndex] = useState(null);
+
+  // Patches local state when CourtPicker changes a match's court — avoids
+  // a full refetch. Walks every round, swaps the matching match in place.
+  const handleCourtChange = (matchId, newName) => {
+    setKnockoutMatchesByRound((prev) => {
+      const next = {};
+      Object.keys(prev).forEach((roundKey) => {
+        next[roundKey] = (prev[roundKey] || []).map((m) =>
+          m._id === matchId ? { ...m, courtNumber: newName } : m
+        );
+      });
+      return next;
+    });
+  };
 
   const toggleAccordion = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -78,6 +98,8 @@ export default function KnockoutPanel({ onOpenMatchModal, onOpenBulkScore }) {
                   match={match}
                   onClick={() => onOpenMatchModal(match)}
                   formatTime={formatTime}
+                  courts={tournamentCourts}
+                  onCourtChange={(newName) => handleCourtChange(match._id, newName)}
                 />
               ))}
             </div>
@@ -88,7 +110,7 @@ export default function KnockoutPanel({ onOpenMatchModal, onOpenBulkScore }) {
   );
 }
 
-function KnockoutMatchCard({ match, onClick, formatTime }) {
+function KnockoutMatchCard({ match, onClick, formatTime, courts, onCourtChange }) {
   const isP1Winner =
     match.winner?.playerId?.toString() === match.player1?.playerId?.toString() ||
     (match.winner?.playerName === match.player1?.playerName && match.player1?.playerName);
@@ -115,10 +137,29 @@ function KnockoutMatchCard({ match, onClick, formatTime }) {
             <span className="bg-gray-100 text-gray-500 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
               M{match.matchNumber}
             </span>
+            {[3, 5, 7].includes(match.matchFormat?.totalSets) && (
+              <span className="bg-[#5E6AD2]/10 text-[#5E6AD2] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                Bo{match.matchFormat.totalSets}
+              </span>
+            )}
           </div>
-          <div className="text-xl font-black text-gray-800">{formatTime(match.matchStartTime || match.startTime)}</div>
+          <div className="text-xl font-black text-gray-800">
+            {formatTime(match.matchStartTime || match.startTime)}
+            {match.matchEndTime && (
+              <span className="text-sm font-bold text-gray-500 ml-1">
+                → {formatTime(match.matchEndTime)}
+              </span>
+            )}
+          </div>
           <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 font-bold">
-            <FiFlag size={12} className="text-[#F97316]" /> COURT {match.courtNumber || "TBD"}
+            <FiFlag size={12} className="text-[#F97316]" />
+            <CourtPicker
+              matchId={match._id}
+              current={match.courtNumber}
+              courts={courts}
+              disabled={isCompleted}
+              onChange={onCourtChange}
+            />
           </div>
         </div>
 

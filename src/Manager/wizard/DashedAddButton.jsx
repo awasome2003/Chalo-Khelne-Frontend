@@ -1,6 +1,8 @@
 import React from "react";
 import { Plus } from "lucide-react";
 
+const SIG = "#5E6AD2";
+
 export default function DashedAddButton({
   children,
   onClick,
@@ -9,14 +11,15 @@ export default function DashedAddButton({
   disabled,
   tabIndex,
 }) {
-  const ic = icon === undefined ? <Plus className="w-4 h-4" /> : icon;
+  const ic = icon === undefined ? <Plus className="w-3.5 h-3.5" /> : icon;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       tabIndex={tabIndex}
-      className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-emerald-300 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 hover:border-emerald-400 transition-colors duration-100 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      className={`w-full inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl border border-dashed border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50/60 text-[13px] font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      style={{ color: SIG }}
     >
       {ic}
       {children}

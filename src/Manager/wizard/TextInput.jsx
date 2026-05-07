@@ -1,5 +1,8 @@
 import React from "react";
 
+const SIG = "#5E6AD2";
+const SIG_TINT = "rgba(94,106,210,0.15)";
+
 export default function TextInput({
   id,
   value,
@@ -11,8 +14,8 @@ export default function TextInput({
   ...rest
 }) {
   const errorClass = error
-    ? "border-red-200 border-l-4 border-l-red-500 bg-red-50/30"
-    : "border-gray-200 bg-white";
+    ? "border-rose-300 bg-rose-50/40"
+    : "border-neutral-200 bg-white hover:border-neutral-300";
 
   return (
     <div>
@@ -23,10 +26,23 @@ export default function TextInput({
         onChange={onChange}
         placeholder={placeholder}
         aria-invalid={!!error || undefined}
-        className={`w-full px-4 py-2.5 rounded-xl border ${errorClass} text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-[border-color,background-color,border-left-width] duration-100 ease-out ${className}`}
+        className={`w-full h-9 px-3 rounded-lg border ${errorClass} text-[13px] text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 transition ${className}`}
+        style={{
+          "--tw-ring-color": error ? "rgba(244,63,94,0.18)" : SIG_TINT,
+        }}
+        onFocus={(e) => {
+          if (!error) e.currentTarget.style.borderColor = SIG;
+          rest.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "";
+          rest.onBlur?.(e);
+        }}
         {...rest}
       />
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && (
+        <p className="text-[11px] text-rose-600 mt-1 font-medium">{error}</p>
+      )}
     </div>
   );
 }

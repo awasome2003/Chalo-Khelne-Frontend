@@ -12,6 +12,8 @@ import BulkScoreUploadModal from "./BulkScoreUploadModal";
 import AssignUmpireModal from "./Tournament/AssignUmpireModal";
 import { getSeedOrder } from "../utils/seedingUtils";
 import SeedPositionsPreview from "./components/SeedPositionsPreview";
+import CourtPoolPreview from "./components/CourtPoolPreview";
+import CourtPicker from "./components/CourtPicker";
 import { getMatchFormat as getMatchFormatHelper } from "../utils/sportTrack";
 
 const DRAW_SIZES = [4, 8, 16, 32, 64, 128];
@@ -64,6 +66,11 @@ export default function MDirectKnockout() {
   // Match Detail Modal
   const [detailMatch, setDetailMatch] = useState(null);
 
+  // Court catalog (Sub-step 4) — drives the optional CourtPoolPreview shown
+  // before bracket creation. Standalone direct-knockout is single-sport per
+  // tournament, so we use sports[0].sportId once the tournament loads.
+  const [tournamentCourts, setTournamentCourts] = useState([]);
+
   // Fetch data
   useEffect(() => {
     if (tournamentId) {
@@ -72,6 +79,20 @@ export default function MDirectKnockout() {
       fetchRegisteredPlayers();
     }
   }, [tournamentId]);
+
+  // Refresh court pool whenever the tournament loads (we need its sportId).
+  useEffect(() => {
+    const sid = tournament?.sports?.[0]?.sportId;
+    if (!tournamentId || !sid) return;
+    (async () => {
+      try {
+        const res = await axios.get(`/api/tournaments/${tournamentId}/courts?sportId=${sid}`);
+        setTournamentCourts(res.data?.courts || []);
+      } catch {
+        setTournamentCourts([]);
+      }
+    })();
+  }, [tournamentId, tournament?.sports?.[0]?.sportId]);
 
   const fetchTournament = async () => {
     try {
@@ -278,12 +299,25 @@ export default function MDirectKnockout() {
         drawSize,
         drawMethod: drawMethod === "custom" ? "standard" : drawMethod,
         numberOfSeeds: drawMethod === "random" ? 0 : drawMethod === "standard" || drawMethod === "custom" ? players.length : numberOfSeeds,
-        schedule: {
-          startDate: new Date().toISOString().split("T")[0],
-          startTime: "10:00",
-          intervalMinutes: 30,
-          courtNumber: "1",
-        },
+        schedule: (() => {
+          // Build per-round payload with cascading defaults (Bo3 30/20 early,
+          // Bo5 50/40 SF, Bo7 80/60 Final). Keeps standalone bracket scheduling
+          // sensible across rounds without requiring a per-round UI on this page.
+          const { buildRequestRounds, buildDefaultRoundsArray } = require("./utils/knockoutDefaults");
+          const totalRounds = Math.ceil(Math.log2(drawSize || 2));
+          const rounds = buildRequestRounds({
+            customizeRounds: true,
+            totalRounds,
+            roundOverrides: buildDefaultRoundsArray(totalRounds),
+          });
+          return {
+            startDate: new Date().toISOString().split("T")[0],
+            startTime: "10:00",
+            rounds,
+            breakBetweenRoundsMinutes: 15,
+            courtNumber: "1",
+          };
+        })(),
       });
 
       if (res.data.success) {
@@ -618,11 +652,31 @@ export default function MDirectKnockout() {
                           </div>
                         )}
 
-                        {/* Court + Time */}
-                        <div className="flex gap-2 mt-2 text-[10px] text-gray-400">
-                          <span>Court {match.courtNumber || "TBD"}</span>
+                        {/* Court + Time. Sub-step 5 — court is reassignable
+                            via CourtPicker when catalog has courts. Locked
+                            once match is COMPLETED. */}
+                        <div className="flex gap-2 mt-2 text-[10px] text-gray-400 items-center">
+                          <CourtPicker
+                            matchId={match._id}
+                            current={match.courtNumber}
+                            courts={tournamentCourts}
+                            disabled={match.status === "COMPLETED" || match.status === "completed"}
+                            onChange={(newName) => {
+                              setMatches((prev) => prev.map((m) =>
+                                m._id === match._id ? { ...m, courtNumber: newName } : m
+                              ));
+                            }}
+                          />
                           <span>•</span>
-                          <span>{match.matchStartTime ? new Date(match.matchStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}</span>
+                          <span>
+                            {match.matchStartTime ? new Date(match.matchStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}
+                            {match.matchEndTime && ` → ${new Date(match.matchEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                          </span>
+                          {[3, 5, 7].includes(match.matchFormat?.totalSets) && (
+                            <span className="ml-auto text-[9px] font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-1.5 py-0.5 rounded">
+                              Bo{match.matchFormat.totalSets}
+                            </span>
+                          )}
                         </div>
 
                         {/* Umpire status */}
@@ -1063,6 +1117,21 @@ export default function MDirectKnockout() {
             </div>
           )}
 
+          {/* Court pool preview (Sub-step 4) — only when catalog has active
+              courts for this sport. Standalone flow always submits a default
+              schedule, but the server uses tournament.courts when populated.
+              Showing the preview keeps the UX consistent with the other
+              knockout-creation modals. */}
+          {tournamentCourts.length > 0 && (
+            <div className="mt-6">
+              <CourtPoolPreview
+                courts={tournamentCourts}
+                startTime="10:00"
+                intervalMinutes={30}
+              />
+            </div>
+          )}
+
           {/* Generate Button */}
           {(() => {
             const count = drawMethod === "custom" ? customSlots.filter(Boolean).length : selectedPlayers.length;
@@ -1444,6 +1513,7 @@ export default function MDirectKnockout() {
                     <p className="text-[10px] text-gray-400 uppercase font-bold">Time</p>
                     <p className="text-sm font-bold text-gray-800">
                       {dm.matchStartTime ? new Date(dm.matchStartTime).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "TBD"}
+                      {dm.matchEndTime && ` → ${new Date(dm.matchEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 text-center">
@@ -1451,6 +1521,13 @@ export default function MDirectKnockout() {
                     <p className="text-lg font-bold text-gray-800">{dm.bracketPosition || "-"}</p>
                   </div>
                 </div>
+                {[3, 5, 7].includes(dm.matchFormat?.totalSets) && (
+                  <div className="flex items-center justify-center">
+                    <span className="text-xs font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-3 py-1 rounded-full">
+                      Format: Best of {dm.matchFormat.totalSets}
+                    </span>
+                  </div>
+                )}
 
                 {/* BYE Notice */}
                 {isBye && (

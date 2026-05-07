@@ -1,11 +1,21 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Users, Grid3X3, Swords, Trophy, ClipboardList } from "lucide-react";
+import { Users, Grid3X3, Swords, ClipboardList, Check } from "lucide-react";
+
+const SIG = "#5E6AD2";
 
 const STEPS = [
   { key: "overview", label: "Overview", icon: ClipboardList, path: "" },
   { key: "players", label: "Players", icon: Users, path: "/players" },
   { key: "groups", label: "Groups", icon: Grid3X3, path: "/groups" },
   { key: "knockout", label: "Knockout", icon: Swords, path: "/knockout" },
+];
+
+const STAGE_ORDER = [
+  "registration",
+  "group_stage",
+  "qualifier_knockout",
+  "knockout",
+  "completed",
 ];
 
 export default function TournamentStepper({ currentStage }) {
@@ -15,64 +25,66 @@ export default function TournamentStepper({ currentStage }) {
 
   const basePath = `/tournaments/${tournamentId}`;
   const activePath = location.pathname.replace(basePath, "") || "";
+  const stageIndex = STAGE_ORDER.indexOf(currentStage || "registration");
 
-  // Determine completion based on tournament stage
-  const stageOrder = ["registration", "group_stage", "qualifier_knockout", "knockout", "completed"];
-  const stageIndex = stageOrder.indexOf(currentStage || "registration");
-
-  const getStepStatus = (step, idx) => {
-    const isActive = activePath === step.path || activePath.startsWith(step.path + "/");
-
+  const getStatus = (step, idx) => {
+    const isActive =
+      activePath === step.path || activePath.startsWith(step.path + "/");
     if (isActive) return "active";
-    // Simple heuristic: steps before current stage are completed
     if (idx <= stageIndex) return "completed";
     return "pending";
   };
 
   return (
-    <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 p-3 mb-6 shadow-sm">
-      {STEPS.map((step, idx) => {
-        const status = getStepStatus(step, idx);
-        const Icon = step.icon;
+    <div className="bg-white border border-neutral-200 rounded-2xl p-2 mb-6">
+      <div className="flex items-center">
+        {STEPS.map((step, idx) => {
+          const status = getStatus(step, idx);
+          const Icon = step.icon;
+          const isLast = idx === STEPS.length - 1;
 
-        return (
-          <div key={step.key} className="flex items-center flex-1">
-            <button
-              onClick={() => navigate(`${basePath}${step.path}`)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all w-auto text-sm font-medium ${
-                status === "active"
-                  ? "bg-orange-500 text-white shadow-sm"
-                  : status === "completed"
-                  ? "text-green-700 hover:bg-green-50"
-                  : "text-gray-400 hover:bg-gray-50"
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                status === "active"
-                  ? "bg-white/20"
-                  : status === "completed"
-                  ? "bg-green-100 text-green-600"
-                  : "bg-gray-100 text-gray-400"
-              }`}>
-                {status === "completed" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <Icon className="w-3.5 h-3.5" />
-                )}
-              </div>
-              <span className="hidden md:inline">{step.label}</span>
-            </button>
+          return (
+            <div key={step.key} className="flex items-center flex-1">
+              <button
+                onClick={() => navigate(`${basePath}${step.path}`)}
+                className={`flex items-center gap-2 px-3 h-9 rounded-lg text-[12px] font-medium transition ${
+                  status === "active"
+                    ? "text-white"
+                    : status === "completed"
+                    ? "text-neutral-900 hover:bg-neutral-50"
+                    : "text-neutral-400 hover:bg-neutral-50"
+                }`}
+                style={status === "active" ? { backgroundColor: SIG } : undefined}
+              >
+                <span
+                  className={`w-5 h-5 rounded-md inline-flex items-center justify-center flex-shrink-0 ${
+                    status === "active"
+                      ? "bg-white/20"
+                      : status === "completed"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-neutral-100 text-neutral-400"
+                  }`}
+                >
+                  {status === "completed" ? (
+                    <Check className="w-3 h-3" strokeWidth={2.5} />
+                  ) : (
+                    <Icon className="w-3 h-3" />
+                  )}
+                </span>
+                <span className="hidden md:inline">{step.label}</span>
+              </button>
 
-            {idx < STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 rounded-full ${
-                idx < stageIndex ? "bg-green-300" : "bg-gray-200"
-              }`} />
-            )}
-          </div>
-        );
-      })}
+              {!isLast && (
+                <div
+                  className={`flex-1 h-px mx-2 ${
+                    idx < stageIndex ? "bg-emerald-300" : "bg-neutral-200"
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

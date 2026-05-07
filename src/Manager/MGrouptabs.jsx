@@ -21,6 +21,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import BulkScoreUploadModal from "./BulkScoreUploadModal";
 import BulkResultUploadModal from "./BulkResultUploadModal";
 import AssignUmpireModal from "./Tournament/AssignUmpireModal";
+import CourtPoolPreview from "./components/CourtPoolPreview";
+import CourtPicker from "./components/CourtPicker";
+import KnockoutFormatPanel, { hasFormatPanelErrors } from "./components/KnockoutFormatPanel";
+import { buildRequestRounds, isSetBasedSport } from "./utils/knockoutDefaults";
 import {
   getCategories,
   getMatchFormat as getMatchFormatHelper,
@@ -43,6 +47,11 @@ export default function Tournament({
   // Without this, the knockout-bracket fetch can't filter to the right sport
   // and ends up displaying matches from every sport in the tournament.
   activeSportId: propActiveSportId = null,
+  // Initial sub-tab inside the Groups view ("League" | "Top Players" |
+  // "Knockout"). Defaults to "League". The parent can pass "Knockout" right
+  // after creating a bracket so the user lands on the bracket view instead
+  // of having to click the sub-tab manually.
+  defaultSubTab = "League",
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,7 +62,7 @@ export default function Tournament({
   // 🎯 TOURNAMENT DATA STATE
   const [tournament, setTournament] = useState(null);
 
-  const [activeSubGroupTab, setactiveSubGroupTab] = useState("League");
+  const [activeSubGroupTab, setactiveSubGroupTab] = useState(defaultSubTab);
   const [activeGroup, setActiveGroup] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(""); // Add this line
   const [groups, setGroups] = useState([]);
@@ -62,8 +71,14 @@ export default function Tournament({
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [courtNumber, setCourtNumber] = useState("");
-  const [matchInterval, setMatchInterval] = useState("");
+  const [matchInterval, setMatchInterval] = useState(""); // legacy — kept until v2 fully removed
+  const [slotDurationMinutes, setSlotDurationMinutes] = useState(30);
+  const [matchDurationMinutes, setMatchDurationMinutes] = useState(20);
   const [startTime, setStartTime] = useState("");
+  // Active court pool for the active sport. Empty array → modal falls back
+  // to the legacy single-court input. Populated → shows CourtPoolPreview
+  // and the server uses tournament.courts to round-robin assign matches.
+  const [tournamentCourts, setTournamentCourts] = useState([]);
   const [openIndex, setOpenIndex] = useState(null);
   const [activeKnockoutRound, setActiveKnockoutRound] = useState(0);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -88,6 +103,10 @@ export default function Tournament({
   // Knockout matches
   const [knockoutMatches, setKnockoutMatches] = useState([]);
   const [knockoutMatchesByRound, setKnockoutMatchesByRound] = useState({});
+  // Tracks the in-flight knockout fetch so the empty state isn't shown while
+  // the bracket is still loading (avoids the post-generate flash where the
+  // panel renders "No knockout matches yet" before the fetch resolves).
+  const [knockoutLoading, setKnockoutLoading] = useState(true);
 
   // Umpire assignment modal (Phase 2 — single shared modal across all three sub-tabs)
   const [assignModalMatch, setAssignModalMatch] = useState(null);
@@ -105,8 +124,14 @@ export default function Tournament({
     courtNumber: "",
     startDate: "",
     startTime: "",
-    intervalMinutes: 30,
-    estimatedDuration: 45
+    slotDurationMinutes: 30,
+    matchDurationMinutes: 20,
+    estimatedDuration: 45,
+    // Per-round knockout format (Step 4 of flexible bestOf).
+    customizeRounds: false,
+    uniformBestOf: 3,
+    roundOverrides: [],
+    breakBetweenRoundsMinutes: 15,
   });
   const [isCreatingKnockout, setIsCreatingKnockout] = useState(false);
 
@@ -545,16 +570,22 @@ export default function Tournament({
     // Reset the hasMatchesInProgress state when component mounts
     setHasMatchesInProgress(false);
 
+    let _resolvedTournament = null;
     const fetchGroups = async () => {
       try {
         setLoading(true);
 
-        // 🎯 Fetch tournament data first
-        await fetchTournamentData();
+        // 🎯 Fetch tournament data first. Capture the resolved value so we
+        // can pass it into fetchKnockoutMatches below — React state updates
+        // are async and the closure won't see the new tournament.
+        _resolvedTournament = await fetchTournamentData();
 
-        // Fetch groups - only Round 1 league groups (Round 2 is handled in Top Players section)
+        // Fetch groups - only Round 1 league groups (Round 2 is handled in
+        // Top Players section). Sport-scoped so multi-sport tournaments don't
+        // leak the other sport's groups into this view.
+        const _sportQ = propActiveSportId ? `?sportId=${propActiveSportId}` : "";
         const response = await axios.get(
-          `/api/tournaments/bookinggroups/tournament/${tournamentId}`
+          `/api/tournaments/bookinggroups/tournament/${tournamentId}${_sportQ}`
         );
 
         const groupsArray = response?.data?.data;
@@ -629,12 +660,35 @@ export default function Tournament({
       }
     };
 
-    fetchGroups();
-    fetchRound2Groups();
-    fetchKnockoutMatches();
-    fetchTournamentMode(); // 🔥 Detect tournament mode
+    // Sequence: fetchGroups awaits fetchTournamentData (which sets _resolvedTournament),
+    // then we fire fetchKnockoutMatches with the resolved tournament so it
+    // doesn't read the closure-stale null value.
+    (async () => {
+      await fetchGroups();
+      fetchRound2Groups();
+      fetchKnockoutMatches(_resolvedTournament);
+      fetchTournamentMode(); // 🔥 Detect tournament mode
+      fetchTournamentCourts(); // Sub-step 3 — court catalog for the active sport
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId, propActiveSportId]);
+
+  // Fetch the court catalog for the active sport. Re-runs on sport tab
+  // change (deps include propActiveSportId via the parent effect above).
+  // Server filters: active only + (sportId null OR matches active sport).
+  // When the catalog is empty, the generation modal falls back to the
+  // legacy single-court input (Sub-step 3).
+  const fetchTournamentCourts = async () => {
+    if (!tournamentId) return;
+    try {
+      const sportQuery = propActiveSportId ? `?sportId=${propActiveSportId}` : "";
+      const res = await axios.get(`/api/tournaments/${tournamentId}/courts${sportQuery}`);
+      setTournamentCourts(res.data?.courts || []);
+    } catch (err) {
+      console.error("Failed to fetch courts:", err.message);
+      setTournamentCourts([]);
+    }
+  };
 
   // 🎯 Secondary useEffect to fetch available players after groups are loaded
   useEffect(() => {
@@ -647,8 +701,9 @@ export default function Tournament({
   // Fetch Round 2 groups (Top Players groups)
   const fetchRound2Groups = async () => {
     try {
+      const _sportQ = propActiveSportId ? `?sportId=${propActiveSportId}` : "";
       const response = await axios.get(
-        `/api/tournaments/bookinggroups/tournament/${tournamentId}`
+        `/api/tournaments/bookinggroups/tournament/${tournamentId}${_sportQ}`
       );
 
       const groupsArray = response?.data?.data;
@@ -672,15 +727,22 @@ export default function Tournament({
     }
   };
 
-  // Fetch knockout matches - SuperMatch objects support live-state integration
-  const fetchKnockoutMatches = async () => {
+  // Fetch knockout matches - SuperMatch objects support live-state integration.
+  // Accepts an optional tournamentOverride so callers that have just loaded
+  // the tournament can pass it in without waiting for React state to commit.
+  // Without this, the first call after mount reads `tournament` as null from
+  // closure, sees no sport type, skips both endpoint calls, and renders empty
+  // until something else triggers a refetch.
+  const fetchKnockoutMatches = async (tournamentOverride = null) => {
+    setKnockoutLoading(true);
     try {
+      const _t = tournamentOverride || tournament;
       // Resolve the active sport — fall back to sports[0] if no per-sport
       // switcher is wired (legacy single-sport rendering).
-      const _activeSportId = propActiveSportId || tournament?.sports?.[0]?.sportId || null;
-      const _activeSport = (tournament?.sports || []).find(
+      const _activeSportId = propActiveSportId || _t?.sports?.[0]?.sportId || null;
+      const _activeSport = (_t?.sports || []).find(
         (s) => String(s.sportId) === String(_activeSportId)
-      ) || tournament?.sports?.[0] || null;
+      ) || _t?.sports?.[0] || null;
       const _type = String(_activeSport?.type || "");
       const _sportQuery = _activeSportId ? `?sportId=${_activeSportId}` : "";
 
@@ -853,6 +915,8 @@ export default function Tournament({
       console.error('Error fetching knockout matches:', err);
       setKnockoutMatches([]);
       setKnockoutMatchesByRound({});
+    } finally {
+      setKnockoutLoading(false);
     }
   };
 
@@ -1141,8 +1205,20 @@ export default function Tournament({
   const [pendingRound2GroupId, setPendingRound2GroupId] = useState(null);
 
   const handleGenerateRound2Matches = async () => {
-    if (!courtNumber || !matchInterval || !startTime) {
+    if (!courtNumber || !startTime) {
       toast.warn("Please fill all match settings.");
+      return;
+    }
+    if (!slotDurationMinutes || slotDurationMinutes < 1) {
+      toast.warn("Slot duration must be at least 1 minute");
+      return;
+    }
+    if (!matchDurationMinutes || matchDurationMinutes < 1) {
+      toast.warn("Match duration must be at least 1 minute");
+      return;
+    }
+    if (matchDurationMinutes > slotDurationMinutes) {
+      toast.warn("Match duration cannot exceed slot duration");
       return;
     }
 
@@ -1171,18 +1247,22 @@ export default function Tournament({
     let currentTime = startTime;
     const newMatches = [];
 
-    // Round-robin generation for top players
+    // Round-robin generation for top players. Slot model: stride = slotDuration,
+    // play time = matchDuration. matchEndTime = matchStartTime + matchDuration.
     for (let i = 0; i < players.length; i++) {
       for (let j = i + 1; j < players.length; j++) {
+        const slotStart = new Date(`${today}T${currentTime}:00`);
+        const slotEnd = new Date(slotStart.getTime() + matchDurationMinutes * 60000);
         newMatches.push({
           matchNumber: newMatches.length + 1,
           player1: { playerId: players[i].playerId, userName: players[i].userName },
           player2: { playerId: players[j].playerId, userName: players[j].userName },
           referee: null,
           courtNumber: String(courtNumber),
-          startTime: new Date(`${today}T${currentTime}:00`).toISOString(),
+          startTime: slotStart.toISOString(),
+          matchEndTime: slotEnd.toISOString(),
         });
-        currentTime = addMinutes(currentTime, matchInterval);
+        currentTime = addMinutes(currentTime, slotDurationMinutes);
       }
     }
 
@@ -1235,8 +1315,23 @@ export default function Tournament({
 
   // frontend (React) - handleGenerateMatches for Round 1 (auto round-robin)
   const handleGenerateMatches = async () => {
-    if (!courtNumber || !matchInterval || !startTime) {
+    // Court input is only required in legacy mode (no catalog). When the
+    // catalog has active courts, the server picks from tournament.courts.
+    const usingCourtPool = tournamentCourts.length > 0;
+    if ((!usingCourtPool && !courtNumber) || !startTime) {
       toast.warn("Please fill all match settings.");
+      return;
+    }
+    if (!slotDurationMinutes || slotDurationMinutes < 1) {
+      toast.warn("Slot duration must be at least 1 minute");
+      return;
+    }
+    if (!matchDurationMinutes || matchDurationMinutes < 1) {
+      toast.warn("Match duration must be at least 1 minute");
+      return;
+    }
+    if (matchDurationMinutes > slotDurationMinutes) {
+      toast.warn("Match duration cannot exceed slot duration");
       return;
     }
 
@@ -1249,16 +1344,17 @@ export default function Tournament({
     const today = new Date().toISOString().split("T")[0];
 
     try {
-      const res = await axios.post(
-        `/api/tournaments/matches/generate-group`,
-        {
-          tournamentId,
-          groupId: activeGroup,
-          courtNumber: String(courtNumber),
-          startTime: `${today}T${startTime}:00`,
-          intervalMinutes: parseInt(matchInterval, 10),
-        }
-      );
+      const body = {
+        tournamentId,
+        groupId: activeGroup,
+        startTime: `${today}T${startTime}:00`,
+        slotDurationMinutes,
+        matchDurationMinutes,
+      };
+      // Only send courtNumber in legacy mode — server ignores it when the
+      // catalog is in use, but cleaner to omit when not needed.
+      if (!usingCourtPool) body.courtNumber = String(courtNumber);
+      const res = await axios.post(`/api/tournaments/matches/generate-group`, body);
 
       setMatchesData(prev => ({ ...prev, [activeGroup]: res.data.matches }));
       setMatchesGenerated(true);
@@ -1346,8 +1442,30 @@ export default function Tournament({
         return;
       }
 
+      // Format-panel validation backstop.
+      if (hasFormatPanelErrors({
+        customizeRounds: directKnockoutSchedule.customizeRounds,
+        roundOverrides: directKnockoutSchedule.roundOverrides,
+        uniformSlot: directKnockoutSchedule.slotDurationMinutes,
+        uniformMatch: directKnockoutSchedule.matchDurationMinutes,
+      })) {
+        toast.warn("Fix the per-round format errors before creating");
+        return;
+      }
+
       // Create the start datetime
       const startDateTime = new Date(`${directKnockoutSchedule.startDate}T${directKnockoutSchedule.startTime}`);
+
+      // drawSize is implicitly selectedPlayersForKnockout.length (must be a power of 2).
+      const _totalRounds = Math.ceil(Math.log2(selectedPlayersForKnockout.length || 2));
+      const _rounds = buildRequestRounds({
+        customizeRounds: directKnockoutSchedule.customizeRounds,
+        totalRounds: _totalRounds,
+        uniformBestOf: directKnockoutSchedule.uniformBestOf,
+        uniformSlot: directKnockoutSchedule.slotDurationMinutes,
+        uniformMatch: directKnockoutSchedule.matchDurationMinutes,
+        roundOverrides: directKnockoutSchedule.roundOverrides,
+      });
 
       // Prepare the API payload
       const payload = {
@@ -1358,7 +1476,10 @@ export default function Tournament({
         schedule: {
           courtNumber: directKnockoutSchedule.courtNumber,
           startTime: startDateTime.toISOString(),
-          intervalMinutes: directKnockoutSchedule.intervalMinutes,
+          rounds: _rounds,
+          breakBetweenRoundsMinutes: directKnockoutSchedule.breakBetweenRoundsMinutes,
+          slotDurationMinutes: directKnockoutSchedule.slotDurationMinutes,
+          matchDurationMinutes: directKnockoutSchedule.matchDurationMinutes,
           estimatedDuration: directKnockoutSchedule.estimatedDuration
         }
       };
@@ -1390,8 +1511,13 @@ export default function Tournament({
           courtNumber: "",
           startDate: "",
           startTime: "",
-          intervalMinutes: 30,
-          estimatedDuration: 45
+          slotDurationMinutes: 30,
+          matchDurationMinutes: 20,
+          estimatedDuration: 45,
+          customizeRounds: false,
+          uniformBestOf: 3,
+          roundOverrides: [],
+          breakBetweenRoundsMinutes: 15,
         });
         setIsDirectKnockoutScheduleModalOpen(false);
 
@@ -2176,9 +2302,31 @@ export default function Tournament({
                                   <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
                                     R1 · M{match.matchNumber}
                                   </span>
-                                  <span className="text-[10px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded">
-                                    Court {match.courtNumber || 'TBD'}
-                                  </span>
+                                  {[3, 5, 7].includes(match.matchFormat?.totalSets) && (
+                                    <span className="text-[10px] font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-2 py-0.5 rounded">
+                                      Bo{match.matchFormat.totalSets}
+                                    </span>
+                                  )}
+                                  <CourtPicker
+                                    matchId={match._id}
+                                    current={match.courtNumber}
+                                    courts={tournamentCourts}
+                                    disabled={(match.status || '').toUpperCase() === 'COMPLETED'}
+                                    onChange={(newName) => {
+                                      // Update local matchesByRound state in place
+                                      // so the bracket card reflects the change
+                                      // without a full refetch.
+                                      setKnockoutMatchesByRound((prev) => {
+                                        const next = { ...prev };
+                                        Object.keys(next).forEach((roundKey) => {
+                                          next[roundKey] = next[roundKey].map((m) =>
+                                            m._id === match._id ? { ...m, courtNumber: newName } : m
+                                          );
+                                        });
+                                        return next;
+                                      });
+                                    }}
+                                  />
                                   {statusChip}
                                 </div>
                                 <div className="flex items-center gap-0.5">
@@ -2209,6 +2357,7 @@ export default function Tournament({
                               {/* Time */}
                               <p className="text-[11px] text-gray-500 mb-3">
                                 {formatDate(match.startTime)} · {MatchformatTime(match.startTime)}
+                                {match.matchEndTime && MatchformatTime(match.matchEndTime) && ` → ${MatchformatTime(match.matchEndTime)}`}
                               </p>
 
                               {/* Players with score in the middle */}
@@ -2416,9 +2565,26 @@ export default function Tournament({
                                   <span className="bg-orange-100 text-orange-700 rounded-lg text-[10px] font-bold px-2 py-0.5">
                                     R2-M{match.matchNumber}
                                   </span>
-                                  <span className="bg-gray-100 text-gray-600 rounded-lg text-[10px] font-medium px-2 py-0.5">
-                                    Court {match.courtNumber || 'TBD'}
-                                  </span>
+                                  <CourtPicker
+                                    matchId={match._id}
+                                    current={match.courtNumber}
+                                    courts={tournamentCourts}
+                                    disabled={(match.status || '').toUpperCase() === 'COMPLETED'}
+                                    onChange={(newName) => {
+                                      // Round 2 list — patch locally so the
+                                      // re-render shows the new court without
+                                      // a full refetch.
+                                      setRound2MatchesData((prev) => {
+                                        const next = {};
+                                        Object.keys(prev).forEach((gid) => {
+                                          next[gid] = prev[gid].map((m) =>
+                                            m._id === match._id ? { ...m, courtNumber: newName } : m
+                                          );
+                                        });
+                                        return next;
+                                      });
+                                    }}
+                                  />
                                   {match.status === 'COMPLETED' && (
                                     <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">Done</span>
                                   )}
@@ -2456,6 +2622,7 @@ export default function Tournament({
 
                               <p className="text-center text-xs text-gray-400 mb-3">
                                 {formatDate(match.startTime)} • {MatchformatTime(match.startTime)}
+                                {match.matchEndTime && MatchformatTime(match.matchEndTime) && ` → ${MatchformatTime(match.matchEndTime)}`}
                               </p>
 
                               <div className="space-y-2">
@@ -2784,7 +2951,13 @@ export default function Tournament({
       {
         activeSubGroupTab === "Knockout" && (
           <div>
-            {Object.keys(knockoutMatchesByRound).length === 0 ? (
+            {knockoutLoading ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <div className="inline-block w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mb-3" />
+                <h3 className="text-base font-bold text-gray-700 mb-1">Loading bracket…</h3>
+                <p className="text-sm text-gray-500">Fetching the latest knockout matches.</p>
+              </div>
+            ) : Object.keys(knockoutMatchesByRound).length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 <FiFlag size={40} className="mx-auto text-gray-300 mb-3" />
                 <h3 className="text-base font-bold text-gray-700 mb-1">No knockout matches yet</h3>
@@ -2831,6 +3004,30 @@ export default function Tournament({
                         </button>
                       );
                     })()}
+                    {tournamentCourts.length >= 2 && (
+                      <button
+                        onClick={() => {
+                          if (!window.confirm(`Redistribute ${totalCount} knockout matches across ${tournamentCourts.length} courts? Live and completed matches stay put; pending ones get reshuffled and rescheduled to run in parallel.`)) return;
+                          const body = {
+                            slotDurationMinutes,
+                            matchDurationMinutes,
+                          };
+                          if (propActiveSportId) body.sportId = propActiveSportId;
+                          else if (tournament?.sports?.[0]?.sportId) body.sportId = tournament.sports[0].sportId;
+                          axios.post(`/api/tournaments/knockout/redistribute-courts/${tournamentId}`, body)
+                            .then((res) => {
+                              toast.success(res.data.message || "Courts redistributed");
+                              fetchKnockoutMatches();
+                            })
+                            .catch((err) => toast.error(err.response?.data?.message || "Failed to redistribute courts"));
+                        }}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold text-[#5E6AD2] bg-[#5E6AD2]/10 border border-[#5E6AD2]/30 hover:bg-[#5E6AD2]/20 flex items-center gap-1.5 w-auto"
+                        title={`Spread matches across ${tournamentCourts.length} courts`}
+                      >
+                        <FiFlag size={13} />
+                        Redistribute
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         if (!window.confirm(`Delete ALL ${totalCount} knockout matches? This cannot be undone.`)) return;
@@ -3097,25 +3294,62 @@ export default function Tournament({
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Court Number
-                </label>
-                <input
-                  type="text"
-                  className="w-full border p-2 mt-1"
-                  value={courtNumber}
-                  onChange={(e) => setCourtNumber(e.target.value)}
-                />
+                {tournamentCourts.length > 0 ? (
+                  // Catalog has active courts → show preview, hide manual input.
+                  // Server uses tournament.courts to round-robin assign matches.
+                  <CourtPoolPreview
+                    courts={tournamentCourts}
+                    startTime={startTime}
+                    intervalMinutes={slotDurationMinutes}
+                  />
+                ) : (
+                  <>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Court Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full border p-2 mt-1"
+                      value={courtNumber}
+                      onChange={(e) => setCourtNumber(e.target.value)}
+                    />
+                  </>
+                )}
 
-                <label className="block text-sm font-medium text-gray-700 mt-3">
-                  Match Interval (minutes)
-                </label>
-                <input
-                  type="number"
-                  className="w-full border p-2 mt-1"
-                  value={matchInterval}
-                  onChange={(e) => setMatchInterval(e.target.value)}
-                />
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Slot Duration (mins)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="w-full border p-2 mt-1"
+                      value={slotDurationMinutes}
+                      onChange={(e) => setSlotDurationMinutes(parseInt(e.target.value) || 0)}
+                      placeholder="30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Match Duration (mins)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="w-full border p-2 mt-1"
+                      value={matchDurationMinutes}
+                      onChange={(e) => setMatchDurationMinutes(parseInt(e.target.value) || 0)}
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Gap between matches:{" "}
+                  <span className="font-semibold text-gray-700">
+                    {Math.max(0, slotDurationMinutes - matchDurationMinutes)} mins
+                  </span>
+                </p>
 
                 <label className="block text-sm font-medium text-gray-700 mt-3">
                   Match Start Time
@@ -3184,7 +3418,7 @@ export default function Tournament({
                     <div>
                       <span className="text-gray-600">Estimated Duration:</span>
                       <span className="font-medium ml-2">
-                        {((selectedPlayersForKnockout.length - 1) * directKnockoutSchedule.intervalMinutes / 60).toFixed(1)} hours
+                        {((selectedPlayersForKnockout.length - 1) * (directKnockoutSchedule.slotDurationMinutes || 30) / 60).toFixed(1)} hours
                       </span>
                     </div>
                   </div>
@@ -3243,25 +3477,28 @@ export default function Tournament({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Match Interval (minutes)
-                      </label>
-                      <select
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        value={directKnockoutSchedule.intervalMinutes}
-                        onChange={(e) => setDirectKnockoutSchedule(prev => ({
-                          ...prev,
-                          intervalMinutes: parseInt(e.target.value)
+                    {/* Per-round bestOf + slot + match + inter-round break */}
+                    <div className="mt-3">
+                      <KnockoutFormatPanel
+                        drawSize={selectedPlayersForKnockout.length}
+                        isSetBased={isSetBasedSport(tournament, tournament?.sports?.[0]?.sportId)}
+                        customizeRounds={directKnockoutSchedule.customizeRounds}
+                        setCustomizeRounds={(v) => setDirectKnockoutSchedule(p => ({ ...p, customizeRounds: v }))}
+                        uniformBestOf={directKnockoutSchedule.uniformBestOf}
+                        setUniformBestOf={(v) => setDirectKnockoutSchedule(p => ({ ...p, uniformBestOf: v }))}
+                        uniformSlot={directKnockoutSchedule.slotDurationMinutes}
+                        setUniformSlot={(v) => setDirectKnockoutSchedule(p => ({ ...p, slotDurationMinutes: v }))}
+                        uniformMatch={directKnockoutSchedule.matchDurationMinutes}
+                        setUniformMatch={(v) => setDirectKnockoutSchedule(p => ({ ...p, matchDurationMinutes: v }))}
+                        roundOverrides={directKnockoutSchedule.roundOverrides}
+                        setRoundOverrides={(v) => setDirectKnockoutSchedule(p => ({
+                          ...p,
+                          roundOverrides: typeof v === "function" ? v(p.roundOverrides) : v,
                         }))}
-                      >
-                        <option value={15}>15 minutes</option>
-                        <option value={30}>30 minutes</option>
-                        <option value={45}>45 minutes</option>
-                        <option value={60}>60 minutes</option>
-                        <option value={90}>90 minutes</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">Time between match start times</p>
+                        breakBetweenRoundsMinutes={directKnockoutSchedule.breakBetweenRoundsMinutes}
+                        setBreakBetweenRoundsMinutes={(v) => setDirectKnockoutSchedule(p => ({ ...p, breakBetweenRoundsMinutes: v }))}
+                        accent="#10B981"
+                      />
                     </div>
                   </div>
                 </div>
@@ -3420,11 +3657,32 @@ export default function Tournament({
                   <span className="text-sm font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded">
                     Match {m.matchNumber}
                   </span>
-                  <span className="text-sm text-gray-600 bg-gray-100 px-2.5 py-1 rounded">
-                    Court {m.courtNumber || 'TBD'}
-                  </span>
+                  {[3, 5, 7].includes(m.matchFormat?.totalSets) && (
+                    <span className="text-xs font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-2 py-1 rounded">
+                      Bo{m.matchFormat.totalSets}
+                    </span>
+                  )}
+                  <CourtPicker
+                    matchId={m._id}
+                    current={m.courtNumber}
+                    courts={tournamentCourts}
+                    disabled={isComp}
+                    onChange={(newName) => {
+                      setSelectedMatch((prev) => prev ? { ...prev, courtNumber: newName } : prev);
+                      setKnockoutMatchesByRound((prev) => {
+                        const next = { ...prev };
+                        Object.keys(next).forEach((roundKey) => {
+                          next[roundKey] = (next[roundKey] || []).map((mm) =>
+                            mm._id === m._id ? { ...mm, courtNumber: newName } : mm
+                          );
+                        });
+                        return next;
+                      });
+                    }}
+                  />
                   <span className="text-xs text-gray-500">
                     {formatDate(m.startTime || m.matchStartTime)} · {MatchformatTime(m.startTime || m.matchStartTime)}
+                    {m.matchEndTime && MatchformatTime(m.matchEndTime) && ` → ${MatchformatTime(m.matchEndTime)}`}
                   </span>
                   {statusChip}
                 </div>

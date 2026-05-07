@@ -10,6 +10,9 @@ import axios from "axios";
 import GroupsTab from "./MGrouptabs";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import SeedPositionsPreview from "./components/SeedPositionsPreview";
+import CourtPoolPreview from "./components/CourtPoolPreview";
+import KnockoutFormatPanel, { hasFormatPanelErrors } from "./components/KnockoutFormatPanel";
+import { buildRequestRounds, isSetBasedSport } from "./utils/knockoutDefaults";
 import { getSportName, getCategories, getCurrentStage } from "../utils/sportTrack";
 
 // Valid knockout bracket sizes (powers of 2, cap at 128).
@@ -101,9 +104,17 @@ const GroupStageManagement = () => {
   const [knockoutSettings, setKnockoutSettings] = useState({
     courtNumber: 1,
     matchStartTime: '',
-    intervalMinutes: 30,
+    slotDurationMinutes: 30,
+    matchDurationMinutes: 20,
     drawSize: 16,      // auto-set when Start Knockout opens based on qualifier count
     numberOfSeeds: 0,  // 0 keeps legacy sequential pairing; >0 enables Mirror & Flip
+    // Per-round knockout format (Step 4 of flexible bestOf). When customizeRounds
+    // is false, uniform values fan to every round on submit. When true,
+    // roundOverrides drives a per-round table.
+    customizeRounds: false,
+    uniformBestOf: 3,
+    roundOverrides: [],
+    breakBetweenRoundsMinutes: 15,
   });
 
   // Ordered player list for the knockout preview — seeded first, then the rest.
@@ -270,14 +281,25 @@ const GroupStageManagement = () => {
   // concurrently — both saves race past the existence check and create
   // duplicate SuperPlayers docs (TOCTOU). Disable the button while busy.
   const [isSubmittingKnockout, setIsSubmittingKnockout] = useState(false);
+  // Tells the inner <GroupsTab> which sub-tab to land on when it mounts.
+  // Default "League"; flipped to "Knockout" by the success handler so the
+  // user doesn't have to click the sub-tab to see their freshly-generated
+  // bracket. Reset to "League" on tab leave.
+  const [groupsDefaultSubTab, setGroupsDefaultSubTab] = useState("League");
   const [selectedDirectKnockoutPlayers, setSelectedDirectKnockoutPlayers] = useState([]);
   const [knockoutSchedule, setKnockoutSchedule] = useState({
     startDate: '',
     startTime: '',
     courtNumber: 1,
-    intervalMinutes: 30,
+    slotDurationMinutes: 30,
+    matchDurationMinutes: 20,
     drawSize: 16,         // auto-picked when schedule modal opens
     numberOfSeeds: 0,     // auto-picked from seeded Top Players count
+    // Per-round knockout format (Step 4 of flexible bestOf).
+    customizeRounds: false,
+    uniformBestOf: 3,
+    roundOverrides: [],
+    breakBetweenRoundsMinutes: 15,
   });
 
   // Ordered player list for the Round 2 Direct-Knockout preview (Schedule modal).
@@ -392,12 +414,39 @@ const GroupStageManagement = () => {
   // (per STEP 11b approval note #1).
   useEffect(() => {
     if (!tournamentId) return;
-    if (!tournament) return; // wait until tournament + activeSportId both ready
+    if (!tournament) return; // wait until tournament loads
+    // Multi-sport tournaments must wait for activeSportId to be resolved by
+    // the effect above before firing sport-scoped fetches. Otherwise the
+    // first run fires with sportId=null (cross-sport) AND the second run
+    // fires with the resolved sportId — a network race where the slower
+    // response overwrites the faster one. Visible symptom: top-players
+    // count reads as the cross-sport total on first land but flips to the
+    // sport-scoped count after any state change forces a refetch.
+    const isMultiSport = Array.isArray(tournament.sports) && tournament.sports.length > 0;
+    if (isMultiSport && !activeSportId) return; // wait
     fetchTopPlayers();
     fetchSuperPlayers();
     checkRound2Progress();
+    fetchTournamentCourts(); // Sub-step 4 — court catalog for the active sport
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSportId, tournamentId]);
+  }, [activeSportId, tournamentId, tournament]);
+
+  // ── Court catalog state + fetch (Sub-step 4) ──────────────────────────
+  // Active courts pool for the current sport. Empty → modals fall back to
+  // the legacy single-court input. Populated → modals show CourtPoolPreview
+  // and the server uses tournament.courts to round-robin assign matches.
+  const [tournamentCourts, setTournamentCourts] = useState([]);
+  const fetchTournamentCourts = async () => {
+    if (!tournamentId) return;
+    try {
+      const sportQuery = activeSportId ? `?sportId=${activeSportId}` : '';
+      const res = await axios.get(`/api/tournaments/${tournamentId}/courts${sportQuery}`);
+      setTournamentCourts(res.data?.courts || []);
+    } catch (err) {
+      console.error('Failed to fetch courts:', err.message);
+      setTournamentCourts([]);
+    }
+  };
 
   // STEP 11b — Sport switch handler. Confirms when there's unsaved Round 2
   // state, then resets per-sport in-flight state so the new sport starts
@@ -513,10 +562,31 @@ const GroupStageManagement = () => {
         return;
       }
 
-      if (!knockoutSettings.intervalMinutes || knockoutSettings.intervalMinutes < 5) {
-        toast.warn("Please enter a valid interval (minimum 5 minutes)");
+      const _slot = knockoutSettings.slotDurationMinutes ?? 30;
+      const _match = knockoutSettings.matchDurationMinutes ?? 20;
+      // The KnockoutFormatPanel already validates each row inline; this is a
+      // last-line backstop so a manual API call from a stale form state can't
+      // squeak through.
+      if (hasFormatPanelErrors({
+        customizeRounds: knockoutSettings.customizeRounds,
+        roundOverrides: knockoutSettings.roundOverrides,
+        uniformSlot: _slot,
+        uniformMatch: _match,
+      })) {
+        toast.warn("Fix the per-round format errors before generating");
         return;
       }
+      // Build the rounds[] payload — uniform mode fans, customize mode sends the
+      // table as-is. totalRounds is derived from drawSize on the client.
+      const _totalRounds = Math.ceil(Math.log2(knockoutSettings.drawSize || 2));
+      const _rounds = buildRequestRounds({
+        customizeRounds: knockoutSettings.customizeRounds,
+        totalRounds: _totalRounds,
+        uniformBestOf: knockoutSettings.uniformBestOf,
+        uniformSlot: _slot,
+        uniformMatch: _match,
+        roundOverrides: knockoutSettings.roundOverrides,
+      });
 
       // Send explicit player order (seeded first, then Round 1 qualifiers) so
       // the backend places them exactly as the preview showed.
@@ -529,7 +599,13 @@ const GroupStageManagement = () => {
           sportId: activeSportId,
           courtNumber: knockoutSettings.courtNumber,
           matchStartTime: knockoutSettings.matchStartTime,
-          intervalMinutes: knockoutSettings.intervalMinutes,
+          // Per-round config + inter-round break (Step 3 backend contract).
+          // Legacy slotDurationMinutes/matchDurationMinutes still sent as a
+          // safety net for the redistribute path which reads them too.
+          rounds: _rounds,
+          breakBetweenRoundsMinutes: knockoutSettings.breakBetweenRoundsMinutes,
+          slotDurationMinutes: _slot,
+          matchDurationMinutes: _match,
           drawSize: knockoutSettings.drawSize,
           numberOfSeeds: knockoutSettings.numberOfSeeds,
           playerOrder,
@@ -542,8 +618,7 @@ const GroupStageManagement = () => {
           `${response.data.message}\n` +
           `Bracket: ${response.data.bracket.totalPlayers} players, ${response.data.bracket.totalRounds} rounds\n\n` +
           `Starting at: ${new Date(knockoutSettings.matchStartTime).toLocaleString()}\n` +
-          `Court: ${knockoutSettings.courtNumber}\n` +
-          `Match Interval: ${knockoutSettings.intervalMinutes} minutes`
+          `Slot: ${_slot} mins · Match: ${_match} mins · Gap: ${_slot - _match} mins`
         );
 
         setShowKnockoutModal(false);
@@ -607,9 +682,12 @@ const GroupStageManagement = () => {
           console.error("Error fetching registered players:", error);
         });
 
-      // Fetch existing groups and player assignments
+      // Fetch existing groups and player assignments. Sport-scoped so
+      // multi-sport tournaments build a mapping for only the active sport's
+      // groups (otherwise the same playerId in two sports would collide).
+      const _sportQ = activeSportId ? `?sportId=${activeSportId}` : "";
       axios
-        .get(`/api/tournaments/bookinggroups/tournament/${tournamentId}`)
+        .get(`/api/tournaments/bookinggroups/tournament/${tournamentId}${_sportQ}`)
         .then((response) => {
 
           const groupsArray = response?.data?.data;
@@ -661,7 +739,9 @@ const GroupStageManagement = () => {
       fetchTopPlayers();
       fetchSuperPlayers();
     }
-  }, [tournamentId]);
+    // activeSportId is read inside this effect for sport-scoped fetches —
+    // include it in deps so multi-sport switches refetch the right groups.
+  }, [tournamentId, activeSportId]);
 
   // Filter players based on search term and category
   useEffect(() => {
@@ -974,8 +1054,11 @@ const GroupStageManagement = () => {
     setShowDeleteWarning(false);
 
     try {
+      // Sport-scoped — only delete groups for the active sport, otherwise
+      // a "Delete All" on Badminton would wipe Table Tennis groups too.
+      const _sportQ = activeSportId ? `?sportId=${activeSportId}` : "";
       const response = await axios.get(
-        `/api/tournaments/bookinggroups/tournament/${tournamentId}`
+        `/api/tournaments/bookinggroups/tournament/${tournamentId}${_sportQ}`
       );
 
       if (response.data.success && response.data.data.length > 0) {
@@ -1254,6 +1337,16 @@ const GroupStageManagement = () => {
       // Step 3: Generate the SuperMatch bracket — same endpoint the
       // production "Start Knockout" button on the Super Players sub-tab uses.
       const matchStartTime = `${knockoutSchedule.startDate}T${knockoutSchedule.startTime}`;
+      // Build per-round payload from the format panel state.
+      const _totalRounds = Math.ceil(Math.log2(knockoutSchedule.drawSize || 2));
+      const _rounds = buildRequestRounds({
+        customizeRounds: knockoutSchedule.customizeRounds,
+        totalRounds: _totalRounds,
+        uniformBestOf: knockoutSchedule.uniformBestOf,
+        uniformSlot: knockoutSchedule.slotDurationMinutes,
+        uniformMatch: knockoutSchedule.matchDurationMinutes,
+        roundOverrides: knockoutSchedule.roundOverrides,
+      });
       const matchResponse = await axios.post(
         `/api/tournaments/knockout/generate`,
         {
@@ -1261,7 +1354,10 @@ const GroupStageManagement = () => {
           sportId: activeSportId,
           courtNumber: knockoutSchedule.courtNumber,
           matchStartTime,
-          intervalMinutes: knockoutSchedule.intervalMinutes,
+          rounds: _rounds,
+          breakBetweenRoundsMinutes: knockoutSchedule.breakBetweenRoundsMinutes,
+          slotDurationMinutes: knockoutSchedule.slotDurationMinutes,
+          matchDurationMinutes: knockoutSchedule.matchDurationMinutes,
           drawSize: knockoutSchedule.drawSize,
           numberOfSeeds: knockoutSchedule.numberOfSeeds,
           // Explicit player order so backend Mirror & Flip placement matches
@@ -1276,8 +1372,10 @@ const GroupStageManagement = () => {
         const created = matchResponse.data.matchesCreated || matchResponse.data.matches?.length || 0;
         toast.info(`Knockout matches created — ${created} matches scheduled.`);
 
-        // Switch to Groups tab to see the matches in Knockout sub-tab
-        // (which fetches from /knockout/matches → SuperMatch collection).
+        // Land the user directly on the Knockout sub-tab inside Groups so
+        // they see the bracket they just generated. Without this they'd see
+        // the League sub-tab (default) and have to click "Knockout" manually.
+        setGroupsDefaultSubTab("Knockout");
         setSelectedTab("Groups");
       } else {
         toast.error("Failed to create knockout matches");
@@ -2502,7 +2600,11 @@ const GroupStageManagement = () => {
 
         {/* Groups Tab Content */}
         {selectedTab === "Groups" && (
-          <GroupsTab tournamentId={tournamentId} activeSportId={activeSportId} />
+          <GroupsTab
+            tournamentId={tournamentId}
+            activeSportId={activeSportId}
+            defaultSubTab={groupsDefaultSubTab}
+          />
         )}
       </div>
 
@@ -3143,22 +3245,35 @@ const GroupStageManagement = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Court Number
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={knockoutSettings.courtNumber}
-                  onChange={(e) => setKnockoutSettings(prev => ({
-                    ...prev,
-                    courtNumber: parseInt(e.target.value)
-                  }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="Enter court number"
+              {tournamentCourts.length > 0 ? (
+                // Catalog has active courts → show preview, hide manual input.
+                // Server uses tournament.courts to round-robin assign matches
+                // round-by-round (round-aware scheduling).
+                <CourtPoolPreview
+                  courts={tournamentCourts}
+                  startTime={knockoutSettings.matchStartTime
+                    ? new Date(knockoutSettings.matchStartTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+                    : null}
+                  intervalMinutes={knockoutSettings.intervalMinutes}
                 />
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Court Number
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={knockoutSettings.courtNumber}
+                    onChange={(e) => setKnockoutSettings(prev => ({
+                      ...prev,
+                      courtNumber: parseInt(e.target.value)
+                    }))}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Enter court number"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3175,22 +3290,26 @@ const GroupStageManagement = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Interval Between Matches (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="5"
-                  value={knockoutSettings.intervalMinutes}
-                  onChange={(e) => setKnockoutSettings(prev => ({
-                    ...prev,
-                    intervalMinutes: parseInt(e.target.value)
-                  }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="Enter interval in minutes"
-                />
-              </div>
+              {/* Per-round bestOf + slot + match duration + inter-round break */}
+              <KnockoutFormatPanel
+                drawSize={knockoutSettings.drawSize}
+                isSetBased={isSetBasedSport(tournament, activeSportId)}
+                customizeRounds={knockoutSettings.customizeRounds}
+                setCustomizeRounds={(v) => setKnockoutSettings(p => ({ ...p, customizeRounds: v }))}
+                uniformBestOf={knockoutSettings.uniformBestOf}
+                setUniformBestOf={(v) => setKnockoutSettings(p => ({ ...p, uniformBestOf: v }))}
+                uniformSlot={knockoutSettings.slotDurationMinutes ?? 30}
+                setUniformSlot={(v) => setKnockoutSettings(p => ({ ...p, slotDurationMinutes: v }))}
+                uniformMatch={knockoutSettings.matchDurationMinutes ?? 20}
+                setUniformMatch={(v) => setKnockoutSettings(p => ({ ...p, matchDurationMinutes: v }))}
+                roundOverrides={knockoutSettings.roundOverrides}
+                setRoundOverrides={(v) => setKnockoutSettings(p => ({
+                  ...p,
+                  roundOverrides: typeof v === "function" ? v(p.roundOverrides) : v,
+                }))}
+                breakBetweenRoundsMinutes={knockoutSettings.breakBetweenRoundsMinutes}
+                setBreakBetweenRoundsMinutes={(v) => setKnockoutSettings(p => ({ ...p, breakBetweenRoundsMinutes: v }))}
+              />
 
               {/* Draw Size */}
               <div>
@@ -3593,25 +3712,50 @@ const GroupStageManagement = () => {
                       className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Court</label>
-                    <input
-                      type="number" min="1" max="10" placeholder="1"
-                      value={knockoutSchedule.courtNumber}
-                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, courtNumber: parseInt(e.target.value) }))}
-                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Interval (min)</label>
-                    <input
-                      type="number" min="15" max="120" step="5" placeholder="30"
-                      value={knockoutSchedule.intervalMinutes}
-                      onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, intervalMinutes: parseInt(e.target.value) }))}
-                      className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
-                    />
-                  </div>
+                  {tournamentCourts.length === 0 && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Court</label>
+                      <input
+                        type="number" min="1" max="10" placeholder="1"
+                        value={knockoutSchedule.courtNumber}
+                        onChange={(e) => setKnockoutSchedule((prev) => ({ ...prev, courtNumber: parseInt(e.target.value) }))}
+                        className="w-full px-2.5 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
+                {/* Per-round bestOf + slot + match duration + inter-round break */}
+                <div className="mt-3">
+                  <KnockoutFormatPanel
+                    drawSize={knockoutSchedule.drawSize}
+                    isSetBased={isSetBasedSport(tournament, activeSportId)}
+                    customizeRounds={knockoutSchedule.customizeRounds}
+                    setCustomizeRounds={(v) => setKnockoutSchedule(p => ({ ...p, customizeRounds: v }))}
+                    uniformBestOf={knockoutSchedule.uniformBestOf}
+                    setUniformBestOf={(v) => setKnockoutSchedule(p => ({ ...p, uniformBestOf: v }))}
+                    uniformSlot={knockoutSchedule.slotDurationMinutes ?? 30}
+                    setUniformSlot={(v) => setKnockoutSchedule(p => ({ ...p, slotDurationMinutes: v }))}
+                    uniformMatch={knockoutSchedule.matchDurationMinutes ?? 20}
+                    setUniformMatch={(v) => setKnockoutSchedule(p => ({ ...p, matchDurationMinutes: v }))}
+                    roundOverrides={knockoutSchedule.roundOverrides}
+                    setRoundOverrides={(v) => setKnockoutSchedule(p => ({
+                      ...p,
+                      roundOverrides: typeof v === "function" ? v(p.roundOverrides) : v,
+                    }))}
+                    breakBetweenRoundsMinutes={knockoutSchedule.breakBetweenRoundsMinutes}
+                    setBreakBetweenRoundsMinutes={(v) => setKnockoutSchedule(p => ({ ...p, breakBetweenRoundsMinutes: v }))}
+                    accent="#F97316"
+                  />
+                </div>
+                {tournamentCourts.length > 0 && (
+                  <div className="mt-3">
+                    <CourtPoolPreview
+                      courts={tournamentCourts}
+                      startTime={knockoutSchedule.startTime}
+                      intervalMinutes={knockoutSchedule.slotDurationMinutes}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Draw Method — segmented control */}

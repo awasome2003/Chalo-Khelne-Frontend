@@ -1,13 +1,14 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { Trophy, ArrowLeft, Medal, Star, ChevronDown, User } from "lucide-react";
+import { Trophy, ArrowLeft, User, Crown } from "lucide-react";
 
-const RANK_STYLES = {
-  1: { bg: "bg-yellow-50", border: "border-yellow-300", badge: "bg-yellow-400", text: "text-yellow-900", icon: "🥇" },
-  2: { bg: "bg-gray-50", border: "border-gray-300", badge: "bg-gray-400", text: "text-gray-800", icon: "🥈" },
-  3: { bg: "bg-orange-50", border: "border-orange-300", badge: "bg-orange-400", text: "text-orange-900", icon: "🥉" },
+const SIG = "#5E6AD2";
+
+const TIER_COLORS = {
+  1: "#F5C31C",
+  2: "#A8B2C0",
+  3: "#CD7F32",
 };
 
 export default function TournamentLeaderboard() {
@@ -17,141 +18,210 @@ export default function TournamentLeaderboard() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard", tournamentId],
     queryFn: async () => {
-      const res = await axios.get(`/api/tournaments/leaderboard/${tournamentId}/players`);
+      const res = await axios.get(
+        `/api/tournaments/leaderboard/${tournamentId}/players`
+      );
       return res.data;
     },
     enabled: !!tournamentId,
   });
 
-  // API returns { success, data: { players: [...], statistics } }
   const players = data?.data?.players || data?.leaderboard || data?.players || [];
   const tournament = data?.data?.tournament || data?.tournament || {};
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+      <div className="p-6 max-w-[960px] mx-auto">
+        <div className="animate-pulse space-y-5">
+          <div className="h-8 w-48 bg-neutral-200 rounded" />
+          <div className="h-44 bg-neutral-100 rounded-2xl" />
+          <div className="h-72 bg-neutral-100 rounded-2xl" />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-red-500">Failed to load leaderboard</p>
-        <p className="text-sm text-gray-400 mt-1">{error.message}</p>
+      <div className="p-6 max-w-[960px] mx-auto">
+        <div className="bg-white border border-rose-200 rounded-2xl p-6 text-center">
+          <p className="text-[14px] font-semibold text-neutral-900">
+            Couldn't load the leaderboard
+          </p>
+          <p className="text-[13px] text-neutral-500 mt-1">{error.message}</p>
+        </div>
       </div>
     );
   }
 
+  const top3 = players.slice(0, 3);
+  const rest = players.slice(3);
+
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      {/* Back + Title */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+    <div className="p-6 max-w-[960px] mx-auto">
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="h-8 w-8 inline-flex items-center justify-center bg-white border border-neutral-200 hover:border-neutral-300 rounded-lg transition flex-shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 text-neutral-700" />
         </button>
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">Final Rankings</h1>
-          <p className="text-sm text-gray-500">{tournament.title || "Tournament"}</p>
-        </div>
-        <div className="ml-auto">
-          <Trophy className="w-8 h-8 text-yellow-500" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-0.5">
+            Final rankings
+          </p>
+          <h1 className="text-[22px] leading-tight font-semibold tracking-tight text-neutral-950 truncate">
+            {tournament.title || "Tournament"}
+          </h1>
         </div>
       </div>
 
-      {/* Podium — Top 3 */}
-      {players.length >= 3 && (
-        <div className="flex items-end justify-center gap-4 mb-8 px-4">
-          {/* 2nd Place */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl mb-2">🥈</div>
-            <p className="font-bold text-sm text-gray-700 text-center truncate w-full">{players[1]?.playerName || "—"}</p>
-            <p className="text-xs text-gray-400">{players[1]?.totalWins || 0}W {players[1]?.totalLosses || 0}L</p>
-            <div className="w-full bg-gray-200 rounded-t-xl mt-2 h-20 flex items-center justify-center">
-              <span className="text-2xl font-black text-gray-500">2</span>
-            </div>
-          </div>
-          {/* 1st Place */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="w-20 h-20 rounded-full bg-yellow-100 flex items-center justify-center text-3xl mb-2 border-4 border-yellow-400 shadow-lg shadow-yellow-200">🏆</div>
-            <p className="font-bold text-sm text-gray-800 text-center truncate w-full">{players[0]?.playerName || "—"}</p>
-            <p className="text-xs text-gray-500">{players[0]?.totalWins || 0}W {players[0]?.totalLosses || 0}L</p>
-            <div className="w-full bg-yellow-400 rounded-t-xl mt-2 h-28 flex items-center justify-center">
-              <span className="text-3xl font-black text-yellow-900">1</span>
-            </div>
-          </div>
-          {/* 3rd Place */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-2xl mb-2">🥉</div>
-            <p className="font-bold text-sm text-gray-700 text-center truncate w-full">{players[2]?.playerName || "—"}</p>
-            <p className="text-xs text-gray-400">{players[2]?.totalWins || 0}W {players[2]?.totalLosses || 0}L</p>
-            <div className="w-full bg-orange-200 rounded-t-xl mt-2 h-14 flex items-center justify-center">
-              <span className="text-2xl font-black text-orange-700">3</span>
-            </div>
+      {top3.length >= 3 && (
+        <div className="bg-neutral-950 rounded-2xl p-6 mb-5 relative overflow-hidden">
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.05]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 50% 30%, white 1px, transparent 1px)",
+              backgroundSize: "44px 44px",
+            }}
+          />
+          <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500 mb-5 text-center">
+            Champions
+          </p>
+          <div className="relative grid grid-cols-3 gap-3 items-end">
+            <PodiumSpot place={2} player={top3[1]} height="h-24" />
+            <PodiumSpot place={1} player={top3[0]} height="h-32" />
+            <PodiumSpot place={3} player={top3[2]} height="h-20" />
           </div>
         </div>
       )}
 
-      {/* Full Rankings Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-          <Medal className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-bold text-gray-600">All Players ({players.length})</span>
+      <section>
+        <div className="flex items-end justify-between mb-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+            All players
+            <span className="ml-2 font-mono tabular-nums text-neutral-500">
+              {players.length}
+            </span>
+          </p>
         </div>
 
         {players.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <User className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No ranking data available</p>
+          <div className="bg-white border border-neutral-200 rounded-2xl px-6 py-14 text-center">
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center mb-3">
+              <User className="w-5 h-5 text-neutral-400" />
+            </div>
+            <p className="text-[14px] font-semibold text-neutral-900">
+              No ranking data available
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {players.map((p, idx) => {
-              const rank = idx + 1;
-              const rs = RANK_STYLES[rank];
-              const winRate = p.totalMatches > 0 ? Math.round((p.totalWins / p.totalMatches) * 100) : 0;
-
-              return (
-                <div key={p.playerId || idx} className={`flex items-center gap-3 px-4 py-3 ${rs ? rs.bg : "hover:bg-gray-50"} transition`}>
-                  {/* Rank */}
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0 ${rs ? `${rs.badge} text-white` : "bg-gray-100 text-gray-500"}`}>
-                    {rs ? rs.icon : rank}
-                  </div>
-
-                  {/* Player Name */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-gray-800 truncate">{p.playerName || "Unknown"}</p>
-                    {p.stageReached && (
-                      <p className="text-[10px] text-gray-400">{p.stageReached}</p>
-                    )}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="text-center">
-                      <p className="font-black text-gray-800">{p.totalMatches || 0}</p>
-                      <p className="text-gray-400">Played</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-black text-green-600">{p.totalWins || 0}</p>
-                      <p className="text-gray-400">Won</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-black text-red-500">{p.totalLosses || 0}</p>
-                      <p className="text-gray-400">Lost</p>
-                    </div>
-                    <div className="text-center min-w-[40px]">
-                      <p className="font-black text-orange-500">{winRate}%</p>
-                      <p className="text-gray-400">WR</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  <Th className="w-12 text-center">#</Th>
+                  <Th>Player</Th>
+                  <Th className="text-center">P</Th>
+                  <Th className="text-center">W</Th>
+                  <Th className="text-center">L</Th>
+                  <Th className="text-right">Win %</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {(rest.length ? rest : players).map((p, idx) => {
+                  const rank = (rest.length ? 4 : 1) + idx;
+                  const winRate =
+                    p.totalMatches > 0
+                      ? Math.round((p.totalWins / p.totalMatches) * 100)
+                      : 0;
+                  return (
+                    <tr key={p.playerId || idx} className="hover:bg-neutral-50/60 transition">
+                      <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-neutral-500">
+                        {rank}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <p className="text-[13px] font-medium text-neutral-900 truncate">
+                          {p.playerName || "Unknown"}
+                        </p>
+                        {p.stageReached && (
+                          <p className="text-[11px] text-neutral-500">
+                            {p.stageReached}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-neutral-700">
+                        {p.totalMatches || 0}
+                      </td>
+                      <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-emerald-700">
+                        {p.totalWins || 0}
+                      </td>
+                      <td className="px-4 py-2.5 text-center font-mono tabular-nums text-[12px] text-rose-600">
+                        {p.totalLosses || 0}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <span
+                          className="font-mono tabular-nums text-[13px] font-semibold"
+                          style={{ color: SIG }}
+                        >
+                          {winRate}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+      </section>
+    </div>
+  );
+}
+
+function PodiumSpot({ place, player, height }) {
+  if (!player)
+    return (
+      <div className="flex flex-col items-center">
+        <div className={`${height} w-full bg-white/5 rounded-t-xl`} />
+      </div>
+    );
+  const color = TIER_COLORS[place];
+  return (
+    <div className="flex flex-col items-center text-center">
+      {place === 1 && <Crown className="w-5 h-5 text-amber-300 mb-1" />}
+      <p className="text-[13px] font-semibold text-white truncate max-w-full">
+        {player.playerName || "—"}
+      </p>
+      <p className="text-[11px] text-neutral-400 mt-0.5 font-mono tabular-nums">
+        {player.totalWins || 0}W · {player.totalLosses || 0}L
+      </p>
+      <div
+        className={`${height} w-full rounded-t-xl mt-3 inline-flex items-center justify-center`}
+        style={{
+          background: `linear-gradient(180deg, ${color}40, ${color}10)`,
+          borderTop: `2px solid ${color}`,
+        }}
+      >
+        <span
+          className="font-mono tabular-nums text-[28px] font-semibold"
+          style={{ color }}
+        >
+          {place}
+        </span>
       </div>
     </div>
+  );
+}
+
+function Th({ children, className = "" }) {
+  return (
+    <th
+      className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400 ${className}`}
+    >
+      {children}
+    </th>
   );
 }

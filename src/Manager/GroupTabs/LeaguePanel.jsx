@@ -5,16 +5,18 @@ import { FiFlag, FiTable, FiEdit2, FiCheck, FiInfo, FiUpload } from "react-icons
 import { useGroupTabs } from "./GroupTabsContext";
 import groupTabsApi from "./groupTabsApi";
 import { getTournamentType, getCurrentStage, getQualifyPerGroup } from "../../utils/sportTrack";
+import CourtPicker from "../components/CourtPicker";
 
 export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkScore, onOpenCsvUpload, onOpenGenerateModal }) {
   const navigate = useNavigate();
   const {
     tournamentId, tournament, groups,
     activeGroup, setActiveGroup,
-    matchesData, groupsWithMatches,
+    matchesData, setMatchesData, groupsWithMatches,
     filteredGroups, currentGroup,
     fetchMatches,
     activeSportId,
+    tournamentCourts,
   } = useGroupTabs();
 
   const [standingsData, setStandingsData] = useState({});
@@ -213,6 +215,15 @@ export default function LeaguePanel({ onEditGroup, onOpenMatchModal, onOpenBulkS
                     onClick={() => onOpenMatchModal(match)}
                     formatDate={formatDate}
                     formatTime={formatTime}
+                    courts={tournamentCourts}
+                    onCourtChange={(newName) => {
+                      setMatchesData((prev) => ({
+                        ...prev,
+                        [activeGroup]: (prev[activeGroup] || []).map((m) =>
+                          m._id === match._id ? { ...m, courtNumber: newName } : m
+                        ),
+                      }));
+                    }}
                   />
                 ))}
               </div>
@@ -280,7 +291,7 @@ function StandingsTable({ data, qualifyPerGroup }) {
   );
 }
 
-function MatchCard({ match, onClick, formatDate, formatTime }) {
+function MatchCard({ match, onClick, formatDate, formatTime, courts, onCourtChange }) {
   const isCompleted = match.status === "completed" || match.status === "COMPLETED";
   const isInProgress = match.status === "in_progress" || match.status === "IN_PROGRESS";
 
@@ -301,13 +312,22 @@ function MatchCard({ match, onClick, formatDate, formatTime }) {
       onClick={onClick}
     >
       <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="bg-orange-100 text-orange-600 rounded-full text-[12px] font-[500] px-2 py-1">
             R1 - M{match.matchNumber}
           </span>
-          <span className="bg-gray-200 text-gray-700 rounded-full text-[12px] px-2 py-1">
-            Court {match.courtNumber || "TBD"}
-          </span>
+          {[3, 5, 7].includes(match.matchFormat?.totalSets) && (
+            <span className="bg-[#5E6AD2]/10 text-[#5E6AD2] rounded-full text-[12px] font-[500] px-2 py-1">
+              Bo{match.matchFormat.totalSets}
+            </span>
+          )}
+          <CourtPicker
+            matchId={match._id}
+            current={match.courtNumber}
+            courts={courts}
+            disabled={isCompleted}
+            onChange={onCourtChange}
+          />
           {isCompleted && <span className="bg-green-500 text-white text-[12px] px-2 py-1 rounded-full">Completed</span>}
           {isInProgress && <span className="bg-yellow-500 text-white text-[12px] px-2 py-1 rounded-full">In Progress</span>}
         </div>
@@ -317,7 +337,9 @@ function MatchCard({ match, onClick, formatDate, formatTime }) {
       </div>
 
       <p className="text-center text-[16px] text-gray-900 font-[400] mb-2">
-        {formatDate(match.startTime)} {formatTime(match.startTime) && `• ${formatTime(match.startTime)}`}
+        {formatDate(match.startTime)}
+        {formatTime(match.startTime) && ` • ${formatTime(match.startTime)}`}
+        {match.matchEndTime && formatTime(match.matchEndTime) && ` → ${formatTime(match.matchEndTime)}`}
       </p>
 
       <div className="flex flex-col items-center">

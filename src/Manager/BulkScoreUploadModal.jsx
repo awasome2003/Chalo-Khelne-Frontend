@@ -151,7 +151,7 @@ export default function BulkScoreUploadModal({
       });
 
       if (response.data.success) {
-        const resultText = response.data.results
+        const resultText = (response.data.results || [])
           .map((r) => {
             const p1 = r.player1 || r.team1 || "Team 1";
             const p2 = r.player2 || r.team2 || "Team 2";
@@ -159,9 +159,30 @@ export default function BulkScoreUploadModal({
           })
           .join("\n");
 
-        toast.info(`${response.data.message}\n\n${resultText}`);
+        // Surface per-match errors so a "0 updated, N errors" response
+        // explains what failed instead of leaving the manager guessing.
+        const errs = Array.isArray(response.data.errors) ? response.data.errors : [];
+        const errText = errs
+          .map((e) => {
+            const id = e.matchId || e.id || "(unknown)";
+            return `• ${id}: ${e.error || "unknown error"}`;
+          })
+          .join("\n");
+
+        if (errs.length > 0) {
+          toast.error(
+            `${response.data.message}\n\n${errText}${
+              resultText ? `\n\nUpdated:\n${resultText}` : ""
+            }`,
+            { autoClose: 8000 }
+          );
+        } else {
+          toast.info(`${response.data.message}\n\n${resultText}`);
+        }
         onSuccess?.();
-        onClose();
+        // Keep the modal open if there were errors so the manager can
+        // adjust the offending rows and retry without re-entering the rest.
+        if (errs.length === 0) onClose();
       } else {
         toast.error(response.data.message);
       }

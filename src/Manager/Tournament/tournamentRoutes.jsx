@@ -4,6 +4,7 @@ import PlayersPage from "./PlayersPage";
 import GroupListPage from "./GroupListPage";
 import GroupDetailPage from "./GroupDetailPage";
 import KnockoutPage from "./KnockoutPage";
+import CourtsPage from "./CourtsPage";
 import MatchScoringPage from "../GroupTabs/MatchScoringPage";
 
 /**
@@ -15,6 +16,7 @@ import MatchScoringPage from "../GroupTabs/MatchScoringPage";
  * /tournaments/:tournamentId/groups             → GroupListPage (all groups grid)
  * /tournaments/:tournamentId/groups/:groupId    → GroupDetailPage (matches + standings + scoring)
  * /tournaments/:tournamentId/knockout           → KnockoutPage (bracket + direct knockout)
+ * /tournaments/:tournamentId/courts             → CourtsPage (court / table catalog)
  * /tournaments/:tournamentId/match/:matchId     → MatchScoringPage (dedicated scoring)
  */
 
@@ -25,6 +27,7 @@ export const tournamentRoutes = (
     <Route path="/tournaments/:tournamentId/groups" element={<GroupListPage />} />
     <Route path="/tournaments/:tournamentId/groups/:groupId" element={<GroupDetailPage />} />
     <Route path="/tournaments/:tournamentId/knockout" element={<KnockoutPage />} />
+    <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
   </>
 );
 

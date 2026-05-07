@@ -35,6 +35,7 @@ import PlayersPage from "./Manager/Tournament/PlayersPage";
 import GroupListPage from "./Manager/Tournament/GroupListPage";
 import GroupDetailPage from "./Manager/Tournament/GroupDetailPage";
 import KnockoutPage from "./Manager/Tournament/KnockoutPage";
+import CourtsPage from "./Manager/Tournament/CourtsPage";
 import StaffApplicationsPage from "./Manager/Tournament/StaffApplicationsPage";
 import AllStaffApplicationsPage from "./Manager/AllStaffApplicationsPage";
 import TournamentLeaderboard from "./Manager/TournamentLeaderboard";
@@ -110,6 +111,7 @@ const ManagerApp = () => {
           <Route path="/tournaments/:tournamentId/groups" element={<GroupListPage />} />
           <Route path="/tournaments/:tournamentId/groups/:groupId" element={<GroupDetailPage />} />
           <Route path="/tournaments/:tournamentId/knockout" element={<KnockoutPage />} />
+          <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
           <Route path="/tournaments/:tournamentId/staff" element={<StaffApplicationsPage />} />
 
           {/* Legacy Group Stage (backward compat) */}

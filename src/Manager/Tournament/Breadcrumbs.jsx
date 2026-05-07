@@ -1,12 +1,16 @@
 import { Link, useParams, useLocation } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+
+const SIG = "#5E6AD2";
 
 const ROUTE_LABELS = {
   tournaments: "Tournaments",
-  players: "Registered Players",
+  players: "Players",
   groups: "Groups",
   knockout: "Knockout",
-  match: "Match Scoring",
+  courts: "Courts",
+  match: "Match",
+  staff: "Staff",
 };
 
 export default function Breadcrumbs({ tournamentName, groupName }) {
@@ -14,56 +18,59 @@ export default function Breadcrumbs({ tournamentName, groupName }) {
   const { tournamentId, groupId, matchId } = useParams();
 
   const segments = location.pathname.split("/").filter(Boolean);
-  const crumbs = [];
+  const crumbs = [{ label: "Tournaments", path: "/mtournament-management" }];
 
-  // Always start with tournaments list
-  crumbs.push({ label: "Tournaments", path: "/mtournament-management" });
-
-  // Build crumbs from path
   let currentPath = "";
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
     currentPath += `/${seg}`;
 
-    // Skip IDs — they get merged with their parent label
     if (seg === tournamentId) {
       crumbs.push({
-        label: tournamentName || `Tournament`,
+        label: tournamentName || "Tournament",
         path: `/tournaments/${tournamentId}`,
       });
       continue;
     }
     if (seg === groupId) {
       crumbs.push({
-        label: groupName || `Group`,
+        label: groupName || "Group",
         path: `/tournaments/${tournamentId}/groups/${groupId}`,
       });
       continue;
     }
     if (seg === matchId) continue;
 
-    // Named segments
     if (ROUTE_LABELS[seg]) {
       crumbs.push({ label: ROUTE_LABELS[seg], path: currentPath });
     }
   }
 
-  // Deduplicate
-  const unique = crumbs.filter((c, i, arr) => i === 0 || c.path !== arr[i - 1].path);
+  const unique = crumbs.filter(
+    (c, i, arr) => i === 0 || c.path !== arr[i - 1].path
+  );
 
   return (
-    <nav className="flex items-center gap-1 text-sm mb-4 overflow-x-auto pb-1">
+    <nav className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
       {unique.map((crumb, i) => {
         const isLast = i === unique.length - 1;
         return (
-          <div key={crumb.path} className="flex items-center gap-1 whitespace-nowrap">
-            {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />}
+          <div
+            key={crumb.path}
+            className="flex items-center gap-1.5 whitespace-nowrap"
+          >
+            {i > 0 && (
+              <ChevronRight className="w-3 h-3 text-neutral-300 flex-shrink-0" />
+            )}
             {isLast ? (
-              <span className="text-gray-800 font-semibold">{crumb.label}</span>
+              <span className="text-[12px] font-semibold text-neutral-900">
+                {crumb.label}
+              </span>
             ) : (
               <Link
                 to={crumb.path}
-                className="text-orange-500 hover:text-orange-700 hover:underline transition"
+                className="text-[12px] font-medium text-neutral-500 hover:text-neutral-900 transition"
+                style={{ "--hover": SIG }}
               >
                 {crumb.label}
               </Link>
